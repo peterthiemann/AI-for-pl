@@ -29,8 +29,32 @@ The legacy sweep finishing touches beyond the earlier checkpoint:
   (both replacements take `na`), `ExtraCastRightAtProof`'s four
   structural-project wrappers take `na` after the inversion argument.
 
-**NEXT**: sweep `GTSFImp-Interpreter` to green (see below), then the
-step-4/5 work.
+**GTSFImp-Interpreter is DONE**: `make check` (check-interpreter,
+check-isomorphism, check-lr) is fully green.  How the sweep landed:
+
+* `NarrowWiden` gained mirroring `w-alias`/`n-alias` constructors and
+  `NarrowWidenIsomorphism` the corresponding cases, keeping the
+  isomorphism exact.
+* `LR-narrow/World.agda`'s `World` record gained a `noAlias` field
+  (`∀ Z {T} → impEnv core Z ≡ X⊑ᵗ T → ⊥`), discharged by every world
+  builder via `lift-alias-inv`; `world-aliases-avoid` derives alias
+  avoidance from it.  This encodes "run-time worlds are alias-free
+  until the alias bind expansion lands" — step 4/5 replaces the field
+  with real avoidance/atom reasoning.
+* `ValueImprecisionᵏ` has an endpoint-only alias clause (mirrors the
+  bot leaves); the closure/size/no-occurrence lemmas gained alias
+  cases and `cong I.⇑ᵛ` mode transports.
+* `replace-⊑` takes `AliasesAvoid μ Z` (the alias case is
+  CONSTRUCTED, not refuted: the representative survives replacement
+  by avoidance, and `replace-alias-not-self` shows no self-alias can
+  arise); `replace-left-⊑` takes a `μ Z ≡ X⊑★` mode premise;
+  `⊑-base-right-no-var` takes a `μ Z ≡ X⊑★` premise.  Reveal/cast
+  proofs refute alias cases at world environments via `noAlias W`,
+  and Cast's ground-tag uniqueness lemmas take `NoAliases μ` (from
+  upstream `ImprecisionConsistency`).
+
+**NEXT**: the step-4/5 work (alias atom kind, alias bind expansion,
+discharging the four `∀⊑∀` obligations).
 
 ## Recurring mechanical recipes (used dozens of times already)
 
@@ -116,20 +140,28 @@ step-4/5 work.
   causes very slow rebuild storms (this is why per-file checks near the
   end of the session took >20 min).
 
-## After GTSFImp is green
+## After both sweeps are green
 
-1. Sweep `GTSFImp-Interpreter` to green (renamed insert signatures
-   such as `liftBoth-insert` bind modes, `LR-narrow/World.agda` shift
-   patterns, `FundamentalAssembly`'s WorldInsert uses, worker-type `na`
-   where it reaches the interpreter surface).  The interpreter-facing
-   surface (`CastTermImprecision(+2Typing)`, `CtxImp`, `WorldInsert`)
-   is alias-general with no `na` hypotheses; keep it that way.
-2. Then the actual step-4/5 work: the LR alias clause/atom kind and the
-   alias bind expansion discharging `blocked-precise-reveal`,
-   `blocked-precise-conceal`, `blocked-dyn-reveal-universal`,
-   `blocked-dyn-conceal-universal` in
-   `GTSFImp-Interpreter/proof/LR-narrow/RevealStatements.agda`,
-   per `GTSFImp-Interpreter/REPLACEMENT-CLOSURE-DESIGN.md`.
+The remaining step-4/5 work: the LR alias clause/atom kind and the
+alias bind expansion discharging `blocked-precise-reveal`,
+`blocked-precise-conceal`, `blocked-dyn-reveal-universal`,
+`blocked-dyn-conceal-universal` in
+`GTSFImp-Interpreter/proof/LR-narrow/RevealStatements.agda`,
+per `GTSFImp-Interpreter/REPLACEMENT-CLOSURE-DESIGN.md`.  Concretely:
+
+* add an alias entry kind to `LR-narrow/Atoms.agda` (an atom at mode
+  `X⊑ᵗ (embP R)` for a precise-only bind whose representative is a
+  paired name), replace the `World.noAlias` field with whatever
+  invariant the alias atoms support (alias avoidance for paired
+  centers no longer holds for free), and strengthen the endpoint-only
+  `ValueImprecisionᵏ` alias clause into an alias-atom clause;
+* add the alias variant of the precise bind expansion (no `⊑ ★`
+  derivation needed) and close the `∀⊑∀` head through the producer's
+  body relation.
+
+The interpreter-facing surface (`CastTermImprecision(+2Typing)`,
+`CtxImp`, `WorldInsert`) is alias-general with no `na` hypotheses;
+keep it that way.
 
 Standing constraints: no postulates, no holes outside this WIP, no
 catch-all `_` cases, no new TERMINATING pragmas, ≤ 80 columns,
