@@ -2528,3 +2528,24 @@ sizeI-rename μ′ ρ injective h ha I.bot-elim = refl
 sizeI-rename μ′ ρ injective h ha I.bot⊑★ = refl
 sizeI-rename μ′ ρ injective h ha (I.alias eq p) =
   cong Nat.suc (sizeI-rename μ′ ρ injective h ha p)
+
+------------------------------------------------------------------------
+-- Collapsing a dynamic variable target
+------------------------------------------------------------------------
+
+-- A derivation into a variable whose mode is dynamic collapses onto
+-- the dynamic type: the variable leaf turns into its mark, the
+-- instantiating universal recurses under the lifted mark, and an alias
+-- rebuilds against `★`, where its side condition is trivial.
+
+var-target-star-to-star : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {T : Ty Δ} {X : TyVar Δ}
+  → μ X ≡ I.X⊑★
+  → μ ⊢ T ⊑ ＇ X
+  → μ ⊢ T ⊑ ★
+var-target-star-to-star mark I.X⊑X = I.X⊑★ mark
+var-target-star-to-star mark (I.∀⊑ Anv zero∈A p) =
+  I.∀⊑ Anv zero∈A
+    (var-target-star-to-star (cong I.⇑ᵛ mark) p)
+var-target-star-to-star mark (I.alias eq p) =
+  I.alias eq (var-target-star-to-star mark p)

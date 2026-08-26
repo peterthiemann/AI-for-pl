@@ -7,7 +7,7 @@ module proof.DGG.Catchup.StructuralWorldLiftLeftProof where
 import Data.Nat as Nat
 import proof.DGG.CtxImp as CTI2
 import proof.DGG.TargetExtend as TE
-open import Imprecision using (VarImp)
+import Imprecision
 open import Reduction using (StoreChanges)
 open import proof.DGG.Catchup.StructuralWorldExtendDef
 
@@ -17,15 +17,23 @@ structural-lift-left : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {W : CTI2.World Δᴸ Δᴿ Δ}
     {W′ : CTI2.World Δᴸ Δᴿ′ Δ′}
   → (plan : StructuralWorldExtendᴿ χs W W′)
-  → (v : VarImp)
-  → StructuralWorldExtendᴿ χs (CTI2.liftWorldLeft v W)
-      (CTI2.liftWorldLeft v W′)
-structural-lift-left structural-[] v = structural-[]
-structural-lift-left (structural-keep plan) v =
-  structural-keep (structural-lift-left plan v)
-structural-lift-left (structural-bind ins follows plan) v =
-  structural-bind (TE.liftLeftTargetInsert {v = v} ins) follows
-    (structural-lift-left plan v)
+  → (c : CTI2.VarImpᶜ)
+  → StructuralWorldExtendᴿ χs
+      (CTI2.liftWorldLeft CTI2.⟦ c ⟧ᶜ W)
+      (CTI2.liftWorldLeft CTI2.⟦ c ⟧ᶜ W′)
+structural-lift-left structural-[] c = structural-[]
+structural-lift-left (structural-keep plan) c =
+  structural-keep (structural-lift-left plan c)
+structural-lift-left
+    (structural-bind ins follows plan) CTI2.cX⊑X =
+  structural-bind
+    (TE.liftLeftTargetInsert {v = Imprecision.X⊑X} ins) follows
+    (structural-lift-left plan CTI2.cX⊑X)
+structural-lift-left
+    (structural-bind ins follows plan) CTI2.cX⊑★ =
+  structural-bind
+    (TE.liftLeftTargetInsert {v = Imprecision.X⊑★} ins) follows
+    (structural-lift-left plan CTI2.cX⊑★)
 
 
 structural-lift-left-frozen : ∀ {k Δᴸ Δᴿ Δᴿ′ Δ Δ′}
@@ -34,13 +42,17 @@ structural-lift-left-frozen : ∀ {k Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {W′ : CTI2.World Δᴸ Δᴿ′ Δ′}
     {plan : StructuralWorldExtendᴿ χs W W′}
   → FrozenStructuralTraceᴿ k plan
-  → {v : VarImp}
+  → {c : CTI2.VarImpᶜ}
   → FrozenStructuralTraceᴿ (Nat.suc k)
-      (structural-lift-left plan v)
+      (structural-lift-left plan c)
 structural-lift-left-frozen frozen-trace-[] = frozen-trace-[]
 structural-lift-left-frozen (frozen-trace-keep frozen) =
   frozen-trace-keep (structural-lift-left-frozen frozen)
 structural-lift-left-frozen
-    (frozen-trace-bind frozen-ins frozen) =
+    (frozen-trace-bind frozen-ins frozen) {c = CTI2.cX⊑X} =
+  frozen-trace-bind (frozen-embedding-keep frozen-ins)
+    (structural-lift-left-frozen frozen)
+structural-lift-left-frozen
+    (frozen-trace-bind frozen-ins frozen) {c = CTI2.cX⊑★} =
   frozen-trace-bind (frozen-embedding-keep frozen-ins)
     (structural-lift-left-frozen frozen)

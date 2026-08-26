@@ -25,16 +25,21 @@ open import Relation.Nullary using (yes; no)
 open import Types
 open import TyStore using (TyStore; store-lift; store-bind; _∋_⦂_; S-lift∋)
 open import Imprecision using
-  (VarImp; ImpEnv; X⊑★; X⊑X; ⇒⊑⇒; instᵐ; extendᵐ; _⊢_⊑_)
+  (VarImp; ImpEnv; X⊑★; X⊑X; X⊑ᵗ; ⇑ᵛ; renameᵛ; ⇒⊑⇒; instᵐ;
+   extendᵐ; _⊢_⊑_)
 open import Consistency using (_↪ᵗ_; empty; keep; skip; toRenameᵗ; id↪ᵗ; wk↪ᵗ)
 open import Conversion using (Conv↑; Conv↓)
 open import CastTerms using (Term; Value; ⟨_,_,_⟩; _⊢_⦂_)
 import TermCtx as T
 import proof.Imprecision as PI
 import Conversion as Conv
+import proof.ImprecisionConsistency as PIC
 import proof.DGG.CastTermImprecision as CTI2
 import proof.DGG.CtxImp as CTX
+import proof.DGG.TargetExtend as TE
+import proof.DGG.WorldInsert as WI
 import proof.DGG.CenterRename as CR
+import proof.DGG.WorldInsert as WI
 import proof.DGG.SealPeelToolkit as SPT
 open import proof.TypeInTermSubst using
   (StoreTransport; StoreTransport-lift; StoreTransport-lift-bind;
@@ -63,17 +68,15 @@ renameEnv-id : ∀ {Δ}
   → (μ : ImpEnv Δ)
   → ∀ X
   → CR.renameEnv id↪ᵗ μ X ≡ μ X
-renameEnv-id {zero} μ ()
-renameEnv-id {suc Δ} μ Fin.zero = refl
-renameEnv-id {suc Δ} μ (Fin.suc X) =
-  renameEnv-id (λ Y → μ (Fin.suc Y)) X
+renameEnv-id μ X rewrite TE.preimage-id↪ X =
+  WI.renameᵛ-id (μ X)
 
 ------------------------------------------------------------------------
 -- The fresh target bind tower
 ------------------------------------------------------------------------
 
 ΛLiftToBindFreshWorld : ∀ {Δᴸ Δᴿ Δ}
-  → VarImp
+  → VarImp (suc (suc Δ))
   → World Δᴸ Δᴿ Δ
   → World (suc Δᴸ) (suc (suc Δᴿ)) (suc (suc (suc Δ)))
 ΛLiftToBindFreshWorld v W =
@@ -86,7 +89,7 @@ renameEnv-id {suc Δ} μ (Fin.suc X) =
 
 
 ΛLiftToBindFreshWorldᴸ : ∀ {Δᴸ Δᴿ Δ}
-  → VarImp
+  → VarImp (suc (suc (suc Δ)))
   → World Δᴸ Δᴿ Δ
   → World (suc (suc Δᴸ)) (suc (suc Δᴿ))
       (suc (suc (suc (suc Δ))))
@@ -200,15 +203,18 @@ move⊑ᵂ : ∀ {Δᴸ Δᴿ Δ} {W Wᵗ : World Δᴸ Δᴿ Δ}
   → A ⊑ᵂ⟨ W ⟩ B
   → A ⊑ᵂ⟨ Wᵗ ⟩ B
 move⊑ᵂ (target-store-move refl refl same refl hΣ resolve) p =
-  imp-env-weaken (λ X dynamic → trans (same X) dynamic) p
+  imp-env-weaken (λ X dynamic → trans (same X) dynamic)
+    (λ X al → trans (same X) al) p
 
 move⊑ᵂ-back : ∀ {Δᴸ Δᴿ Δ} {W Wᵗ : World Δᴸ Δᴿ Δ}
     {A : Ty Δᴸ} {B : Ty Δᴿ}
   → TargetStoreMove W Wᵗ
   → A ⊑ᵂ⟨ Wᵗ ⟩ B
   → A ⊑ᵂ⟨ W ⟩ B
-move⊑ᵂ-back (target-store-move refl refl same refl hΣ resolve) p =
-  imp-env-weaken (λ X dynamic → trans (sym (same X)) dynamic) p
+move⊑ᵂ-back
+    (target-store-move refl refl same refl hΣ resolve) p =
+  imp-env-weaken (λ X dynamic → trans (sym (same X)) dynamic)
+    (λ X al → trans (sym (same X)) al) p
 
 moveCtx : ∀ {Δᴸ Δᴿ Δ} {W Wᵗ : World Δᴸ Δᴿ Δ}
   → TargetStoreMove W Wᵗ
@@ -247,8 +253,21 @@ moveImpEnvMono : ∀ {Δᴸ Δᴿ Δ}
 moveImpEnvMono
     (target-store-move refl refl same₁ refl hΣ₁ resolve₁)
     (target-store-move refl refl same₂ refl hΣ₂ resolve₂)
-    mono X dynamic =
-  trans (same₂ X) (mono X (trans (sym (same₁ X)) dynamic))
+    mono =
+  CTX.imp-env-mono
+    (λ X dynamic →
+      trans (same₂ X)
+        (CTX.starMono mono X
+          (trans (sym (same₁ X)) dynamic)))
+    (CTX.alias-same
+      (λ X al →
+        trans (same₂ X)
+          (CTX.alias-fwd (CTX.aliasAgree mono) X
+            (trans (sym (same₁ X)) al)))
+      (λ X al →
+        trans (same₁ X)
+          (CTX.alias-bwd (CTX.aliasAgree mono) X
+            (trans (sym (same₂ X)) al))))
 
 private
   moveRep★PartnerOK : ∀ {Δᴸ Δᴿ Δ}
@@ -323,7 +342,7 @@ private
     CTX.matched-id-conceal-target
 
 liftMoveBoth : ∀ {Δᴸ Δᴿ Δ} {W Wᵗ : World Δᴸ Δᴿ Δ}
-  → (v : VarImp)
+  → (v : VarImp (suc Δ))
   → TargetStoreMove W Wᵗ
   → TargetStoreMove (CTX.liftWorldBoth v W) (CTX.liftWorldBoth v Wᵗ)
 liftMoveBoth v (target-store-move refl refl same refl hΣ resolve) =
@@ -332,7 +351,7 @@ liftMoveBoth v (target-store-move refl refl same refl hΣ resolve) =
   where
   same′ : ∀ X → extendᵐ v _ X ≡ extendᵐ v _ X
   same′ Fin.zero = refl
-  same′ (Fin.suc X) = same X
+  same′ (Fin.suc X) = cong ⇑ᵛ (same X)
 
   resolve-lift : ∀ {X R}
     → store-lift _ ∋ X ⦂ R
@@ -340,7 +359,7 @@ liftMoveBoth v (target-store-move refl refl same refl hΣ resolve) =
   resolve-lift (S-lift∋ X∈ eq) = cong ⇑ᵗ (resolve X∈)
 
 liftMoveLeft : ∀ {Δᴸ Δᴿ Δ} {W Wᵗ : World Δᴸ Δᴿ Δ}
-  → (v : VarImp)
+  → (v : VarImp (suc Δ))
   → TargetStoreMove W Wᵗ
   → TargetStoreMove (CTX.liftWorldLeft v W) (CTX.liftWorldLeft v Wᵗ)
 liftMoveLeft v (target-store-move refl refl same refl hΣ resolve) =
@@ -348,7 +367,7 @@ liftMoveLeft v (target-store-move refl refl same refl hΣ resolve) =
   where
   same′ : ∀ X → extendᵐ v _ X ≡ extendᵐ v _ X
   same′ Fin.zero = refl
-  same′ (Fin.suc X) = same X
+  same′ (Fin.suc X) = cong ⇑ᵛ (same X)
 
 moveCtx-tgt : ∀ {Δᴸ Δᴿ Δ} {W Wᵗ : World Δᴸ Δᴿ Δ}
   → (mv : TargetStoreMove W Wᵗ)
@@ -422,7 +441,7 @@ moveLiftCtxᴸ mv (CTX.liftᴸ-∷ liftγ) =
 
 liftTargetBindMoveBoth : ∀ {Δᴸ Δᴿ Δ}
     {W Wᵗ : World Δᴸ Δᴿ Δ} {Y}
-  → (v : VarImp)
+  → (v : VarImp (suc Δ))
   → TargetBindLiftMove W Wᵗ Y
   → TargetBindLiftMove
       (CTX.liftWorldBoth v W)
@@ -430,7 +449,8 @@ liftTargetBindMoveBoth : ∀ {Δᴸ Δᴿ Δ}
       (Fin.suc Y)
 liftTargetBindMoveBoth {W = W} {Wᵗ = Wᵗ} {Y = Y} v
     (target-bind-lift-move mv pivot-star old-pivot pivot-res other) =
-  target-bind-lift-move (liftMoveBoth v mv) pivot-star
+  target-bind-lift-move (liftMoveBoth v mv)
+    (cong ⇑ᵛ pivot-star)
     (cong ⇑ᵗ old-pivot) (cong ⇑ᵗ pivot-res) other′
   where
   other′ : ∀ Z
@@ -444,7 +464,7 @@ liftTargetBindMoveBoth {W = W} {Wᵗ = Wᵗ} {Y = Y} v
 
 liftTargetBindMoveLeft : ∀ {Δᴸ Δᴿ Δ}
     {W Wᵗ : World Δᴸ Δᴿ Δ} {Y}
-  → (v : VarImp)
+  → (v : VarImp (suc Δ))
   → TargetBindLiftMove W Wᵗ Y
   → TargetBindLiftMove
       (CTX.liftWorldLeft v W)
@@ -452,7 +472,8 @@ liftTargetBindMoveLeft : ∀ {Δᴸ Δᴿ Δ}
       Y
 liftTargetBindMoveLeft v
     (target-bind-lift-move mv pivot-star old-pivot pivot-res other) =
-  target-bind-lift-move (liftMoveLeft v mv) pivot-star old-pivot
+  target-bind-lift-move (liftMoveLeft v mv)
+    (cong ⇑ᵛ pivot-star) old-pivot
     pivot-res other
 
 targetStoreAs : ∀ {Δᴸ Δᴿ Δ}
@@ -532,7 +553,7 @@ premiseTargetBindMove
   pivot-star′ =
     subst≡ (λ Z → CTX.impEnvʷ W′ Z ≡ X⊑★)
       (sym frozenY)
-      (mono (toRenameᵗ (CTX.ηᴿʷ W) Y)
+      (CTX.starMono mono (toRenameᵗ (CTX.ηᴿʷ W) Y)
         (trans (sym (same _)) pivot-star))
 
   old-pivot′ : CTX.resolveVar (CTX.targetStoreʷ W′) Y ≡ ＇ Y
@@ -680,6 +701,16 @@ moveSmartAliasMergeGuard
     (λ X X≢β X≢α dynamic →
       CTX.SmartAliasMergeGuard.target-mark-off-footprint guard
         X X≢β X≢α (trans (sym (same _)) dynamic))
+    (CTX.alias-same
+      (λ Z al →
+        CTX.alias-fwd
+          (CTX.SmartAliasMergeGuard.old-alias-agree guard) Z
+          (trans (sym (same Z)) al))
+      (λ Z al →
+        trans (same Z)
+          (CTX.alias-bwd
+            (CTX.SmartAliasMergeGuard.old-alias-agree guard)
+            Z al)))
 
 moveSmartFreshBehindGuard : ∀ {Δᴸ Δᴿ Δ Δᵐ}
     {W Wᵗ : World Δᴸ Δᴿ Δ}
@@ -688,7 +719,7 @@ moveSmartFreshBehindGuard : ∀ {Δᴸ Δᴿ Δ Δᵐ}
   → CTX.SmartFreshBehindGuard W Wᵐ
   → CTX.SmartFreshBehindGuard Wᵗ
       (targetStoreAs Wᵐ (CTX.targetStoreʷ Wᵗ))
-moveSmartFreshBehindGuard
+moveSmartFreshBehindGuard {W = W} {Wᵗ = Wᵗ}
     (target-bind-lift-move
       mv@(target-store-move refl refl same refl hΣ resolve)
       pivot-star old-pivot pivot-res other)
@@ -707,6 +738,14 @@ moveSmartFreshBehindGuard
     (CTX.SmartFreshBehindGuard.fresh-mark-dynamic guard)
     (λ X dynamic → CTX.SmartFreshBehindGuard.target-mark-mono guard X
       (trans (sym (same _)) dynamic))
+    (λ Z al →
+      CTX.SmartFreshBehindGuard.old-alias-frozen guard Z
+        (trans (sym (same Z)) al))
+    (λ Z al →
+      let T₀ , w-eq , T-eq =
+            CTX.SmartFreshBehindGuard.old-alias-reflect
+              guard Z al
+      in T₀ , trans (same Z) w-eq , T-eq)
 
 moveSmartCommaLiftᴸ : ∀ {Δᴸ Δᴿ Δ Δᵐ}
     {W Wᵗ : World Δᴸ Δᴿ Δ}
@@ -767,7 +806,7 @@ moveStoreRepBindLift
       (target-store-move refl refl same refl hΣ resolve)
       pivot-star old-pivot pivot-res other)
     (CTX.store-rep-imp represented)
-    | yes refl | X₂ , source-eq , aligned =
+    | yes refl | SPT.rv-aligned X₂ source-eq aligned =
   CTX.store-rep-imp
     (subst≡
       (λ R → R ⊑ᵂ⟨ Wᵗ ⟩ CTX.resolveVar (CTX.targetStoreʷ Wᵗ) Y)
@@ -779,6 +818,27 @@ moveStoreRepBindLift
           (λ Z → CTX.impEnvʷ Wᵗ ⊢ (＇ Z) ⊑ ★)
           (sym aligned)
           (X⊑★ pivot-star))))
+moveStoreRepBindLift
+    {W = W} {Wᵗ = Wᵗ} {Y = Y} {Xᴸ = Xᴸ} {Xᴿ = .Y}
+    (target-bind-lift-move
+      (target-store-move refl refl same refl hΣ resolve)
+      pivot-star old-pivot pivot-res other)
+    (CTX.store-rep-imp represented)
+    | yes refl | SPT.rv-aliased X₂ source-eq mode rep⊑Y =
+  CTX.store-rep-imp
+    (subst≡
+      (λ R → R ⊑ᵂ⟨ Wᵗ ⟩ CTX.resolveVar (CTX.targetStoreʷ Wᵗ) Y)
+      (sym source-eq)
+      (subst≡
+        (λ B → ＇ X₂ ⊑ᵂ⟨ Wᵗ ⟩ B)
+        (sym pivot-res)
+        (Imprecision.alias (trans (same _) mode)
+          (imp-env-weaken
+            (λ Z dynamic → trans (same Z) dynamic)
+            (λ Z al → trans (same Z) al)
+            (PIC.var-target-star-to-star
+              (trans (sym (same _)) pivot-star)
+              rep⊑Y)))))
 moveStoreRepBindLift
     {W = W} {Wᵗ = Wᵗ} {Y = Y} {Xᴸ = Xᴸ} {Xᴿ = Xᴿ}
     (target-bind-lift-move
@@ -1241,7 +1301,7 @@ source-conceal-move
     (move⊑ᵂ (baseMove mv) r)
 
 freshLiftToBindMove : ∀ {Δᴸ Δᴿ Δ}
-    {W : World Δᴸ Δᴿ Δ} {v : VarImp}
+    {W : World Δᴸ Δᴿ Δ} {v : VarImp (suc (suc Δ))}
   → TargetStoreMove
       (CR.renameWorld wk↪ᵗ
         (CTX.liftWorldBoth v (CTX.rightOnlyWorld W ★)))
@@ -1258,13 +1318,15 @@ freshLiftToBindMove {W = W} {v = v} =
     resolve
   where
   same : ∀ X
-    → extendᵐ X⊑★ (extendᵐ v (instᵐ (CTX.impEnvʷ W))) X
-      ≡ extendᵐ X⊑★
-          (CR.renameEnv id↪ᵗ
-            (extendᵐ v (instᵐ (CTX.impEnvʷ W)))) X
+    → CTX.impEnvʷ (ΛLiftToBindFreshWorld v W) X
+      ≡ CTX.impEnvʷ
+          (CR.renameWorld wk↪ᵗ
+            (CTX.liftWorldBoth v (CTX.rightOnlyWorld W ★))) X
   same Fin.zero = refl
-  same (Fin.suc X) =
-    sym (renameEnv-id (extendᵐ v (instᵐ (CTX.impEnvʷ W))) X)
+  same (Fin.suc X)
+      rewrite TE.preimage-id↪ X =
+    TE.mode-wk-comm
+      (extendᵐ v (instᵐ (CTX.impEnvʷ W)) X)
 
   resolve : ∀ {Δ} {Σ : TyStore (suc Δ)} {X R}
     → store-lift Σ ∋ X ⦂ R
@@ -1399,7 +1461,7 @@ freshLiftToBindTargetMoveAtκᴸ {W = W} κ {Σ₂ = Σ₂}
   resolve (S-lift∋ {X = X} X∈ eq) = other (Fin.suc X) (λ ())
 
 freshLiftToBindMoveᴸ : ∀ {Δᴸ Δᴿ Δ}
-    {W : World Δᴸ Δᴿ Δ} {v : VarImp}
+    {W : World Δᴸ Δᴿ Δ} {v : VarImp (suc (suc (suc Δ)))}
   → TargetStoreMove
       (CR.renameWorld wk↪ᵗ
         (CTX.liftWorldBoth v
@@ -1417,17 +1479,18 @@ freshLiftToBindMoveᴸ {W = W} {v = v} =
     resolve
   where
   same : ∀ X
-    → extendᵐ X⊑★
-        (extendᵐ v (extendᵐ X⊑★
-          (instᵐ (CTX.impEnvʷ W)))) X
-      ≡ extendᵐ X⊑★
-          (CR.renameEnv id↪ᵗ
-            (extendᵐ v (extendᵐ X⊑★
-              (instᵐ (CTX.impEnvʷ W))))) X
+    → CTX.impEnvʷ (ΛLiftToBindFreshWorldᴸ v W) X
+      ≡ CTX.impEnvʷ
+          (CR.renameWorld wk↪ᵗ
+            (CTX.liftWorldBoth v
+              (CTX.liftWorldLeft X⊑★
+                (CTX.rightOnlyWorld W ★)))) X
   same Fin.zero = refl
-  same (Fin.suc X) =
-    sym (renameEnv-id
-      (extendᵐ v (extendᵐ X⊑★ (instᵐ (CTX.impEnvʷ W)))) X)
+  same (Fin.suc X)
+      rewrite TE.preimage-id↪ X =
+    TE.mode-wk-comm
+      (extendᵐ v (extendᵐ X⊑★
+        (instᵐ (CTX.impEnvʷ W))) X)
 
   resolve : ∀ {Δ} {Σ : TyStore (suc Δ)} {X R}
     → store-lift Σ ∋ X ⦂ R

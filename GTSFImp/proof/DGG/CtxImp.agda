@@ -201,6 +201,24 @@ alias-same-ext {μ = μ} {ν = ν} {v = v} a = alias-same fwd bwd
   bwd (Fin.suc Z) eq | T₀ , mode , refl =
     cong ⇑ᵛ (alias-bwd a Z mode)
 
+-- The two constant modes, interpretable in any center context and
+-- invariant under every mode renaming.  Structural traces that lift a
+-- whole extension plan under one binder push a constant mode, so the
+-- pushed mode is the same at every world of the trace.
+
+data VarImpᶜ : Set where
+  cX⊑X : VarImpᶜ
+  cX⊑★ : VarImpᶜ
+
+⟦_⟧ᶜ : VarImpᶜ → ∀ {Δ} → VarImp Δ
+⟦ cX⊑X ⟧ᶜ = X⊑X
+⟦ cX⊑★ ⟧ᶜ = X⊑★
+
+constᵛ-rename : ∀ (c : VarImpᶜ) {Δ Δ′} (ρ : TyVar Δ → TyVar Δ′)
+  → renameᵛ ρ (⟦ c ⟧ᶜ {Δ}) ≡ ⟦ c ⟧ᶜ {Δ′}
+constᵛ-rename cX⊑X ρ = refl
+constᵛ-rename cX⊑★ ρ = refl
+
 -- The internal inversion layers reason about seal pivots under the
 -- assumption that the world at hand aliases no variable; the source
 -- calculus never constructs aliased worlds, so its top-level theorems
