@@ -124,6 +124,29 @@ record TargetSemanticAtom {Δᴾ Δᴵ Δᶜ}
 
 open TargetSemanticAtom public
 
+-- An alias slot is a precise-only allocation whose representative is
+-- recorded in the mode: the center variable unfolds to the embedding
+-- of the bound representation type.  Unlike the dynamic slot it
+-- carries no imprecision derivation — the `alias` rule supplies the
+-- premise at each use.
+
+record AliasSemanticAtom {Δᴾ Δᴵ Δᶜ}
+    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (Z : TyVar Δᶜ) (T : Ty Δᶜ) : Set where
+  constructor alias-semantic-atom
+  field
+    aliasPreciseVariable : TyVar Δᴾ
+    aliasPreciseAligned :
+      toRenameᵗ (preciseEmbedding W) aliasPreciseVariable ≡ Z
+    aliasNoTargetOccupant :
+      (Σ[ Y ∈ TyVar Δᴵ ]
+        toRenameᵗ (impreciseEmbedding W) Y ≡ Z) → ⊥
+    aliasRep : Ty Δᴾ
+    aliasRep-eq : embedPrecise W aliasRep ≡ T
+    aliasFresh : ∀ {Y : TyVar Δᶜ} → Y ∈ᵗ T → Z Fin.< Y
+    aliasBound : preciseStore W ∋ aliasPreciseVariable ⦂ aliasRep
+
+open AliasSemanticAtom public
+
 data SemanticEntry {Δᴾ Δᴵ Δᶜ} (W : CoreWorld Δᴾ Δᴵ Δᶜ)
     (Z : TyVar Δᶜ) : I.VarImp Δᶜ → Set where
   paired-entry : ∀ {mode}
@@ -131,6 +154,9 @@ data SemanticEntry {Δᴾ Δᴵ Δᶜ} (W : CoreWorld Δᴾ Δᴵ Δᶜ)
     → SemanticEntry W Z mode
   dynamic-entry : DynamicSemanticAtom W Z → SemanticEntry W Z I.X⊑★
   target-entry : TargetSemanticAtom W Z → SemanticEntry W Z I.X⊑★
+  alias-entry : ∀ {T}
+    → AliasSemanticAtom W Z T
+    → SemanticEntry W Z (I.X⊑ᵗ T)
 
 ------------------------------------------------------------------------
 -- Canonical slot relations below a payload relation
@@ -178,6 +204,24 @@ record DynamicHolds {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
 
 open DynamicHolds public
 
+-- A sealed precise value at an alias slot: the payload below the seal
+-- is related to the imprecise value at the alias premise, which
+-- relates the recorded representative to the right endpoint.
+
+record AliasHolds {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
+    {Z} {T B : Ty Δᶜ} (ℛ : PayloadRelation W)
+    (a : AliasSemanticAtom W Z T)
+    (p : impEnv W I.⊢ T ⊑ B)
+    (Vᴵ : Term Δᴵ) (Vᴾ : Term Δᴾ) : Set where
+  constructor alias-holds
+  field
+    aliasSealed : Term Δᴾ
+    alias-sealed-shape :
+      Vᴾ ≡ aliasSealed ↓ seal (aliasPreciseVariable a) (aliasRep a)
+    alias-payload-related : ℛ p Vᴵ aliasSealed
+
+open AliasHolds public
+
 PairedAtomHolds : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ}
   → PayloadRelation W
@@ -186,6 +230,7 @@ PairedAtomHolds : ∀ {Δᴾ Δᴵ Δᶜ mode}
 PairedAtomHolds ℛ (paired-entry a) Vᴵ Vᴾ = AtomHolds ℛ a Vᴵ Vᴾ
 PairedAtomHolds ℛ (dynamic-entry a) Vᴵ Vᴾ = ⊥
 PairedAtomHolds ℛ (target-entry a) Vᴵ Vᴾ = ⊥
+PairedAtomHolds ℛ (alias-entry a) Vᴵ Vᴾ = ⊥
 
 DynamicAtomHolds : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ}
@@ -196,6 +241,24 @@ DynamicAtomHolds : ∀ {Δᴾ Δᴵ Δᶜ mode}
 DynamicAtomHolds ℛ (paired-entry a) eq Vᴵ Vᴾ = ⊥
 DynamicAtomHolds ℛ (dynamic-entry a) refl Vᴵ Vᴾ = DynamicHolds ℛ a Vᴵ Vᴾ
 DynamicAtomHolds ℛ (target-entry a) refl Vᴵ Vᴾ = ⊥
+DynamicAtomHolds ℛ (alias-entry a) () Vᴵ Vᴾ
+
+-- The value relation at an alias use of a slot: forced onto the alias
+-- entry by mode disjointness; a paired slot never sits at the alias
+-- mode.
+
+AliasAtomHolds : ∀ {Δᴾ Δᴵ Δᶜ mode}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
+  → PayloadRelation W
+  → (entry : SemanticEntry W Z mode)
+  → mode ≡ I.X⊑ᵗ T
+  → impEnv W I.⊢ T ⊑ B
+  → Term Δᴵ → Term Δᴾ → Set
+AliasAtomHolds ℛ (paired-entry a) eq p Vᴵ Vᴾ = ⊥
+AliasAtomHolds ℛ (dynamic-entry a) () p Vᴵ Vᴾ
+AliasAtomHolds ℛ (target-entry a) () p Vᴵ Vᴾ
+AliasAtomHolds ℛ (alias-entry a) refl p Vᴵ Vᴾ =
+  AliasHolds ℛ a p Vᴵ Vᴾ
 
 
 -- The slot predicates are functorial in the payload relation.
@@ -219,6 +282,7 @@ paired-holds-map f (paired-entry a)
   atom-holds Uᴵ Uᴾ eqᴵ eqᴾ (f related)
 paired-holds-map f (dynamic-entry a) ()
 paired-holds-map f (target-entry a) ()
+paired-holds-map f (alias-entry a) ()
 
 dynamic-holds-map : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ}
@@ -233,6 +297,23 @@ dynamic-holds-map f (dynamic-entry a) refl
     (dynamic-holds Uᴾ eqᴾ related) =
   dynamic-holds Uᴾ eqᴾ (f related)
 dynamic-holds-map f (target-entry a) refl ()
+dynamic-holds-map f (alias-entry a) () related
+
+alias-holds-map : ∀ {Δᴾ Δᴵ Δᶜ mode}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
+    {ℛ ℛ′ : PayloadRelation W}
+  → PayloadMap W ℛ ℛ′
+  → (entry : SemanticEntry W Z mode) (eq : mode ≡ I.X⊑ᵗ T)
+  → (p : impEnv W I.⊢ T ⊑ B)
+  → ∀ {Vᴵ Vᴾ}
+  → AliasAtomHolds ℛ entry eq p Vᴵ Vᴾ
+  → AliasAtomHolds ℛ′ entry eq p Vᴵ Vᴾ
+alias-holds-map f (paired-entry a) eq p ()
+alias-holds-map f (dynamic-entry a) () p related
+alias-holds-map f (target-entry a) () p related
+alias-holds-map f (alias-entry a) refl p
+    (alias-holds Uᴾ eqᴾ related) =
+  alias-holds Uᴾ eqᴾ (f related)
 
 dynamic-atom-no-target : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {ℛ : PayloadRelation W}
@@ -245,6 +326,20 @@ dynamic-atom-no-target (paired-entry a) eq ()
 dynamic-atom-no-target (dynamic-entry a) refl related =
   dynamicNoTargetOccupant a
 dynamic-atom-no-target (target-entry a) refl ()
+dynamic-atom-no-target (alias-entry a) () related
+
+alias-atom-no-target : ∀ {Δᴾ Δᴵ Δᶜ mode}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
+    {ℛ : PayloadRelation W} {p : impEnv W I.⊢ T ⊑ B} {Vᴵ Vᴾ}
+    (entry : SemanticEntry W Z mode) (eq : mode ≡ I.X⊑ᵗ T)
+  → AliasAtomHolds ℛ entry eq p Vᴵ Vᴾ
+  → (Σ[ Y ∈ TyVar Δᴵ ]
+      toRenameᵗ (impreciseEmbedding W) Y ≡ Z) → ⊥
+alias-atom-no-target (paired-entry a) eq ()
+alias-atom-no-target (dynamic-entry a) () related
+alias-atom-no-target (target-entry a) () related
+alias-atom-no-target (alias-entry a) refl related =
+  aliasNoTargetOccupant a
 
 ------------------------------------------------------------------------
 -- Reindexing slots through fresh bindings
@@ -516,6 +611,87 @@ weaken-target-atom-imprecise {W = W} {Z = Z} Aᴵ a =
   no-precise (X , eq) =
     targetNoPreciseOccupant a (X , fin-suc-injective eq)
 
+weaken-alias-atom : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z} {T : Ty Δᶜ}
+  → (Aᴾ : Ty Δᴾ)
+  → (Aᴵ : Ty Δᴵ)
+  → AliasSemanticAtom W Z T
+  → AliasSemanticAtom (pairedBindCore W Aᴾ Aᴵ) (Fin.suc Z) (⇑ᵗ T)
+weaken-alias-atom {W = W} {Z = Z} {T = T} Aᴾ Aᴵ a =
+  alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
+    (cong Fin.suc (aliasPreciseAligned a))
+    no-target
+    (⇑ᵗ (aliasRep a))
+    (trans (embedPrecise-paired-shift W Aᴾ Aᴵ (aliasRep a))
+      (cong ⇑ᵗ (aliasRep-eq a)))
+    fresh
+    (S-bind∋ (aliasBound a) refl)
+  where
+  fresh : ∀ {Y} → Y ∈ᵗ ⇑ᵗ T → Fin.suc Z Fin.< Y
+  fresh occurs with shift-∈ᵗ-inversion T occurs
+  fresh occurs | Y′ , refl , occurs′ = s≤s (aliasFresh a occurs′)
+
+  no-target :
+      (Σ[ Y ∈ TyVar _ ]
+        toRenameᵗ (impreciseEmbedding
+          (pairedBindCore W Aᴾ Aᴵ)) Y ≡ Fin.suc Z) → ⊥
+  no-target (Fin.zero , ())
+  no-target (Fin.suc Y , eq) =
+    aliasNoTargetOccupant a (Y , fin-suc-injective eq)
+
+weaken-alias-atom-precise : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z} {T : Ty Δᶜ}
+  → (Aᴾ : Ty Δᴾ)
+  → AliasSemanticAtom W Z T
+  → AliasSemanticAtom (preciseBindCore W Aᴾ) (Fin.suc Z) (⇑ᵗ T)
+weaken-alias-atom-precise {W = W} {Z = Z} {T = T} Aᴾ a =
+  alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
+    (cong Fin.suc (aliasPreciseAligned a))
+    no-target
+    (⇑ᵗ (aliasRep a))
+    (trans (embedPrecise-precise-shift W Aᴾ (aliasRep a))
+      (cong ⇑ᵗ (aliasRep-eq a)))
+    fresh
+    (S-bind∋ (aliasBound a) refl)
+  where
+  fresh : ∀ {Y} → Y ∈ᵗ ⇑ᵗ T → Fin.suc Z Fin.< Y
+  fresh occurs with shift-∈ᵗ-inversion T occurs
+  fresh occurs | Y′ , refl , occurs′ = s≤s (aliasFresh a occurs′)
+
+  no-target :
+      (Σ[ Y ∈ TyVar _ ]
+        toRenameᵗ (impreciseEmbedding
+          (preciseBindCore W Aᴾ)) Y ≡ Fin.suc Z) → ⊥
+  no-target (Y , eq) =
+    aliasNoTargetOccupant a (Y , fin-suc-injective eq)
+
+weaken-alias-atom-imprecise : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z} {T : Ty Δᶜ}
+  → (Aᴵ : Ty Δᴵ)
+  → AliasSemanticAtom W Z T
+  → AliasSemanticAtom (impreciseBindCore W Aᴵ) (Fin.suc Z) (⇑ᵗ T)
+weaken-alias-atom-imprecise {W = W} {Z = Z} {T = T} Aᴵ a =
+  alias-semantic-atom (aliasPreciseVariable a)
+    (cong Fin.suc (aliasPreciseAligned a))
+    no-target
+    (aliasRep a)
+    (trans (embedPrecise-imprecise-shift W Aᴵ (aliasRep a))
+      (cong ⇑ᵗ (aliasRep-eq a)))
+    fresh
+    (aliasBound a)
+  where
+  fresh : ∀ {Y} → Y ∈ᵗ ⇑ᵗ T → Fin.suc Z Fin.< Y
+  fresh occurs with shift-∈ᵗ-inversion T occurs
+  fresh occurs | Y′ , refl , occurs′ = s≤s (aliasFresh a occurs′)
+
+  no-target :
+      (Σ[ Y ∈ TyVar _ ]
+        toRenameᵗ (impreciseEmbedding
+          (impreciseBindCore W Aᴵ)) Y ≡ Fin.suc Z) → ⊥
+  no-target (Fin.zero , ())
+  no-target (Fin.suc Y , eq) =
+    aliasNoTargetOccupant a (Y , fin-suc-injective eq)
+
 weaken-entry : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
   → (Aᴾ : Ty Δᴾ)
@@ -528,6 +704,8 @@ weaken-entry Aᴾ Aᴵ (dynamic-entry a) =
   dynamic-entry (weaken-dynamic-atom Aᴾ Aᴵ a)
 weaken-entry Aᴾ Aᴵ (target-entry a) =
   target-entry (weaken-target-atom Aᴾ Aᴵ a)
+weaken-entry Aᴾ Aᴵ (alias-entry a) =
+  alias-entry (weaken-alias-atom Aᴾ Aᴵ a)
 
 weaken-entry-precise : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
@@ -540,6 +718,8 @@ weaken-entry-precise Aᴾ (dynamic-entry a) =
   dynamic-entry (weaken-dynamic-atom-precise Aᴾ a)
 weaken-entry-precise Aᴾ (target-entry a) =
   target-entry (weaken-target-atom-precise Aᴾ a)
+weaken-entry-precise Aᴾ (alias-entry a) =
+  alias-entry (weaken-alias-atom-precise Aᴾ a)
 
 weaken-entry-imprecise : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
@@ -552,6 +732,8 @@ weaken-entry-imprecise Aᴵ (dynamic-entry a) =
   dynamic-entry (weaken-dynamic-atom-imprecise Aᴵ a)
 weaken-entry-imprecise Aᴵ (target-entry a) =
   target-entry (weaken-target-atom-imprecise Aᴵ a)
+weaken-entry-imprecise Aᴵ (alias-entry a) =
+  alias-entry (weaken-alias-atom-imprecise Aᴵ a)
 
 ------------------------------------------------------------------------
 -- Fresh slots

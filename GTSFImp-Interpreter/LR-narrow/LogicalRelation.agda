@@ -195,7 +195,11 @@ open AlignedDynamicAtomRelated public
 -- The same-index dynamic payload is deliberate: a dynamic seal is
 -- created and eliminated by precise-only steps, so no imprecise step
 -- is available to pay for a contractive decrement (see
--- FUNDAMENTAL-PROPERTY-PLAN.md, Finding D).
+-- FUNDAMENTAL-PROPERTY-PLAN.md, Finding D).  The `alias` clause
+-- consults its slot the same way, at the same index, but at the
+-- structurally smaller premise of the alias derivation; like a
+-- dynamic seal, an alias seal is created and eliminated by
+-- precise-only steps.
 {-# TERMINATING #-}
 mutual
   ValueImprecisionᵏ : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
@@ -277,13 +281,15 @@ mutual
     TypedEndpoints W I.bot⊑★ Vᴵ Vᴾ
 
   -- An alias derivation unfolds the center variable to its
-  -- representative; run-time worlds stay alias-free until the alias
-  -- bind expansion lands, so like the bot leaves only the endpoint
-  -- typings are recorded here.  The alias atom strengthens this
-  -- clause together with the alias bind expansion.
+  -- representative: the precise value is sealed at the alias slot and
+  -- its payload is related to the imprecise value at the alias
+  -- premise.  The entry is forced onto the alias atom by mode
+  -- disjointness.
   ValueImprecisionᵏ (suc k) W
-      (I.alias eq {notSelf} p) Vᴵ Vᴾ =
-    TypedEndpoints W (I.alias eq {notSelf = notSelf} p) Vᴵ Vᴾ
+      (I.alias {X = X} eq {notSelf} p) Vᴵ Vᴾ =
+    TypedEndpoints W (I.alias eq {notSelf = notSelf} p) Vᴵ Vᴾ ×
+    AliasAtomHolds (ValueImprecisionᵏ (suc k) W)
+      (semanticEntry W X) eq p Vᴵ Vᴾ
 
   FutureValueRelation : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
       {W : World Δᴾ Δᴵ Δᶜ}

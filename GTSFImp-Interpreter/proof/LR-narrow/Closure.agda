@@ -9,6 +9,7 @@ import Data.Fin as Fin
 open import Data.List using ([])
 open import Data.Nat using (ℕ; zero; suc; _≤_; z≤n; s≤s)
 open import Data.Nat.Properties using (m≤n⇒m<n∨m≡n)
+open import Data.Empty using (⊥-elim)
 open import Data.Product using (_,_)
 open import Data.Sum using (inj₁; inj₂)
 open import Data.Unit.Polymorphic.Base using (tt)
@@ -140,9 +141,12 @@ value-imprecision-downward {p = I.bot-elim} {k = suc k} endpoints =
 value-imprecision-downward {p = I.bot⊑★} {k = suc k} endpoints =
   endpoints
 value-imprecision-downward {p = I.alias eq p} {k = zero}
-    endpoints = endpoints
-value-imprecision-downward {p = I.alias eq p} {k = suc k}
-    endpoints = endpoints
+    (endpoints , related) = endpoints
+value-imprecision-downward {W = W} {p = I.alias {X = X} eq p}
+    {k = suc k} (endpoints , related) =
+  endpoints ,
+  alias-holds-map (value-imprecision-downward {k = suc k})
+    (semanticEntry W X) eq p related
 
 value-imprecision-downward-to : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -240,6 +244,7 @@ paired-holds-endpoints {W = W} (paired-entry a) p
          (precise-typed endpoints) typeᴾ-eq)
 paired-holds-endpoints (dynamic-entry a) p ()
 paired-holds-endpoints (target-entry a) p ()
+paired-holds-endpoints (alias-entry a) p ()
 
 dynamic-holds-endpoints : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : World Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {k Vᴵ Vᴾ}
@@ -267,6 +272,7 @@ dynamic-holds-endpoints {W = W} (dynamic-entry a) refl p
        (sealed-precise-typing (dynamicBound a)
          (precise-typed endpoints) typeᴾ-eq)
 dynamic-holds-endpoints (target-entry a) refl p ()
+dynamic-holds-endpoints (alias-entry a) ()
 
 -- Sealed payloads related at a paired slot are related values at the
 -- slot's center variable.
@@ -1033,6 +1039,7 @@ paired-holds-lift {W′ = W′} W≼W′ f reindex
       (f related))
 paired-holds-lift W≼W′ f reindex (lift-dynamic eqᴾ repᴾ) ()
 paired-holds-lift W≼W′ f reindex lift-target ()
+paired-holds-lift W≼W′ f reindex (lift-alias eqᴾ repᴾ) ()
 
 paired-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1077,6 +1084,7 @@ dynamic-holds-lift {W′ = W′} W≼W′ f reindex
       (liftCenterTy-star W≼W′)
       (f related))
 dynamic-holds-lift W≼W′ f reindex lift-target refl refl ()
+dynamic-holds-lift W≼W′ f reindex (lift-alias eqᴾ repᴾ) () eq′
 
 dynamic-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1485,12 +1493,9 @@ value-imprecision-paired W r {p = I.bot-elim} {k = suc k}
     endpoints = typed-endpoints-future (paired-future W r) endpoints
 value-imprecision-paired W r {p = I.bot⊑★} {k = suc k}
     endpoints = typed-endpoints-future (paired-future W r) endpoints
-value-imprecision-paired W r {p = I.alias eq p} {k = zero}
-    endpoints =
-  typed-endpoints-future (paired-future W r) endpoints
-value-imprecision-paired W r {p = I.alias eq p} {k = suc k}
-    endpoints =
-  typed-endpoints-future (paired-future W r) endpoints
+value-imprecision-paired W r {p = I.alias eq p} {k}
+    related =
+  ⊥-elim (noAlias W _ eq)
 
 -- Termination note: the `X⊑★` dynamic case recurses at the same step
 -- index into the slot's representation imprecision; well-founded by
@@ -1673,12 +1678,9 @@ value-imprecision-precise W r {p = I.bot-elim} {k = suc k}
     endpoints = typed-endpoints-future (precise-future W r) endpoints
 value-imprecision-precise W r {p = I.bot⊑★} {k = suc k}
     endpoints = typed-endpoints-future (precise-future W r) endpoints
-value-imprecision-precise W r {p = I.alias eq p} {k = zero}
-    endpoints =
-  typed-endpoints-future (precise-future W r) endpoints
-value-imprecision-precise W r {p = I.alias eq p} {k = suc k}
-    endpoints =
-  typed-endpoints-future (precise-future W r) endpoints
+value-imprecision-precise W r {p = I.alias eq p} {k}
+    related =
+  ⊥-elim (noAlias W _ eq)
 
 -- Termination note: the `X⊑★` dynamic case recurses at the same step
 -- index into the slot's representation imprecision; well-founded by
@@ -1862,11 +1864,8 @@ value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.bot⊑★}
     {k = suc k} endpoints =
   typed-endpoints-future (imprecise-future W Rᴵ) endpoints
 value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.alias eq p}
-    {k = zero} endpoints =
-  typed-endpoints-future (imprecise-future W Rᴵ) endpoints
-value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.alias eq p}
-    {k = suc k} endpoints =
-  typed-endpoints-future (imprecise-future W Rᴵ) endpoints
+    {k} related =
+  ⊥-elim (noAlias W _ eq)
 
 value-imprecision-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
