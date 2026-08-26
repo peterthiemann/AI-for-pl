@@ -63,6 +63,18 @@ ext-mode-star : ∀ {Δ} {μ : ImpEnv Δ} {v : VarImp (suc Δ)}
 ext-mode-star eq = cong ⇑ᵛ eq
 
 -- and are reflected back, since the alias mode never lifts to them.
+-- The `⇑ᵛ`-based inverses leave no unsolved arguments, because
+-- `extendᵐ v μ (suc Z)` reduces to `⇑ᵛ (μ Z)` and forgets `v`.
+
+lift-paired-inv : ∀ {Δ} {w : VarImp Δ}
+  → ⇑ᵛ w ≡ X⊑X
+  → w ≡ X⊑X
+lift-paired-inv {w = X⊑X} eq = refl
+
+lift-star-inv : ∀ {Δ} {w : VarImp Δ}
+  → ⇑ᵛ w ≡ X⊑★
+  → w ≡ X⊑★
+lift-star-inv {w = X⊑★} eq = refl
 
 ext-mode-paired-inv : ∀ {Δ} (μ : ImpEnv Δ) {v : VarImp (suc Δ)}
     (Z : TyVar Δ)

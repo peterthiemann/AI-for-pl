@@ -559,6 +559,14 @@ imprecise-star A = imprecise-star-shape (shape A) (\ ())
 -- mentions it -- which is the allocation-order condition the world
 -- model already enforces for dynamic seals.
 
+-- Occurrence and non-occurrence evidence cannot coexist.
+
+∈∉-⊥ : ∀ {Δ} {X : TyVar Δ} {A : Ty Δ}
+  → X ∉ᵗ A
+  → X ∈ᵗ A
+  → ⊥
+∈∉-⊥ = not-occurs
+
 AliasesAvoid : ∀ {Δ} → I.ImpEnv Δ → TyVar Δ → Set
 AliasesAvoid μ X = ∀ Y {T} → μ Y ≡ I.X⊑ᵗ T → X ∉ᵗ T
 
