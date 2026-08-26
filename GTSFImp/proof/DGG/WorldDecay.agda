@@ -6,17 +6,20 @@ module proof.DGG.WorldDecay where
 --   * Blends premise worlds with decayed conclusion-world marks.
 --   * Honestifies worlds by dynamizing centers without a target alignment.
 
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Fin using (Fin)
 import Data.Fin as Fin
 open import Data.List using ([]; _∷_)
 open import Data.Product using (Σ-syntax; _,_)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; refl; cong; sym; trans)
 open import Relation.Nullary using (Dec; yes; no)
 
 open import Types
 open import Consistency using (_↪ᵗ_; empty; keep; skip; toRenameᵗ)
 open import Imprecision
 import proof.DGG.CtxImp as CTI2
+open import proof.ImprecisionConsistency using (imp-env-weaken)
 open CTI2 using
   (World;
    _⊑ᵂ⟨_⟩_;
@@ -35,48 +38,10 @@ open CTI2 using
 
 ⊑-env-mono : ∀ {Δ} {μ μᵈ : ImpEnv Δ} {A B : Ty Δ}
   → (∀ Z → μ Z ≡ X⊑★ → μᵈ Z ≡ X⊑★)
+  → (∀ Z {T} → μ Z ≡ X⊑ᵗ T → μᵈ Z ≡ X⊑ᵗ T)
   → μ ⊢ A ⊑ B
   → μᵈ ⊢ A ⊑ B
-⊑-env-mono cond ★⊑★ = ★⊑★
-⊑-env-mono cond ι⊑ι = ι⊑ι
-⊑-env-mono cond X⊑X = X⊑X
-⊑-env-mono cond (⇒⊑⇒ A⊑A′ B⊑B′) =
-  ⇒⊑⇒ (⊑-env-mono cond A⊑A′) (⊑-env-mono cond B⊑B′)
-⊑-env-mono cond (∀⊑∀ A⊑B) =
-  ∀⊑∀ (⊑-env-mono lift-cond A⊑B)
-  where
-  lift-cond : ∀ Z
-    → extᵐ _ Z ≡ X⊑★
-    → extᵐ _ Z ≡ X⊑★
-  lift-cond Fin.zero eq = eq
-  lift-cond (Fin.suc Z) eq = cond Z eq
-⊑-env-mono cond (⇒⊑★ A⊑★ B⊑★) =
-  ⇒⊑★ (⊑-env-mono cond A⊑★) (⊑-env-mono cond B⊑★)
-⊑-env-mono cond ι⊑★ = ι⊑★
-⊑-env-mono cond (X⊑★ eq) = X⊑★ (cond _ eq)
-⊑-env-mono cond (∀⊑ Anv z∈A A⊑B) =
-  ∀⊑ Anv z∈A (⊑-env-mono lift-cond A⊑B)
-  where
-  lift-cond : ∀ Z
-    → instᵐ _ Z ≡ X⊑★
-    → instᵐ _ Z ≡ X⊑★
-  lift-cond Fin.zero eq = eq
-  lift-cond (Fin.suc Z) eq = cond Z eq
-⊑-env-mono cond ∀★⊑★ = ∀★⊑★
-⊑-env-mono cond (∀⊑★ Ans A⊑★) =
-  ∀⊑★ Ans (⊑-env-mono lift-cond A⊑★)
-  where
-  lift-cond : ∀ Z
-    → extᵐ _ Z ≡ X⊑★
-    → extᵐ _ Z ≡ X⊑★
-  lift-cond Fin.zero eq = eq
-  lift-cond (Fin.suc Z) eq = cond Z eq
-⊑-env-mono cond bot-elim = bot-elim
-⊑-env-mono cond bot⊑★ = bot⊑★
-
-------------------------------------------------------------------------
--- Environment decay between worlds
-------------------------------------------------------------------------
+⊑-env-mono = imp-env-weaken
 
 record EnvDecay {Δᴸ Δᴿ Δ} (W Wᵈ : World Δᴸ Δᴿ Δ) : Set where
   constructor env-decay
@@ -87,7 +52,11 @@ record EnvDecay {Δᴸ Δᴿ Δ} (W Wᵈ : World Δᴸ Δᴿ Δ) : Set where
       CTI2.sourceStoreʷ Wᵈ ≡ CTI2.sourceStoreʷ W
     targetStore-same :
       CTI2.targetStoreʷ Wᵈ ≡ CTI2.targetStoreʷ W
-    env-mono : CTI2.ImpEnvMono W Wᵈ
+    env-mono : ∀ Z
+      → CTI2.impEnvʷ W Z ≡ X⊑★
+      → CTI2.impEnvʷ Wᵈ Z ≡ X⊑★
+    env-alias : CTI2.AliasSame (CTI2.impEnvʷ W)
+      (CTI2.impEnvʷ Wᵈ)
 
 open EnvDecay public
 
@@ -99,12 +68,14 @@ decay⊑ᵂ : ∀ {Δᴸ Δᴿ Δ} {W Wᵈ : World Δᴸ Δᴿ Δ}
 decay⊑ᵂ
     {W = CTI2.world ηL ηR μ ΣL ΣR}
     {Wᵈ = CTI2.world ηL′ ηR′ μᵈ ΣL′ ΣR′}
-    (env-decay refl refl refl refl mono) p =
-  ⊑-env-mono mono p
+    (env-decay refl refl refl refl mono al) p =
+  ⊑-env-mono mono (CTI2.alias-fwd al) p
 
 decay-refl : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
   → EnvDecay W W
-decay-refl = env-decay refl refl refl refl (λ Z eq → eq)
+decay-refl =
+  env-decay refl refl refl refl (λ Z eq → eq)
+    CTI2.alias-same-refl
 
 ------------------------------------------------------------------------
 -- Context decay
@@ -142,9 +113,10 @@ decaySameCtx dec dec′ (same-∷ same) =
 -- Blending premise-world marks with a decayed conclusion world
 ------------------------------------------------------------------------
 
-blendVar : VarImp → VarImp → VarImp
+blendVar : ∀ {Δ} → VarImp Δ → VarImp Δ → VarImp Δ
 blendVar X⊑★ v = X⊑★
 blendVar X⊑X v = v
+blendVar (X⊑ᵗ T) v = X⊑ᵗ T
 
 blendWorld : ∀ {Δᴸ Δᴿ Δ}
   → World Δᴸ Δᴿ Δ
@@ -156,24 +128,86 @@ blendWorld W′ Wᵈ =
     (CTI2.sourceStoreʷ W′) (CTI2.targetStoreʷ W′)
 
 private
-  blend-left-mono : ∀ {v vᵈ}
+  blend-left-mono : ∀ {Δ} {v vᵈ : VarImp Δ}
     → v ≡ X⊑★
     → blendVar v vᵈ ≡ X⊑★
   blend-left-mono refl = refl
 
+  blend-left-alias : ∀ {Δ} {v vᵈ : VarImp Δ} {T}
+    → v ≡ X⊑ᵗ T
+    → blendVar v vᵈ ≡ X⊑ᵗ T
+  blend-left-alias refl = refl
+
+  blend-alias-reflect : ∀ {Δᴸ Δᴿ Δ}
+      {W′ Wᵈ : World Δᴸ Δᴿ Δ}
+    → CTI2.AliasSame (CTI2.impEnvʷ W′) (CTI2.impEnvʷ Wᵈ)
+    → ∀ Z {T}
+    → CTI2.impEnvʷ (blendWorld W′ Wᵈ) Z ≡ X⊑ᵗ T
+    → CTI2.impEnvʷ W′ Z ≡ X⊑ᵗ T
+  blend-alias-reflect {W′ = W′} {Wᵈ = Wᵈ} agree Z eq
+      with CTI2.impEnvʷ W′ Z in w′-eq
+  blend-alias-reflect agree Z () | X⊑★
+  blend-alias-reflect {W′ = W′} {Wᵈ = Wᵈ} agree Z eq | X⊑X
+      with trans (sym w′-eq) (CTI2.alias-bwd agree Z eq)
+  blend-alias-reflect agree Z eq | X⊑X | ()
+  blend-alias-reflect agree Z refl | X⊑ᵗ T = refl
+
+-- Blending is a decay of the premise world only when the premise and
+-- decayed worlds assign the same aliases; the hypothesis is the
+-- composition of the wrapper rule's alias agreement with the decay's.
+
 blend-decay : ∀ {Δᴸ Δᴿ Δ}
     {W′ Wᵈ : World Δᴸ Δᴿ Δ}
+  → CTI2.AliasSame (CTI2.impEnvʷ W′) (CTI2.impEnvʷ Wᵈ)
   → EnvDecay W′ (blendWorld W′ Wᵈ)
-blend-decay =
-  env-decay refl refl refl refl (λ Z eq → blend-left-mono eq)
+blend-decay {W′ = W′} {Wᵈ = Wᵈ} agree =
+  env-decay refl refl refl refl
+    (λ Z eq → blend-left-mono eq)
+    (CTI2.alias-same (λ Z eq → blend-left-alias eq)
+      (blend-alias-reflect {W′ = W′} {Wᵈ = Wᵈ} agree))
+
+-- Blending keeps the decayed world's dynamic marks and the premise
+-- world's aliases.  The first hypothesis says the premise world's
+-- aliases are already aliases of the decayed world; at the use site it
+-- is the composition of the wrapper rule's alias agreement with the
+-- decay's alias preservation.
 
 blend-mono : ∀ {Δᴸ Δᴿ Δ}
     {W′ Wᵈ : World Δᴸ Δᴿ Δ}
+  → CTI2.AliasSame (CTI2.impEnvʷ W′) (CTI2.impEnvʷ Wᵈ)
   → CTI2.ImpEnvMono Wᵈ (blendWorld W′ Wᵈ)
-blend-mono {W′ = W′} {Wᵈ = Wᵈ} Z eq
-    with CTI2.impEnvʷ W′ Z
-blend-mono {W′ = W′} {Wᵈ = Wᵈ} Z eq | X⊑★ = refl
-blend-mono {W′ = W′} {Wᵈ = Wᵈ} Z eq | X⊑X = eq
+blend-mono {W′ = W′} {Wᵈ = Wᵈ} agree =
+  CTI2.imp-env-mono star
+    (CTI2.alias-same alias-fwdʹ alias-bwdʹ)
+  where
+  star : ∀ Z
+    → CTI2.impEnvʷ Wᵈ Z ≡ X⊑★
+    → CTI2.impEnvʷ (blendWorld W′ Wᵈ) Z ≡ X⊑★
+  star Z eq with CTI2.impEnvʷ W′ Z in w′-eq
+  star Z eq | X⊑★ = refl
+  star Z eq | X⊑X = eq
+  star Z eq | X⊑ᵗ T
+      with trans (sym eq) (CTI2.alias-fwd agree Z w′-eq)
+  star Z eq | X⊑ᵗ T | ()
+  alias-fwdʹ : ∀ Z {T}
+    → CTI2.impEnvʷ Wᵈ Z ≡ X⊑ᵗ T
+    → CTI2.impEnvʷ (blendWorld W′ Wᵈ) Z ≡ X⊑ᵗ T
+  alias-fwdʹ Z eq with CTI2.impEnvʷ W′ Z in w′-eq
+  alias-fwdʹ Z eq | X⊑X = eq
+  alias-fwdʹ Z eq | X⊑★
+      with trans (sym (CTI2.alias-bwd agree Z eq)) w′-eq
+  alias-fwdʹ Z eq | X⊑★ | ()
+  alias-fwdʹ Z eq | X⊑ᵗ T′
+      with trans (sym (CTI2.alias-fwd agree Z w′-eq)) eq
+  alias-fwdʹ Z eq | X⊑ᵗ T′ | refl = refl
+  alias-bwdʹ : ∀ Z {T}
+    → CTI2.impEnvʷ (blendWorld W′ Wᵈ) Z ≡ X⊑ᵗ T
+    → CTI2.impEnvʷ Wᵈ Z ≡ X⊑ᵗ T
+  alias-bwdʹ Z eq with CTI2.impEnvʷ W′ Z in w′-eq
+  alias-bwdʹ Z () | X⊑★
+  alias-bwdʹ Z eq | X⊑X = eq
+  alias-bwdʹ Z refl | X⊑ᵗ T =
+    CTI2.alias-fwd agree Z w′-eq
 
 ------------------------------------------------------------------------
 -- Honest worlds
@@ -204,10 +238,18 @@ alignedᴿ? (skip ηᴿ) (Fin.suc Z) | yes (Xᴿ , eq) =
 alignedᴿ? (skip ηᴿ) (Fin.suc Z) | no unaligned =
   no λ { (Xᴿ , eq) → unaligned (Xᴿ , fin-suc-injective eq) }
 
+-- Honestification forgets stale precise marks; aliases are not marks
+-- and survive it unchanged.
+
+dynamizeVar : ∀ {Δ} → VarImp Δ → VarImp Δ
+dynamizeVar X⊑X = X⊑★
+dynamizeVar X⊑★ = X⊑★
+dynamizeVar (X⊑ᵗ T) = X⊑ᵗ T
+
 honestEnv : ∀ {Δᴿ Δ} → (Δᴿ ↪ᵗ Δ) → ImpEnv Δ → ImpEnv Δ
 honestEnv ηᴿ μ Z with alignedᴿ? ηᴿ Z
 honestEnv ηᴿ μ Z | yes aligned = μ Z
-honestEnv ηᴿ μ Z | no unaligned = X⊑★
+honestEnv ηᴿ μ Z | no unaligned = dynamizeVar (μ Z)
 
 honestify : ∀ {Δᴸ Δᴿ Δ}
   → World Δᴸ Δᴿ Δ
@@ -224,13 +266,37 @@ private
     → honestEnv ηᴿ μ Z ≡ X⊑★
   honestEnv-mono ηᴿ μ Z eq with alignedᴿ? ηᴿ Z
   honestEnv-mono ηᴿ μ Z eq | yes aligned = eq
-  honestEnv-mono ηᴿ μ Z eq | no unaligned = refl
+  honestEnv-mono ηᴿ μ Z eq | no unaligned rewrite eq = refl
+
+  honestEnv-alias : ∀ {Δᴿ Δ} (ηᴿ : Δᴿ ↪ᵗ Δ)
+      (μ : ImpEnv Δ) (Z : TyVar Δ) {T : Ty Δ}
+    → μ Z ≡ X⊑ᵗ T
+    → honestEnv ηᴿ μ Z ≡ X⊑ᵗ T
+  honestEnv-alias ηᴿ μ Z eq with alignedᴿ? ηᴿ Z
+  honestEnv-alias ηᴿ μ Z eq | yes aligned = eq
+  honestEnv-alias ηᴿ μ Z eq | no unaligned rewrite eq = refl
+
+  honestEnv-alias-bwd : ∀ {Δᴿ Δ} (ηᴿ : Δᴿ ↪ᵗ Δ)
+      (μ : ImpEnv Δ) (Z : TyVar Δ) {T : Ty Δ}
+    → honestEnv ηᴿ μ Z ≡ X⊑ᵗ T
+    → μ Z ≡ X⊑ᵗ T
+  honestEnv-alias-bwd ηᴿ μ Z eq with alignedᴿ? ηᴿ Z
+  honestEnv-alias-bwd ηᴿ μ Z eq | yes aligned = eq
+  honestEnv-alias-bwd ηᴿ μ Z eq | no unaligned
+      with μ Z in μ-eq
+  honestEnv-alias-bwd ηᴿ μ Z () | no unaligned | X⊑X
+  honestEnv-alias-bwd ηᴿ μ Z () | no unaligned | X⊑★
+  honestEnv-alias-bwd ηᴿ μ Z refl | no unaligned | X⊑ᵗ T =
+    refl
 
 honestify-decay : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
   → EnvDecay W (honestify W)
 honestify-decay {W = W} =
   env-decay refl refl refl refl
     (honestEnv-mono (CTI2.ηᴿʷ W) (CTI2.impEnvʷ W))
+    (CTI2.alias-same
+      (honestEnv-alias (CTI2.ηᴿʷ W) (CTI2.impEnvʷ W))
+      (honestEnv-alias-bwd (CTI2.ηᴿʷ W) (CTI2.impEnvʷ W)))
 
 honestify-WF : ∀ {Δᴸ Δᴿ Δ} (W : World Δᴸ Δᴿ Δ)
   → CTI2.WFWorld (honestify W)
@@ -238,4 +304,12 @@ honestify-WF W Xᴸ precise
     with alignedᴿ? (CTI2.ηᴿʷ W)
            (toRenameᵗ (CTI2.ηᴸʷ W) Xᴸ)
 honestify-WF W Xᴸ precise | yes (Xᴿ , aligned) = Xᴿ , aligned
-honestify-WF W Xᴸ () | no unaligned
+honestify-WF W Xᴸ precise | no unaligned =
+  ⊥-elim (dynamize-not-precise _ precise)
+  where
+  dynamize-not-precise : ∀ {Δ} (v : VarImp Δ)
+    → dynamizeVar v ≡ X⊑X
+    → ⊥
+  dynamize-not-precise X⊑X ()
+  dynamize-not-precise X⊑★ ()
+  dynamize-not-precise (X⊑ᵗ T) ()

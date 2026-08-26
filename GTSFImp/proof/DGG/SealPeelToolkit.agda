@@ -15,7 +15,7 @@ import Data.Fin as Fin
 open import Data.Product using (Σ-syntax; _×_; _,_)
 open import Data.Sum.Base using (_⊎_; inj₁; inj₂)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; _≢_; refl; cong)
+  using (_≡_; _≢_; refl; cong; subst; sym)
 open import Relation.Nullary using (Dec; yes; no)
 
 open import Types
@@ -54,39 +54,84 @@ private
       (∀⊑ Anv zero∈A A⊑X) nonvar-all (∈-all Y∈A) =
     imprecision-variable-nonvar-occurs⊥ A⊑X Anv zero∈A
 
+  -- A derivation into a bare variable either starts at that same
+  -- variable or at a variable aliased to a representative that is
+  -- itself below the target variable.
+
+  data RightVarView {Δ} (μ : ImpEnv Δ) (X : TyVar Δ)
+      (A : Ty Δ) : Set where
+    rv-self : A ≡ ＇ X → RightVarView μ X A
+    rv-alias : ∀ {Z} {T : Ty Δ}
+      → A ≡ ＇ Z
+      → μ Z ≡ X⊑ᵗ T
+      → μ ⊢ T ⊑ ＇ X
+      → RightVarView μ X A
+
   imprecision-right-variable : ∀ {Δ} {μ : ImpEnv Δ}
       {A : Ty Δ} {X : TyVar Δ}
     → μ ⊢ A ⊑ ＇ X
-    → A ≡ ＇ X
-  imprecision-right-variable X⊑X = refl
+    → RightVarView μ X A
+  imprecision-right-variable X⊑X = rv-self refl
   imprecision-right-variable (∀⊑ Anv zero∈A A⊑X) =
     ⊥-elim (imprecision-variable-nonvar-occurs⊥ A⊑X Anv zero∈A)
+  imprecision-right-variable (alias eq p) =
+    rv-alias refl eq p
 
   ty-var-injective : ∀ {Δ} {X Y : TyVar Δ}
     → _≡_ {A = Ty Δ} (＇ X) (＇ Y)
     → X ≡ Y
   ty-var-injective {X = X} {.X} refl = refl
 
+-- The world-level view of a store representative below a bare target
+-- variable: either the aligned variable, or an aliased source-center
+-- variable whose representative is below the target's center image.
+
+data RightVarObligationView {Δᴸ Δᴿ Δ} (W : World Δᴸ Δᴿ Δ)
+    (R : Ty Δᴸ) (Y : TyVar Δᴿ) : Set where
+  rv-aligned : ∀ X₂
+    → R ≡ ＇ X₂
+    → toRenameᵗ (ηᴸʷ W) X₂ ≡ toRenameᵗ (ηᴿʷ W) Y
+    → RightVarObligationView W R Y
+  rv-aliased : ∀ X₂ {T}
+    → R ≡ ＇ X₂
+    → impEnvʷ W (toRenameᵗ (ηᴸʷ W) X₂) ≡ X⊑ᵗ T
+    → impEnvʷ W ⊢ T ⊑ ＇ (toRenameᵗ (ηᴿʷ W) Y)
+    → RightVarObligationView W R Y
+
 right-var-obligation-view : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {R : Ty Δᴸ} {Y : TyVar Δᴿ}
   → R ⊑ᵂ⟨ W ⟩ (＇ Y)
-  → Σ[ X₂ ∈ TyVar Δᴸ ]
-      (R ≡ ＇ X₂
-      × toRenameᵗ (ηᴸʷ W) X₂ ≡ toRenameᵗ (ηᴿʷ W) Y)
-right-var-obligation-view {R = ＇ X₂} p =
-  X₂ , refl , ty-var-injective (imprecision-right-variable p)
+  → RightVarObligationView W R Y
+right-var-obligation-view {R = ＇ X₂} p
+    with imprecision-right-variable p
+right-var-obligation-view {R = ＇ X₂} p | rv-self eqA =
+  rv-aligned X₂ refl (ty-var-injective eqA)
+right-var-obligation-view {W = W} {R = ＇ X₂} p
+    | rv-alias {T = T} eqA eq q =
+  rv-aliased X₂ refl
+    (subst (λ V → impEnvʷ W V ≡ X⊑ᵗ T)
+      (sym (ty-var-injective eqA)) eq)
+    q
 right-var-obligation-view {R = ‵ ι} p
     with imprecision-right-variable p
-right-var-obligation-view {R = ‵ ι} p | ()
+right-var-obligation-view {R = ‵ ι} p | rv-self ()
+right-var-obligation-view {R = ‵ ι} p
+    | rv-alias () eq q
 right-var-obligation-view {R = ★} p
     with imprecision-right-variable p
-right-var-obligation-view {R = ★} p | ()
+right-var-obligation-view {R = ★} p | rv-self ()
+right-var-obligation-view {R = ★} p
+    | rv-alias () eq q
 right-var-obligation-view {R = A ⇒ B} p
     with imprecision-right-variable p
-right-var-obligation-view {R = A ⇒ B} p | ()
+right-var-obligation-view {R = A ⇒ B} p | rv-self ()
+right-var-obligation-view {R = A ⇒ B} p
+    | rv-alias () eq q
 right-var-obligation-view {R = `∀ A} p
     with imprecision-right-variable p
-right-var-obligation-view {R = `∀ A} p | ()
+right-var-obligation-view {R = `∀ A} p | rv-self ()
+right-var-obligation-view {R = `∀ A} p
+    | rv-alias () eq q
 
 ------------------------------------------------------------------------
 -- Resolution of non-variable store entries
@@ -171,22 +216,51 @@ dynWorld : ∀ {Δᴸ Δᴿ Δ}
   → World Δᴸ Δᴿ Δ
   → World Δᴸ Δᴿ Δ
 dynWorld W =
-  world (ηᴸʷ W) (ηᴿʷ W) (λ Z → X⊑★)
+  world (ηᴸʷ W) (ηᴿʷ W) (λ Z → WD.dynamizeVar (impEnvʷ W Z))
     (sourceStoreʷ W) (targetStoreʷ W)
 
 dynWorld-decay : ∀ {Δᴸ Δᴿ Δ} (W : World Δᴸ Δᴿ Δ)
   → WD.EnvDecay W (dynWorld W)
 dynWorld-decay W =
-  WD.env-decay refl refl refl refl (λ Z eq → refl)
+  WD.env-decay refl refl refl refl
+    (λ Z eq → cong WD.dynamizeVar eq)
+    (CTI2.alias-same
+      (λ Z eq → cong WD.dynamizeVar eq)
+      dynamize-alias-bwd)
+  where
+  dynamize-alias-bwd : ∀ Z {T}
+    → WD.dynamizeVar (impEnvʷ W Z) ≡ X⊑ᵗ T
+    → impEnvʷ W Z ≡ X⊑ᵗ T
+  dynamize-alias-bwd Z eq with impEnvʷ W Z
+  dynamize-alias-bwd Z () | X⊑X
+  dynamize-alias-bwd Z () | X⊑★
+  dynamize-alias-bwd Z refl | X⊑ᵗ T = refl
+
+private
+  dynamize-not-precise : ∀ {Δ} (v : VarImp Δ)
+    → WD.dynamizeVar v ≡ X⊑X
+    → ⊥
+  dynamize-not-precise X⊑X ()
+  dynamize-not-precise X⊑★ ()
+  dynamize-not-precise (X⊑ᵗ T) ()
 
 dynWorld-WF : ∀ {Δᴸ Δᴿ Δ} (W : World Δᴸ Δᴿ Δ)
   → CTI2.WFWorld (dynWorld W)
-dynWorld-WF W Xᴸ ()
+dynWorld-WF W Xᴸ precise =
+  ⊥-elim (dynamize-not-precise _ precise)
+
+-- Dynamization stars every non-alias mark; an alias survives, so the
+-- mark statement is conditional on the original mode.
 
 dynWorld-mark : ∀ {Δᴸ Δᴿ Δ} (W : World Δᴸ Δᴿ Δ)
     (Z : TyVar Δ)
+  → (∀ {T} → impEnvʷ W Z ≡ X⊑ᵗ T → ⊥)
   → impEnvʷ (dynWorld W) Z ≡ X⊑★
-dynWorld-mark W Z = refl
+dynWorld-mark W Z not-alias with impEnvʷ W Z in w-eq
+dynWorld-mark W Z not-alias | X⊑X = refl
+dynWorld-mark W Z not-alias | X⊑★ = refl
+dynWorld-mark W Z not-alias | X⊑ᵗ T =
+  ⊥-elim (not-alias refl)
 
 ------------------------------------------------------------------------
 -- Consistency at a source variable

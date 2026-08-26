@@ -14,9 +14,10 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.List using (List; []; _∷_; map)
 open import Data.Maybe using (Maybe; just; nothing)
 open import Data.Nat as Nat using (ℕ)
-open import Data.Product using (Σ-syntax; _,_)
+open import Data.Product using (Σ-syntax; _×_; _,_)
 import Data.Fin as Fin
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; _≢_; refl; cong)
 
 open import Types
 open import TyStore using
@@ -32,6 +33,7 @@ open import Conversion using
    _⊢↑[_]_; ⊢↑-unsealˣ; ⊢↑-⇒ˣ; ⊢↑-∀ˣ; ⊢↑-∀-idˣ; ⊢↑-idˣ;
    _⊢↓[_]_; ⊢↓-sealˣ; ⊢↓-⇒ˣ; ⊢↓-∀ˣ; ⊢↓-∀-idˣ; ⊢↓-idˣ)
 open import Imprecision
+open import proof.Imprecision using (lift-alias-inv)
 open import Primitives using (Const; Prim; constTy; primArgTy; primResultTy)
 open import CastTerms
   using
@@ -149,12 +151,105 @@ record SameRuntime {Δᴸ Δᴿ Δ}
 -- carries this premise from its conclusion world to its premise
 -- world; the rebase records no longer constrain the marks.
 
-ImpEnvMono : ∀ {Δᴸ Δᴿ Δ}
+-- Two environments assign the same aliases: an aliased variable of
+-- either is aliased to the same representative in the other.  Alias
+-- modes are never created, destroyed, or changed by the world
+-- relations below, so the agreement is symmetric.
+
+record AliasSame {Δ} (μ ν : ImpEnv Δ) : Set where
+  constructor alias-same
+  field
+    alias-fwd : ∀ Z {T} → μ Z ≡ X⊑ᵗ T → ν Z ≡ X⊑ᵗ T
+    alias-bwd : ∀ Z {T} → ν Z ≡ X⊑ᵗ T → μ Z ≡ X⊑ᵗ T
+
+open AliasSame public
+
+alias-same-refl : ∀ {Δ} {μ : ImpEnv Δ} → AliasSame μ μ
+alias-same-refl = alias-same (λ Z eq → eq) (λ Z eq → eq)
+
+alias-same-sym : ∀ {Δ} {μ ν : ImpEnv Δ}
+  → AliasSame μ ν
+  → AliasSame ν μ
+alias-same-sym a = alias-same (alias-bwd a) (alias-fwd a)
+
+alias-same-trans : ∀ {Δ} {μ ν ξ : ImpEnv Δ}
+  → AliasSame μ ν
+  → AliasSame ν ξ
+  → AliasSame μ ξ
+alias-same-trans a b =
+  alias-same (λ Z eq → alias-fwd b Z (alias-fwd a Z eq))
+    (λ Z eq → alias-bwd a Z (alias-bwd b Z eq))
+
+alias-same-ext : ∀ {Δ} {μ ν : ImpEnv Δ}
+    {v : VarImp (Nat.suc Δ)}
+  → AliasSame μ ν
+  → AliasSame (extendᵐ v μ) (extendᵐ v ν)
+alias-same-ext {μ = μ} {ν = ν} {v = v} a = alias-same fwd bwd
+  where
+  fwd : ∀ Z {T}
+    → extendᵐ v μ Z ≡ X⊑ᵗ T
+    → extendᵐ v ν Z ≡ X⊑ᵗ T
+  fwd Fin.zero eq = eq
+  fwd (Fin.suc Z) eq with lift-alias-inv eq
+  fwd (Fin.suc Z) eq | T₀ , mode , refl =
+    cong ⇑ᵛ (alias-fwd a Z mode)
+  bwd : ∀ Z {T}
+    → extendᵐ v ν Z ≡ X⊑ᵗ T
+    → extendᵐ v μ Z ≡ X⊑ᵗ T
+  bwd Fin.zero eq = eq
+  bwd (Fin.suc Z) eq with lift-alias-inv eq
+  bwd (Fin.suc Z) eq | T₀ , mode , refl =
+    cong ⇑ᵛ (alias-bwd a Z mode)
+
+-- World-level environment monotonicity carries two components: the
+-- dynamic marks of the outer world persist into the inner world, and
+-- the two worlds assign the same aliases.  The alias component is what
+-- lets decay and blending commute with the wrapper rules once
+-- environments may alias variables.
+
+record ImpEnvMono {Δᴸ Δᴿ Δ}
+    (W W′ : World Δᴸ Δᴿ Δ) : Set where
+  constructor imp-env-mono
+  field
+    starMono : ∀ Z
+      → impEnvʷ W Z ≡ X⊑★
+      → impEnvʷ W′ Z ≡ X⊑★
+    aliasAgree : AliasSame (impEnvʷ W) (impEnvʷ W′)
+
+open ImpEnvMono public
+
+-- Alias preservation in the forward direction alone, for relations
+-- that keep aliases but are otherwise one-directional.
+
+ImpEnvAlias : ∀ {Δᴸ Δᴿ Δ}
   → World Δᴸ Δᴿ Δ
   → World Δᴸ Δᴿ Δ
   → Set
-ImpEnvMono W W′ =
-  ∀ Z → impEnvʷ W Z ≡ X⊑★ → impEnvʷ W′ Z ≡ X⊑★
+ImpEnvAlias W W′ =
+  ∀ Z {T} → impEnvʷ W Z ≡ X⊑ᵗ T → impEnvʷ W′ Z ≡ X⊑ᵗ T
+
+-- The identity and the generic same-head binder lift.  Lifting with
+-- the same pushed mode on both sides is the common case; the pushed
+-- mode itself transports by the identity at the new variable.
+
+idᵉᵐ : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
+  → ImpEnvMono W W
+idᵉᵐ = imp-env-mono (λ Z eq → eq) alias-same-refl
+
+module _ {Δᴸ Δᴿ Δ} {W W′ : World Δᴸ Δᴿ Δ} where
+
+  liftMonoBoth : ∀ (v : VarImp (Nat.suc Δ))
+    → ImpEnvMono W W′
+    → ImpEnvMono (liftWorldBoth v W) (liftWorldBoth v W′)
+  liftMonoBoth v mono = imp-env-mono star
+    (alias-same-ext (aliasAgree mono))
+    where
+    star : ∀ Z
+      → extendᵐ v (impEnvʷ W) Z ≡ X⊑★
+      → extendᵐ v (impEnvʷ W′) Z ≡ X⊑★
+    star Fin.zero eq = eq
+    star (Fin.suc Z) eq =
+      cong ⇑ᵛ (starMono mono Z (lift-star-inv eq))
 
 -- A world is mark-honest when every source variable whose center is
 -- marked precise has an aligned target variable.  This is the world
@@ -290,6 +385,15 @@ record SmartFreshBehindGuard {Δᴸ Δᴿ Δ Δᵐ}
     target-mark-mono : ∀ Xᴿ
       → impEnvʷ W (toRenameᵗ (ηᴿʷ W) Xᴿ) ≡ X⊑★
       → impEnvʷ Wᵐ (toRenameᵗ (ηᴿʷ Wᵐ) Xᴿ) ≡ X⊑★
+    old-alias-frozen : ∀ Z {T}
+      → impEnvʷ W Z ≡ X⊑ᵗ T
+      → impEnvʷ Wᵐ (toRenameᵗ oldCenters Z)
+        ≡ X⊑ᵗ (renameᵗ (toRenameᵗ oldCenters) T)
+    old-alias-reflect : ∀ Z {T}
+      → impEnvʷ Wᵐ (toRenameᵗ oldCenters Z) ≡ X⊑ᵗ T
+      → Σ[ T₀ ∈ Ty Δ ]
+          ((impEnvʷ W Z ≡ X⊑ᵗ T₀)
+          × (T ≡ renameᵗ (toRenameᵗ oldCenters) T₀))
 
 
 record SmartAliasMergeGuard {Δᴸ Δᴿ Δ}
@@ -328,6 +432,7 @@ record SmartAliasMergeGuard {Δᴸ Δᴿ Δ}
       → Xᴿ ≢ α
       → impEnvʷ W (toRenameᵗ (ηᴿʷ W) Xᴿ) ≡ X⊑★
       → impEnvʷ Wᵐ (toRenameᵗ (ηᴿʷ Wᵐ) Xᴿ) ≡ X⊑★
+    old-alias-agree : AliasSame (impEnvʷ W) (impEnvʷ Wᵐ)
 
 
 data SmartCommaLiftᴸ {Δᴸ Δᴿ Δ}
