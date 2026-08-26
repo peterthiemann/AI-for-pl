@@ -119,6 +119,7 @@ TargetSourceStarAt =
     {X : TyVar Δᴸ} {Y : TyVar Δᴿ} {S : Ty Δᴿ}
     {ν : Env∼ Δᴸ} {c : ν ⊢ (＇ X) ∼ ★}
     {q : (＇ X) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+  → CTI2.NoAliasWorld W
   → SpineValue V
   → Inert c
   → Value U
@@ -195,6 +196,7 @@ TargetSourceStarChain =
     {ν : Env∼ Δᴸ} {c : ν ⊢ (＇ X₂) ∼ ★}
     {p₂ : (＇ X₂) ⊑ᵂ⟨ W′ ⟩ (＇ Y)}
     {q : (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+  → CTI2.NoAliasWorld W
   → SpineValue V
   → Inert c
   → Value U

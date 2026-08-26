@@ -332,6 +332,7 @@ SourceTagSealCore =
     {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : A ⊑ᵂ⟨ Wᵖ ⟩ ★}
     {q : (＇ Xᴸ) ⊑ᵂ⟨ Wᵒ ⟩ (＇ Y)}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue P
   → Value U
   → CTI2.ImpEnvMono Wᵒ Wᵖ

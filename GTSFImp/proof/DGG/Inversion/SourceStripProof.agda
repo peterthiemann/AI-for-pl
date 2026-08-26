@@ -59,6 +59,7 @@ private
       {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
       {p : A ⊑ᵂ⟨ Wᵖ ⟩ ★}
       {q : (＇ Xᴸ) ⊑ᵂ⟨ Wᵒ ⟩ (＇ Y)}
+    → CTI2.NoAliasWorld Wᵒ
     → SpineValue P
     → Value U
     → CTI2.ImpEnvMono Wᵒ Wᵖ
@@ -68,26 +69,30 @@ private
     → targetStoreʷ Wᵒ ∋ Y ⦂ S
     → Wᵖ ∣ γᵖ ⊢² P ⊑ (U ↓ seal Y S) ⟨ cY ⟩ ∶ p
     → SourceTagSealCoreBranch Wᵒ γᵒ P A U Xᴸ Y S cY Wᵖ γᵖ p
-  source-tag-seal-core-tagged ★ sv vU mono rb sc source∈ target∈ D
-      with target-strip-at★ sv vU mono rb sc source∈ target∈ D
-  source-tag-seal-core-tagged ★ sv vU mono rb sc source∈ target∈ D
+  source-tag-seal-core-tagged ★ na sv vU mono rb sc
+      source∈ target∈ D
+      with target-strip-at★ na sv vU mono rb sc source∈
+        target∈ D
+  source-tag-seal-core-tagged ★ na sv vU mono rb sc
+      source∈ target∈ D
       | target-strip★-data U★ Y★ W★ γ★ mono★ same★ boundary★
           target∈★ q★ premise★ reemit =
     core-terminus refl
       (U★ , Y★ , _ , refl , W★ , γ★ , mono★ , same★ ,
         boundary★ , target∈★ , q★ , premise★ , reemit)
   source-tag-seal-core-tagged {Wᵒ = Wᵒ} {γᵒ = γᵒ}
-      (＇ X) sv vU mono rb sc source∈ target∈ D
-      with target-strip-at★ sv vU mono rb sc source∈ target∈ D
+      (＇ X) na sv vU mono rb sc source∈ target∈ D
+      with target-strip-at★ na sv vU mono rb sc source∈
+        target∈ D
   source-tag-seal-core-tagged {Wᵒ = Wᵒ} {γᵒ = γᵒ}
-      (＇ X) sv vU mono rb sc source∈ target∈ D
+      (＇ X) na sv vU mono rb sc source∈ target∈ D
       | target-strip★-data U★ Y★ W★ γ★ mono★ same★ boundary★
           target∈★ q★ premise★ reemit =
     core-terminus-nonstar nonstar-X
       (U★ , Y★ , _ , refl , W★ , γ★ , mono★ , same★ ,
         boundary★ , target∈★ , q★ , premise★ , reemit)
   source-tag-seal-core-tagged {Wᵒ = Wᵒ} {γᵒ = γᵒ}
-      (＇ X) sv vU mono rb sc source∈ target∈ D
+      (＇ X) na sv vU mono rb sc source∈ target∈ D
       | target-strip★-paired {qᵒ = qᵒ} source∈ᵒ target∈ᵒ
           boundaryᵒ residualᵒ monoᵐ sameᵐ partnerᵐ premiseᵐ reemit =
     core-sealed
@@ -100,30 +105,33 @@ private
             (CTI2.RebaseAt.storeRepresentations boundaryᵒ)) ,
         target∈ᵒ ,
         residualᵒ)
-  source-tag-seal-core-tagged (‵ ι) sv vU mono rb sc source∈
+  source-tag-seal-core-tagged (‵ ι) na sv vU mono rb sc source∈
       target∈ D
-      with target-strip-at★ sv vU mono rb sc source∈ target∈ D
-  source-tag-seal-core-tagged (‵ ι) sv vU mono rb sc source∈
+      with target-strip-at★ na sv vU mono rb sc source∈
+        target∈ D
+  source-tag-seal-core-tagged (‵ ι) na sv vU mono rb sc source∈
       target∈ D
       | target-strip★-data U★ Y★ W★ γ★ mono★ same★ boundary★
           target∈★ q★ premise★ reemit =
     core-terminus-nonstar nonstar-ι
       (U★ , Y★ , _ , refl , W★ , γ★ , mono★ , same★ ,
         boundary★ , target∈★ , q★ , premise★ , reemit)
-  source-tag-seal-core-tagged (A ⇒ B) sv vU mono rb sc source∈
+  source-tag-seal-core-tagged (A ⇒ B) na sv vU mono rb sc source∈
       target∈ D
-      with target-strip-at★ sv vU mono rb sc source∈ target∈ D
-  source-tag-seal-core-tagged (A ⇒ B) sv vU mono rb sc source∈
+      with target-strip-at★ na sv vU mono rb sc source∈
+        target∈ D
+  source-tag-seal-core-tagged (A ⇒ B) na sv vU mono rb sc source∈
       target∈ D
       | target-strip★-data U★ Y★ W★ γ★ mono★ same★ boundary★
           target∈★ q★ premise★ reemit =
     core-terminus-nonstar nonstar-⇒
       (U★ , Y★ , _ , refl , W★ , γ★ , mono★ , same★ ,
         boundary★ , target∈★ , q★ , premise★ , reemit)
-  source-tag-seal-core-tagged (`∀ A) sv vU mono rb sc source∈
+  source-tag-seal-core-tagged (`∀ A) na sv vU mono rb sc source∈
       target∈ D
-      with target-strip-at★ sv vU mono rb sc source∈ target∈ D
-  source-tag-seal-core-tagged (`∀ A) sv vU mono rb sc source∈
+      with target-strip-at★ na sv vU mono rb sc source∈
+        target∈ D
+  source-tag-seal-core-tagged (`∀ A) na sv vU mono rb sc source∈
       target∈ D
       | target-strip★-data U★ Y★ W★ γ★ mono★ same★ boundary★
           target∈★ q★ premise★ reemit =
@@ -143,13 +151,13 @@ module SourceStripProofFrom
   source-spine-strip = source-spine-strip-worker
 
 source-tag-seal-core : SourceTagSealCore
-source-tag-seal-core sv vU mono rb sc source∈ target∈
+source-tag-seal-core na sv vU mono rb sc source∈ target∈
     (core-untagged qᶜ D) =
   core-sealed
     (_ , _ , qᶜ , mono , sc , CTI2.rebase-varᴸ rb ,
       rebase-target-membership-forward rb target∈ , D)
-source-tag-seal-core {A = A} {p = p} {q = q} sv vU mono rb sc
+source-tag-seal-core {A = A} {p = p} {q = q} na sv vU mono rb sc
     source∈ target∈
     (core-tagged D) =
-  source-tag-seal-core-tagged A {p = p} {q = q} sv vU mono rb sc
+  source-tag-seal-core-tagged A {p = p} {q = q} na sv vU mono rb sc
     source∈ target∈ D

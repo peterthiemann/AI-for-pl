@@ -15,7 +15,7 @@ open import Relation.Binary.PropositionalEquality using (refl)
 open import Types
 open import TyStore using (_∋_⦂_)
 open import Consistency using (Env∼; _⊢_∼_; id; _!; sym∼)
-open import Conversion using (seal; _↦↓_; `∀↓_)
+open import Conversion using (seal; _↦↓_; `∀↓_; ⊢↓-seal)
 open import CastTerms
 open import Imprecision
 open import Primitives using (κℕ; κ𝔹)
@@ -50,13 +50,13 @@ pattern st-stripped W₂ γ₂ link mono sc q D =
     link mono sc D
 
 target-source-star-at : TargetSourceStarAt
-target-source-star-at {V = M ⦂∀ C [ A ]} ()
+target-source-star-at {V = M ⦂∀ C [ A ]} na ()
     inert vU X∈ Y∈ D
 target-source-star-at {W = W} {X = X} {Y = Y}
-    {c = c} {q = q} (sv-cast sv₀ ()) inert vU X∈ Y∈
+    {c = c} {q = q} na (sv-cast sv₀ ()) inert vU X∈ Y∈
     (CTI2.cast⊑² c₁ prem .q)
 target-source-star-at {W = W} {X = X} {Y = Y}
-    {q = q} (sv-seal sv₀) inert vU X∈ Y∈
+    {q = q} na (sv-seal sv₀) inert vU X∈ Y∈
     (CTI2.conceal⊑²-source-ok {W′ = Wᵖ} {p = p}
       ok mono rb sc (Conv.⊢↓-sealˣ X∈′) prem .q) =
   ⊥-elim
@@ -65,7 +65,7 @@ target-source-star-at {W = W} {X = X} {Y = Y}
         (store-lookup-unique X∈′ X∈) p)
       nonstar-X)
 target-source-star-at {W = W} {X = X} {S = ＇ Y₂}
-    {q = q} (sv-seal sv₀) inert vU X∈ Y∈
+    {q = q} na (sv-seal sv₀) inert vU X∈ Y∈
     (CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {p = p}
       ok mono rb sc (Conv.⊢↓-sealˣ X∈′) target⊢ prem .q) =
   ⊥-elim
@@ -74,7 +74,7 @@ target-source-star-at {W = W} {X = X} {S = ＇ Y₂}
         (store-lookup-unique X∈′ X∈) p)
       nonstar-X)
 target-source-star-at {W = W} {X = X} {S = ‵ ι}
-    {q = q} (sv-seal sv₀) inert vU X∈ Y∈
+    {q = q} na (sv-seal sv₀) inert vU X∈ Y∈
     (CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {p = p}
       ok mono rb sc (Conv.⊢↓-sealˣ X∈′) target⊢ prem .q) =
   ⊥-elim
@@ -83,7 +83,7 @@ target-source-star-at {W = W} {X = X} {S = ‵ ι}
         (store-lookup-unique X∈′ X∈) p)
       nonstar-ι)
 target-source-star-at {W = W} {X = X} {S = A ⇒ B}
-    {q = q} (sv-seal sv₀) inert vU X∈ Y∈
+    {q = q} na (sv-seal sv₀) inert vU X∈ Y∈
     (CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {p = p}
       ok mono rb sc (Conv.⊢↓-sealˣ X∈′) target⊢ prem .q) =
   ⊥-elim
@@ -92,7 +92,7 @@ target-source-star-at {W = W} {X = X} {S = A ⇒ B}
         (store-lookup-unique X∈′ X∈) p)
       nonstar-⇒)
 target-source-star-at {W = W} {X = X} {S = `∀ A}
-    {q = q} (sv-seal sv₀) inert vU X∈ Y∈
+    {q = q} na (sv-seal sv₀) inert vU X∈ Y∈
     (CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {p = p}
       ok mono rb sc (Conv.⊢↓-sealˣ X∈′) target⊢ prem .q) =
   ⊥-elim
@@ -101,88 +101,105 @@ target-source-star-at {W = W} {X = X} {S = `∀ A}
         (store-lookup-unique X∈′ X∈) p)
       nonstar-∀)
 target-source-star-at {X = X} {S = ★} {c = c} {q = q}
-    sv (inj ⦃ Gᵍ = ＇ .X ⦄) vU X∈ Y∈ D
-    with STC.seal-transfer sv vU X∈ D
-target-source-star-at {S = ★} {c = c} {q = q} sv inert vU X∈ Y∈ D
+    na sv (inj ⦃ Gᵍ = ＇ .X ⦄) vU X∈ Y∈ D
+    with STC.seal-transfer na sv vU X∈ D
+target-source-star-at {S = ★} {c = c} {q = q}
+    na sv inert vU X∈ Y∈ D
     | STC.seal-transfer-paired {P = P}
         monoᵖ rbᵖ scᵖ source⊢ target⊢ partner prem =
   target-source-star-paired refl monoᵖ rbᵖ scᵖ X∈ Y∈ partner prem
-target-source-star-at {V = ƛ N} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = ƛ N} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
-target-source-star-at {V = ƛ N} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = ƛ N} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ | ()
-target-source-star-at {V = Λ V} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = Λ V} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
-target-source-star-at {V = Λ V} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = Λ V} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ | ()
-target-source-star-at {V = $ (κℕ n)} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = $ (κℕ n)} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
-target-source-star-at {V = $ (κℕ n)} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = $ (κℕ n)} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ | ()
-target-source-star-at {V = $ (κ𝔹 b)} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = $ (κ𝔹 b)} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
-target-source-star-at {V = $ (κ𝔹 b)} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = $ (κ𝔹 b)} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ | ()
-target-source-star-at {V = V ⟨ c₁ ⟩} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ⟨ c₁ ⟩} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
-target-source-star-at {V = V ⟨ c₁ ⟩} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ⟨ c₁ ⟩} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | ⊢⟨⟩ V⊢ .c₁
     with sv
-target-source-star-at {V = V ⟨ c₁ ⟩} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ⟨ c₁ ⟩} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | ⊢⟨⟩ V⊢ .c₁ | sv-cast sv₀ ()
-target-source-star-at {V = V ↑ c₁} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ↑ c₁} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with sv
-target-source-star-at {V = V ↑ c₁} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ↑ c₁} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | sv-reveal-fun sv₀
     with CTI2T.source-typing² D₂
-target-source-star-at {V = V ↑ c₁} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ↑ c₁} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | sv-reveal-fun sv₀ | ()
-target-source-star-at {V = V ↑ c₁} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ↑ c₁} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | sv-reveal-all sv₀
     with CTI2T.source-typing² D₂
-target-source-star-at {V = V ↑ c₁} {S = ★} sv inert vU X∈ Y∈ D
+target-source-star-at {V = V ↑ c₁} {S = ★}
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | sv-reveal-all sv₀ | ()
 target-source-star-at {V = V ↓ (c₁ ↦↓ d₁)} {S = ★}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
 target-source-star-at {V = V ↓ (c₁ ↦↓ d₁)} {S = ★}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ | ()
 target-source-star-at {V = V ↓ `∀↓ d₁} {S = ★}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with CTI2T.source-typing² D₂
 target-source-star-at {V = V ↓ `∀↓ d₁} {S = ★}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ | ()
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-seal-star-open no-target monoᵖ rbᵖ scᵖ
         (Conv.⊢↓-sealˣ X∈ᵖ) prem .q₂) =
   target-source-star-payload refl mono₂ link sc₂ X∈ Y∈ D₂
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-source-ok
         (CTX.seal-nonstar-unmatched-ok {R = R} Rns no-target)
         monoᵖ rbᵖ scᵖ (Conv.⊢↓-sealˣ X∈ᵖ) prem .q₂)
     with store-lookup-unique X∈ᵖ (rebase-source-membership link X∈)
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-source-ok
         (CTX.seal-nonstar-unmatched-ok {R = R} Rns no-target)
@@ -190,7 +207,7 @@ target-source-star-at {X = X} {S = ★} {q = q}
     | refl
     with Rns
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-source-ok
         (CTX.seal-nonstar-unmatched-ok Rns no-target)
@@ -198,14 +215,14 @@ target-source-star-at {X = X} {S = ★} {q = q}
     | refl
     | ()
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-source-ok
         (CTX.seal-nonstar-name-protected-ok {R = R} Rns aligned)
         monoᵖ rbᵖ scᵖ (Conv.⊢↓-sealˣ X∈ᵖ) prem .q₂)
     with store-lookup-unique X∈ᵖ (rebase-source-membership link X∈)
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-source-ok
         (CTX.seal-nonstar-name-protected-ok {R = R} Rns aligned)
@@ -213,7 +230,7 @@ target-source-star-at {X = X} {S = ★} {q = q}
     | refl
     with Rns
 target-source-star-at {X = X} {S = ★} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.conceal⊑²-source-ok
         (CTX.seal-nonstar-name-protected-ok Rns aligned)
@@ -222,7 +239,7 @@ target-source-star-at {X = X} {S = ★} {q = q}
     | ()
 target-source-star-at
     {U = U ⟨ _! ⦃ Gᵍ = ‵ ι ⦄ cᴿ ⟩} {S = ★} {c = c} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ =
   target-source-star-final
     (CTI2.conceal⊑conceal²
@@ -233,7 +250,7 @@ target-source-star-at
       (CTI2.cast⊑² c D₂ ★⊑★) q)
 target-source-star-at
     {U = U ⟨ _! ⦃ Gᵍ = ★⇒★ ⦄ cᴿ ⟩} {S = ★} {c = c}
-    {q = q} sv inert vU X∈ Y∈ D
+    {q = q} na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ =
   target-source-star-final
     (CTI2.conceal⊑conceal²
@@ -244,7 +261,7 @@ target-source-star-at
       (CTI2.cast⊑² c D₂ ★⊑★) q)
 target-source-star-at
     {U = U ⟨ _! ⦃ Gᵍ = ∀★ ⦄ cᴿ ⟩} {S = ★} {c = c}
-    {q = q} sv inert vU X∈ Y∈ D
+    {q = q} na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ =
   target-source-star-final
     (CTI2.conceal⊑conceal²
@@ -254,15 +271,15 @@ target-source-star-at
       (Conv.⊢↓-sealˣ X∈) (Conv.⊢↓-sealˣ Y∈)
       (CTI2.cast⊑² c D₂ ★⊑★) q)
 target-source-star-at {U = U ⟨ id A ⟩} {S = ★}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     with vU
 target-source-star-at {U = U ⟨ id A ⟩} {S = ★}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂
     | vU₀ Value.《 () 》
 target-source-star-at {U = U ↑ cᴿ} {S = ★} {c = c} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ =
   target-source-star-final
     (CTI2.conceal⊑conceal²
@@ -274,14 +291,14 @@ target-source-star-at {U = U ↑ cᴿ} {S = ★} {c = c} {q = q}
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     with SPT.var-consistency-view (sym∼ cᴿ)
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
@@ -289,27 +306,30 @@ target-source-star-at
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
     | varv-seal {W = U₀} vU₀ Y₂∈ refl
-    with SPT.right-var-obligation-view {W = W₂} {Y = Y₂} p₂
+    with SPT.right-var-obligation-view-na {W = W₂} {Y = Y₂}
+      (CTX.no-alias-same (CTX.aliasAgree mono₂) na) p₂
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
     | varv-seal {W = U₀} vU₀ Y₂∈ refl
     | ._ , refl , aligned
-    with target-source-star-at (sv-seal sv₀) inert vU₀
+    with target-source-star-at
+      (CTX.no-alias-same (CTX.aliasAgree mono₂) na)
+      (sv-seal sv₀) inert vU₀
       (rebase-source-membership link X∈) Y₂∈ prem
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
@@ -328,7 +348,7 @@ target-source-star-at
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
@@ -340,7 +360,7 @@ target-source-star-at
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
@@ -352,7 +372,7 @@ target-source-star-at
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
@@ -369,7 +389,7 @@ target-source-star-at
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = Ansᴿ ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₁ refl
@@ -385,12 +405,12 @@ target-source-star-at
 target-source-star-at
     {V = V ↓ x}
     {U = U ⟨ _! ⦃ Gᵍ = ＇ Y₂ ⦄ cᴿ ⦃ Ans = () ⦄ ⟩}
-    {S = ★} {c = c} {q = q} (sv-seal sv₀) inert vU X∈ Y∈ D
+    {S = ★} {c = c} {q = q} na (sv-seal sv₀) inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
       D₂@(CTI2.⊑cast² {p = p₂} cᴿ! prem .q₂)
     | inj₂ refl
 target-source-star-at {U = U ↓ cᴿ} {S = ★} {c = c} {q = q}
-    sv inert vU X∈ Y∈ D
+    na sv inert vU X∈ Y∈ D
     | st-stripped W₂ γ₂ link mono₂ sc₂ q₂ D₂ =
   target-source-star-final
     (CTI2.conceal⊑conceal²
@@ -399,26 +419,84 @@ target-source-star-at {U = U ↓ cᴿ} {S = ★} {c = c} {q = q}
       mono₂ link sc₂
       (Conv.⊢↓-sealˣ X∈) (Conv.⊢↓-sealˣ Y∈)
       (CTI2.cast⊑² c D₂ ★⊑★) q)
+target-source-star-at {V = V ↓ x} {X = X} {S = ★} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    with vU
+target-source-star-at {V = V ↓ x} {X = X} {S = ★} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    | vU₀ Value.《 inj ⦃ Gᵍ = ‵ ι ⦄ 》 =
+  ⊥-elim
+    (var-source-nonstar-⊥ {W = W₂}
+      (CTX.no-alias-same (CTX.aliasAgree mono₂) na)
+      p₂ nonvar-base nonstar-ι)
+target-source-star-at {V = V ↓ x} {X = X} {S = ★} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    | vU₀ Value.《 inj ⦃ Gᵍ = ★⇒★ ⦄ 》 =
+  ⊥-elim
+    (var-source-nonstar-⊥ {W = W₂}
+      (CTX.no-alias-same (CTX.aliasAgree mono₂) na)
+      p₂ nonvar-fun nonstar-⇒)
+target-source-star-at {V = V ↓ x} {X = X} {S = ★} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    | vU₀ Value.《 inj ⦃ Gᵍ = ∀★ ⦄ 》 =
+  ⊥-elim
+    (var-source-nonstar-⊥ {W = W₂}
+      (CTX.no-alias-same (CTX.aliasAgree mono₂) na)
+      p₂ nonvar-all nonstar-∀)
+target-source-star-at {V = V ↓ x} {X = X} {S = ★}
+    {c = c} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    | vU₀ Value.《 inj ⦃ Gᵍ = ＇ Y₃ ⦄ 》
+    with CTI2T.source-typing² D₂
+target-source-star-at {V = V ↓ x} {X = X} {S = ★}
+    {c = c} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    | vU₀ Value.《 inj ⦃ Gᵍ = ＇ Y₃ ⦄ 》
+    | ⊢conceal (⊢↓-seal X₁∈) V₀⊢
+    with store-lookup-unique X₁∈
+      (rebase-source-membership link X∈)
+target-source-star-at {V = V ↓ x} {X = X} {S = ★}
+    {c = c} {q = q}
+    na sv inert vU X∈ Y∈ D
+    | st-stripped W₂ γ₂ link mono₂ sc₂ q₂
+      D₂@(CTI2.⊑cast² {p = p₂} c′ prem .q₂)
+    | vU₀ Value.《 inj ⦃ Gᵍ = ＇ Y₃ ⦄ 》
+    | ⊢conceal (⊢↓-seal X₁∈) V₀⊢
+    | refl =
+  target-source-star-payload refl mono₂ link sc₂ X∈ Y∈ D₂
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
-    with target-seal-rebase-source rbᴿ q
+    with target-seal-rebase-source na rbᴿ q
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link
     with var-value-view vU (CTI2T.target-typing² prem)
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link | varv-seal {W = U₀} vU₀ Y₂∈ refl
-    with target-source-star-at sv inert vU₀
+    with target-source-star-at
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) sv inert vU₀
       (rebase-source-membership link X∈) Y₂∈ prem
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -427,7 +505,7 @@ target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
     (CTI2.⊑conceal² mono rbᴿ sc (Conv.⊢↓-sealˣ Y∈)
       sourcePrem q)
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -438,7 +516,7 @@ target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
     (CTI2.⊑conceal² mono rbᴿ sc (Conv.⊢↓-sealˣ Y∈)
       residualᵒ q)
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -449,7 +527,7 @@ target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
     (CTI2.⊑conceal² mono rbᴿ sc (Conv.⊢↓-sealˣ Y∈)
       residualᵒ q)
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -464,7 +542,7 @@ target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
         premᵒ pᵈ)
       q)
 target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
-    {c = c} {q = q} sv inert vU X∈ Y∈
+    {c = c} {q = q} na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = pᵈ} mono rbᴿ sc
       (Conv.⊢↓-sealˣ Y∈′) prem .q)
     | link | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -477,23 +555,29 @@ target-source-star-at {W = W} {X = X} {Y = Y} {S = ＇ Y₂}
       (CTI2.⊑conceal² monoᵒ (CTX.rebase-varᴿ rbᵒ) scᵒ
         (Conv.⊢↓-sealˣ Y₂∈ᵒ) sourcePremᵒ pᵈ)
       q)
-target-source-star-at {X = X} {S = ‵ ι} {q = q} sv inert vU X∈ Y∈
+target-source-star-at {X = X} {S = ‵ ι} {q = q}
+    na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = p}
       mono rbᴿ sc target⊢ prem .q) =
   ⊥-elim
     (var-source-nonstar-⊥ {W = Wᵈ} {X = X} {S = ‵ ι}
+      (CTX.no-alias-same (CTX.aliasAgree mono) na)
       p nonvar-base nonstar-ι)
-target-source-star-at {X = X} {S = A ⇒ B} {q = q} sv inert vU X∈ Y∈
+target-source-star-at {X = X} {S = A ⇒ B} {q = q}
+    na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = p}
       mono rbᴿ sc target⊢ prem .q) =
   ⊥-elim
     (var-source-nonstar-⊥ {W = Wᵈ} {X = X} {S = A ⇒ B}
+      (CTX.no-alias-same (CTX.aliasAgree mono) na)
       p nonvar-fun nonstar-⇒)
-target-source-star-at {X = X} {S = `∀ A} {q = q} sv inert vU X∈ Y∈
+target-source-star-at {X = X} {S = `∀ A} {q = q}
+    na sv inert vU X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {p = p}
       mono rbᴿ sc target⊢ prem .q) =
   ⊥-elim
     (var-source-nonstar-⊥ {W = Wᵈ} {X = X} {S = `∀ A}
+      (CTX.no-alias-same (CTX.aliasAgree mono) na)
       p nonvar-all nonstar-∀)
 
 target-source-star-chain-wrap-target : ∀ {Δᴸ Δᴿ Δ}
@@ -561,19 +645,20 @@ target-source-star-chain-wrap-target {W = W} {W′ = W′}
     sourcePrem
 
 target-source-star-chain : TargetSourceStarChain
-target-source-star-chain {V = M ⦂∀ C [ A ]} ()
+target-source-star-chain {V = M ⦂∀ C [ A ]} na ()
     inert vU mono ra sc X∈ Y∈ D
-target-source-star-chain {V = V ⟨ c₁ ⟩} (sv-cast sv₀ ())
+target-source-star-chain {V = V ⟨ c₁ ⟩} na (sv-cast sv₀ ())
     inert vU mono ra sc X∈ Y∈ (CTI2.cast⊑² .c₁ prem p₂)
 target-source-star-chain {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} {p₂ = p₂} {q = q}
-    (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
+    na (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
     (CTI2.conceal⊑²-source-ok {W′ = Wᵖ} {p = p}
       ok mono₁ rb₁ sc₁ (Conv.⊢↓-sealˣ X∈′) prem .p₂)
-    with inner-source-pivot-eq ra q p₂
+    with inner-source-pivot-eq na
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) ra q p₂
 target-source-star-chain {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {Y = Y} {p₂ = p₂} {q = q}
-    (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
+    na (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
     (CTI2.conceal⊑²-source-ok {W′ = Wᵖ} {p = p}
       ok mono₁ rb₁ sc₁ (Conv.⊢↓-sealˣ X∈′) prem .p₂)
     | refl =
@@ -584,13 +669,14 @@ target-source-star-chain {W = W} {W′ = W′}
       nonstar-X)
 target-source-star-chain {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {X₂ = X₂} {Y₂ = Y₂} {p₂ = p₂} {q = q}
-    (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
+    na (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
     (CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {p = p}
       ok mono₁ rb₁ sc₁ (Conv.⊢↓-sealˣ X∈′) target⊢ prem .p₂)
-    with inner-source-pivot-eq ra q p₂
+    with inner-source-pivot-eq na
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) ra q p₂
 target-source-star-chain {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {Y₂ = Y₂} {p₂ = p₂} {q = q}
-    (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
+    na (sv-seal sv₀) inert vU mono ra sc X∈ Y∈
     (CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {p = p}
       ok mono₁ rb₁ sc₁ (Conv.⊢↓-sealˣ X∈′) target⊢ prem .p₂)
     | refl =
@@ -602,38 +688,45 @@ target-source-star-chain {W = W} {W′ = W′}
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {U = U} {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y}
     {Y₂ = Y₂} {c = c} {p₂ = p₂} {q = q}
-    sv inert vU mono ra sc X∈ Y∈
+    na sv inert vU mono ra sc X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem .p₂)
-    with inner-source-pivot-eq ra q p₂
+    with inner-source-pivot-eq na
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) ra q p₂
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {U = U} {Xᴸ = Xᴸ} {Y = Y}
     {Y₂ = Y₂} {c = c} {p₂ = p₂} {q = q}
-    sv inert vU mono ra sc X∈ Y∈
+    na sv inert vU mono ra sc X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl
-    with target-seal-rebase-source rbᴿ p₂
+    with target-seal-rebase-source
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) rbᴿ p₂
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {U = U} {Xᴸ = Xᴸ} {Y = Y}
     {Y₂ = Y₂} {c = c} {p₂ = p₂} {q = q}
-    sv inert vU mono ra sc X∈ Y∈
+    na sv inert vU mono ra sc X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁
     with var-value-view vU (CTI2T.target-typing² prem)
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {Xᴸ = Xᴸ} {Y = Y} {Y₂ = Y₂}
-    {c = c} {p₂ = p₂} {q = q} sv inert vU mono ra sc X∈ Y∈
+    {c = c} {p₂ = p₂} {q = q} na sv inert vU mono ra sc
+    X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁ | varv-seal {W = U₀} vU₀ Y₂∈ refl
-    with target-source-star-at sv inert vU₀
+    with target-source-star-at
+      (CTX.no-alias-same (CTX.aliasAgree mono₁)
+        (CTX.no-alias-same (CTX.aliasAgree mono) na))
+      sv inert vU₀
       (rebase-source-membership (composeSamePivotRebase ra link₁) X∈)
       Y₂∈ prem
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {Xᴸ = Xᴸ} {Y = Y} {Y₂ = Y₂}
-    {c = c} {p₂ = p₂} {q = q} sv inert vU mono ra sc X∈ Y∈
+    {c = c} {p₂ = p₂} {q = q} na sv inert vU mono ra sc
+    X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁ | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -647,7 +740,8 @@ target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
       sourcePrem q)
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {Xᴸ = Xᴸ} {Y = Y} {Y₂ = Y₂}
-    {c = c} {p₂ = p₂} {q = q} sv inert vU mono ra sc X∈ Y∈
+    {c = c} {p₂ = p₂} {q = q} na sv inert vU mono ra sc
+    X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁ | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -661,12 +755,16 @@ target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     (composeSamePivotRebase ra link₁)
     (sameCtx-∘ sc sc₁)
     X∈ Y∈
-    (target-source-star-chain {Y₂ = Y₃} sv inert vU₀
+    (target-source-star-chain {Y₂ = Y₃}
+      (CTX.no-alias-same (CTX.aliasAgree mono₁)
+        (CTX.no-alias-same (CTX.aliasAgree mono) na))
+      sv inert vU₀
       (STC.impEnvMono-refl {W = Wᵈ}) rbᵒ
       (STC.sameCtx-refl {γ = γᵈ}) X∈ᵒ Y₂∈ᵒ residualᵒ)
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {Xᴸ = Xᴸ} {Y = Y} {Y₂ = Y₂}
-    {c = c} {p₂ = p₂} {q = q} sv inert vU mono ra sc X∈ Y∈
+    {c = c} {p₂ = p₂} {q = q} na sv inert vU mono ra sc
+    X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁ | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -682,7 +780,8 @@ target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
       residualᵒ q)
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {Xᴸ = Xᴸ} {Y = Y} {Y₂ = Y₂}
-    {c = c} {p₂ = p₂} {q = q} sv inert vU mono ra sc X∈ Y∈
+    {c = c} {p₂ = p₂} {q = q} na sv inert vU mono ra sc
+    X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁ | varv-seal {W = U₀} vU₀ Y₂∈ refl
@@ -710,7 +809,8 @@ target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     partnerᵒ premᵒ
 target-source-star-chain {W = W} {W′ = W′} {γ = γ} {γ′ = γ′}
     {V = V} {Xᴸ = Xᴸ} {Y = Y} {Y₂ = Y₂}
-    {c = c} {p₂ = p₂} {q = q} sv inert vU mono ra sc X∈ Y∈
+    {c = c} {p₂ = p₂} {q = q} na sv inert vU mono ra sc
+    X∈ Y∈
     (CTI2.⊑conceal² {W′ = Wᵈ} {γ′ = γᵈ} {p = pᵈ}
       mono₁ rbᴿ sc₁ (Conv.⊢↓-sealˣ Y∈′) prem ._)
     | refl | link₁ | varv-seal {W = U₀} vU₀ Y₂∈ refl

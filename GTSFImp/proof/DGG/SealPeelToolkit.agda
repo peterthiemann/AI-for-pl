@@ -137,6 +137,22 @@ right-var-obligation-view {R = `∀ A} p
 -- Resolution of non-variable store entries
 ------------------------------------------------------------------------
 
+right-var-obligation-view-na : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
+    {R : Ty Δᴸ} {Y : TyVar Δᴿ}
+  → (∀ Z {T} → impEnvʷ W Z ≡ X⊑ᵗ T → ⊥)
+  → R ⊑ᵂ⟨ W ⟩ (＇ Y)
+  → Σ[ X₂ ∈ TyVar Δᴸ ]
+      ((R ≡ ＇ X₂)
+      × (toRenameᵗ (ηᴸʷ W) X₂ ≡ toRenameᵗ (ηᴿʷ W) Y))
+right-var-obligation-view-na {W = W} {R = R} {Y = Y} na p
+    with right-var-obligation-view {W = W} {R = R} {Y = Y} p
+right-var-obligation-view-na {W = W} {R = R} {Y = Y} na p
+    | rv-aligned X₂ eqA aligned = X₂ , eqA , aligned
+right-var-obligation-view-na {W = W} {R = R} {Y = Y} na p
+    | rv-aliased X₂ eqA mode q = ⊥-elim (na _ mode)
+
+
+
 private
   unshift-nonvar : ∀ {Δ} {A : Ty Δ}
     → NonVar (⇑ᵗ A)
