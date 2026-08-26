@@ -13,6 +13,7 @@ open import Data.Unit.Base using (⊤; tt)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; _≢_; refl; cong; cong₂; sym; trans)
 open import Relation.Nullary using (Dec; yes; no)
+open import Relation.Nullary.Decidable using (False; toWitnessFalse)
 
 ------------------------------------------------------------------------
 -- Type variables, base types, types
@@ -166,6 +167,20 @@ data _∈ᵗ_ {Δ : TyCtx} : TyVar Δ → Ty Δ → Set where
 data Occurs? {Δ : TyCtx} (X : TyVar Δ) (A : Ty Δ) : Set where
   present : X ∈ᵗ A → Occurs? X A
   absent : X ∉ᵗ A → Occurs? X A
+
+-- Deciding whether a type is literally a given variable.  The
+-- `alias` rule of imprecision uses `False (isVar? X B)` as a
+-- side condition so that it never overlaps `X⊑X`; that type is `⊤`
+-- when the two differ, so the field is inferred and proof-irrelevant.
+
+isVar? : ∀ {Δ} (X : TyVar Δ) (B : Ty Δ) → Dec (B ≡ ＇ X)
+isVar? X (＇ Y) with Y ≟ X
+isVar? X (＇ .X) | yes refl = yes refl
+isVar? X (＇ Y) | no Y≢X = no (λ { refl → Y≢X refl })
+isVar? X (‵ ι) = no (λ ())
+isVar? X ★ = no (λ ())
+isVar? X (A ⇒ B) = no (λ ())
+isVar? X (`∀ A) = no (λ ())
 
 occurs? : ∀ {Δ} (X : TyVar Δ) (A : Ty Δ) → Occurs? X A
 occurs? X (＇ Y) with X ≟ Y

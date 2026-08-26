@@ -29,7 +29,7 @@ private
 -- Environment alignment
 ------------------------------------------------------------------------
 
-data VarLower : Var∼ → I.VarImp → I.VarImp → Set where
+data VarLower {Δ : TyCtx} : Var∼ → I.VarImp Δ → I.VarImp Δ → Set where
   var-refl : VarLower X∼X I.X⊑X I.X⊑X
   cross-refl : VarLower ★∼X∼★ I.X⊑X I.X⊑X
   var-to-star : VarLower X∼★ I.X⊑X I.X⊑★
@@ -43,29 +43,38 @@ LowerEnv : ∀ {Δ}
   → Set
 LowerEnv μ φ ψ = ∀ X → VarLower (μ X) (φ X) (ψ X)
 
+varLower-lift : ∀ {Δ} {v : Var∼} {a b : I.VarImp Δ}
+  → VarLower v a b
+  → VarLower {Nat.suc Δ} v (I.⇑ᵛ a) (I.⇑ᵛ b)
+varLower-lift var-refl = var-refl
+varLower-lift cross-refl = cross-refl
+varLower-lift var-to-star = var-to-star
+varLower-lift var-from-star = var-from-star
+varLower-lift both-to-star = both-to-star
+
 extend-lower-env : ∀ {μ : Env∼ Δ} {φ ψ}
   → LowerEnv μ φ ψ
   → LowerEnv (extᵐ μ) (I.extᵐ φ) (I.extᵐ ψ)
 extend-lower-env h zero = var-refl
-extend-lower-env h (suc X) = h X
+extend-lower-env h (suc X) = varLower-lift (h X)
 
 instantiate-right-lower-env : ∀ {μ : Env∼ Δ} {φ ψ}
   → LowerEnv μ φ ψ
   → LowerEnv (instᵐ μ) (I.extᵐ φ) (I.instᵐ ψ)
 instantiate-right-lower-env h zero = var-to-star
-instantiate-right-lower-env h (suc X) = h X
+instantiate-right-lower-env h (suc X) = varLower-lift (h X)
 
 instantiate-left-lower-env : ∀ {μ : Env∼ Δ} {φ ψ}
   → LowerEnv μ φ ψ
   → LowerEnv (genᵐ μ) (I.instᵐ φ) (I.extᵐ ψ)
 instantiate-left-lower-env h zero = var-from-star
-instantiate-left-lower-env h (suc X) = h X
+instantiate-left-lower-env h (suc X) = varLower-lift (h X)
 
 instantiate-both-lower-env : ∀ {μ : Env∼ Δ} {φ ψ}
   → LowerEnv μ φ ψ
   → LowerEnv (extᵐ μ) (I.instᵐ φ) (I.instᵐ ψ)
 instantiate-both-lower-env h zero = both-to-star
-instantiate-both-lower-env h (suc X) = h X
+instantiate-both-lower-env h (suc X) = varLower-lift (h X)
 
 identity-lower-env : ∀ {Δ}
   → LowerEnv (idᶜ {Δ}) (I.idᵐ {Δ}) (I.idᵐ {Δ})

@@ -7,33 +7,80 @@ module Imprecision where
 
 open import Data.Nat using (zero; suc)
 open import Data.Fin using (zero; suc)
-open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
 
+open import Relation.Nullary.Decidable using (False)
 open import Types
 
 private
   variable
     Δ : TyCtx
 
-data VarImp : Set where
-  X⊑X : VarImp
-  X⊑★ : VarImp
+-- A variable is either paired with itself, unconstrained below `★`,
+-- or an *alias* that unfolds to a stored representative type.  Alias
+-- modes arise only in runtime worlds, where a conversion allocates a
+-- name for a type that already has an imprecise counterpart.
+
+data VarImp (Δ : TyCtx) : Set where
+  X⊑X : VarImp Δ
+  X⊑★ : VarImp Δ
+  X⊑ᵗ : Ty Δ → VarImp Δ
+
+⇑ᵛ : VarImp Δ → VarImp (suc Δ)
+⇑ᵛ X⊑X = X⊑X
+⇑ᵛ X⊑★ = X⊑★
+⇑ᵛ (X⊑ᵗ T) = X⊑ᵗ (⇑ᵗ T)
 
 ImpEnv : TyCtx → Set
-ImpEnv Δ = TyVar Δ → VarImp
+ImpEnv Δ = TyVar Δ → VarImp Δ
 
 idᵐ : ∀ {Δ} → ImpEnv Δ
 idᵐ X = X⊑X
 
-extendᵐ : VarImp → ImpEnv Δ → ImpEnv (suc Δ)
+extendᵐ : VarImp (suc Δ) → ImpEnv Δ → ImpEnv (suc Δ)
 extendᵐ v μ zero = v
-extendᵐ v μ (suc X) = μ X
+extendᵐ v μ (suc X) = ⇑ᵛ (μ X)
 
 extᵐ : ImpEnv Δ → ImpEnv (suc Δ)
 extᵐ = extendᵐ X⊑X
 
 instᵐ : ImpEnv Δ → ImpEnv (suc Δ)
 instᵐ = extendᵐ X⊑★
+
+-- Transporting a mode across a binder.  The paired and dynamic modes
+-- are stable, so their equations survive `cong ⇑ᵛ`.
+
+ext-mode-paired : ∀ {Δ} {μ : ImpEnv Δ} {v : VarImp (suc Δ)}
+    {Z : TyVar Δ}
+  → μ Z ≡ X⊑X
+  → extendᵐ v μ (suc Z) ≡ X⊑X
+ext-mode-paired eq = cong ⇑ᵛ eq
+
+ext-mode-star : ∀ {Δ} {μ : ImpEnv Δ} {v : VarImp (suc Δ)}
+    {Z : TyVar Δ}
+  → μ Z ≡ X⊑★
+  → extendᵐ v μ (suc Z) ≡ X⊑★
+ext-mode-star eq = cong ⇑ᵛ eq
+
+-- and are reflected back, since the alias mode never lifts to them.
+
+ext-mode-paired-inv : ∀ {Δ} (μ : ImpEnv Δ) {v : VarImp (suc Δ)}
+    (Z : TyVar Δ)
+  → extendᵐ v μ (suc Z) ≡ X⊑X
+  → μ Z ≡ X⊑X
+ext-mode-paired-inv μ Z eq with μ Z
+ext-mode-paired-inv μ Z eq | X⊑X = refl
+ext-mode-paired-inv μ Z () | X⊑★
+ext-mode-paired-inv μ Z () | X⊑ᵗ T
+
+ext-mode-star-inv : ∀ {Δ} (μ : ImpEnv Δ) {v : VarImp (suc Δ)}
+    (Z : TyVar Δ)
+  → extendᵐ v μ (suc Z) ≡ X⊑★
+  → μ Z ≡ X⊑★
+ext-mode-star-inv μ Z eq with μ Z
+ext-mode-star-inv μ Z () | X⊑X
+ext-mode-star-inv μ Z eq | X⊑★ = refl
+ext-mode-star-inv μ Z () | X⊑ᵗ T
 
 ----------------------------------------------------------------------
 -- Imprecision
@@ -105,6 +152,18 @@ data _⊢_⊑_ {Δ : TyCtx} (μ : ImpEnv Δ) : Ty Δ → Ty Δ → Set where
   bot⊑★ :
       ---------------------------
     μ ⊢ (`∀ (＇ zero)) ⊑ ★
+
+  -- An alias inherits its representative's imprecisions.  The rule is
+  -- the composite of the unfolding `＇X ⊑ T` with `T ⊑ B`; fusing it
+  -- keeps the judgment closed under transitivity, which the separate
+  -- unfolding axiom would not be (the mode records `T`, not `B`).
+
+  alias : ∀ {X T B}
+    → μ X ≡ X⊑ᵗ T
+    → {notSelf : False (isVar? X B)}
+    → μ ⊢ T ⊑ B
+      ---------------------------
+    → μ ⊢ ＇ X ⊑ B
 
 infix 4 _⊑_
 

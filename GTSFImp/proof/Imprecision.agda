@@ -9,8 +9,11 @@ module proof.Imprecision where
 
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Fin using (zero; suc)
-open import Data.Product using (_×_; _,_)
+open import Data.Product using (_×_; _,_; ∃-syntax)
 import Data.Nat as Nat
+open import Data.Unit.Base using (⊤; tt)
+open import Relation.Nullary using (Dec; yes; no)
+open import Relation.Nullary.Decidable using (False; toWitnessFalse)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; _≢_; refl; cong; cong₂; sym; trans)
 
@@ -32,11 +35,23 @@ private
     not-occurs X∉B X∈B
   not-occurs (∉-all X∉A) (∈-all X∈A) = not-occurs X∉A X∈A
 
-  varImp-disjoint : ∀ {v : I.VarImp}
+  varImp-disjoint : ∀ {Δ} {v : I.VarImp Δ}
     → v ≡ I.X⊑X
     → v ≡ I.X⊑★
     → ⊥
   varImp-disjoint refl ()
+
+  varImp-alias-disjoint : ∀ {Δ} {v : I.VarImp Δ} {T : Ty Δ}
+    → v ≡ I.X⊑X
+    → v ≡ I.X⊑ᵗ T
+    → ⊥
+  varImp-alias-disjoint refl ()
+
+  varImp-star-alias-disjoint : ∀ {Δ} {v : I.VarImp Δ} {T : Ty Δ}
+    → v ≡ I.X⊑★
+    → v ≡ I.X⊑ᵗ T
+    → ⊥
+  varImp-star-alias-disjoint refl ()
 
   occurs-not-star : ∀ {Δ} {μ : I.ImpEnv Δ} {X : TyVar Δ} {A : Ty Δ}
     → μ X ≡ I.X⊑X
@@ -52,11 +67,13 @@ private
   occurs-not-star same (∈-fun-right X∉A X∈B) (I.⇒⊑★ A⊑★ B⊑★) =
     occurs-not-star same X∈B B⊑★
   occurs-not-star same (∈-all X∈A) (I.∀⊑ Anv zero∈A A⊑★) =
-    occurs-not-star same X∈A A⊑★
+    occurs-not-star (cong I.⇑ᵛ same) X∈A A⊑★
   occurs-not-star same (∈-all ()) I.∀★⊑★
   occurs-not-star same (∈-all X∈A) (I.∀⊑★ Ans A⊑★) =
-    occurs-not-star same X∈A A⊑★
+    occurs-not-star (cong I.⇑ᵛ same) X∈A A⊑★
   occurs-not-star same (∈-all ()) I.bot⊑★
+  occurs-not-star same var-∈ (I.alias eq p) =
+    varImp-alias-disjoint same eq
 
   insertʳ : ∀ {Δ} → TyVar (Nat.suc Δ) → Δ ⇒ʳ Nat.suc Δ
   insertʳ zero Y = suc Y
@@ -170,19 +187,21 @@ private
       (∈-fun-right X∉A X∈B) =
     wp-fun-right (source-path-same same B⊑B′ X∈B)
   source-path-same same (I.∀⊑∀ A⊑B) (∈-all X∈A) =
-    wp-all (source-path-same same A⊑B X∈A)
+    wp-all (source-path-same (cong I.⇑ᵛ same) A⊑B X∈A)
   source-path-same same p@(I.⇒⊑★ A⊑★ B⊑★) X∈A =
     ⊥-elim (occurs-not-star same X∈A p)
   source-path-same same I.ι⊑★ ()
   source-path-same same (I.X⊑★ x⊑★) var-∈ =
     ⊥-elim (varImp-disjoint same x⊑★)
   source-path-same same (I.∀⊑ Anv zero∈A A⊑B) (∈-all X∈A) =
-    wp-inst (source-path-same same A⊑B X∈A)
+    wp-inst (source-path-same (cong I.⇑ᵛ same) A⊑B X∈A)
   source-path-same same I.∀★⊑★ (∈-all ())
   source-path-same same (I.∀⊑★ Ans A⊑★) (∈-all X∈A) =
-    ⊥-elim (occurs-not-star same X∈A A⊑★)
+    ⊥-elim (occurs-not-star (cong I.⇑ᵛ same) X∈A A⊑★)
   source-path-same same I.bot-elim (∈-all ())
   source-path-same same I.bot⊑★ (∈-all ())
+  source-path-same same (I.alias eq p) var-∈ =
+    ⊥-elim (varImp-alias-disjoint same eq)
 
   data EndpointSpine : ∀ {Δᴸ Δᴿ} → Ty Δᴸ → Ty Δᴿ → Set where
     spine-renamed : ∀ {Δ₀ Δᴸ Δᴿ} {L : Ty Δᴸ} {R : Ty Δᴿ}
@@ -348,6 +367,8 @@ private
     not-occurs fresh var-∈
   widen-spine-overlap⊥ to-star wp-var sp fresh (I.X⊑★ x⊑★) =
     widen-path-star-spine⊥ wp-var sp
+  widen-spine-overlap⊥ to-star wp-var sp fresh (I.alias eq q) =
+    ⊥-elim (varImp-star-alias-disjoint to-star eq)
   widen-spine-overlap⊥ to-star (wp-fun-left p)
       (spine-renamed {T = T₁ ⇒ T₂} refl refl)
       (∉-fun fresh₁ fresh₂) (I.⇒⊑⇒ q₁ q₂) =
@@ -364,11 +385,12 @@ private
     widen-path-star-spine⊥ {Δ = Δ} {Δ★ = Δ} path sp
   widen-spine-overlap⊥ to-star (wp-all p) sp (∉-all fresh)
       (I.∀⊑∀ q) =
-    widen-spine-overlap⊥ to-star p (spine-strip-both sp) fresh q
+    widen-spine-overlap⊥ (cong I.⇑ᵛ to-star) p
+      (spine-strip-both sp) fresh q
   widen-spine-overlap⊥ to-star (wp-all p) sp fresh
       (I.∀⊑ Anv zero∈A q) =
-    widen-spine-overlap⊥ to-star p (spine-peel-left suc sp)
-      (shift-fresh fresh) q
+    widen-spine-overlap⊥ (cong I.⇑ᵛ to-star) p
+      (spine-peel-left suc sp) (shift-fresh fresh) q
   widen-spine-overlap⊥ to-star (wp-all p) sp fresh I.∀★⊑★ =
     widen-path-star-spine⊥ (wp-all p) sp
   widen-spine-overlap⊥ to-star (wp-all p) sp fresh
@@ -379,10 +401,11 @@ private
     widen-path-star-spine⊥ (wp-all p) sp
   widen-spine-overlap⊥ to-star (wp-inst p) sp (∉-all fresh)
       (I.∀⊑∀ q) =
-    widen-spine-overlap⊥ to-star p (spine-peel-right suc sp) fresh q
+    widen-spine-overlap⊥ (cong I.⇑ᵛ to-star) p
+      (spine-peel-right suc sp) fresh q
   widen-spine-overlap⊥ to-star (wp-inst p) sp fresh
       (I.∀⊑ Anv zero∈A q) =
-    widen-spine-overlap⊥ to-star p
+    widen-spine-overlap⊥ (cong I.⇑ᵛ to-star) p
       (spine-map-right suc (spine-map-left suc sp))
       (shift-fresh fresh) q
   widen-spine-overlap⊥ to-star (wp-inst p) sp fresh I.∀★⊑★ =
@@ -435,7 +458,7 @@ private
     → ∀ X → X ∈ᵗ A → I.instᵐ μ X ≡ I.X⊑★
   dynamic-under-inst dynamic zero X∈A = refl
   dynamic-under-inst dynamic (suc X) X∈A =
-    dynamic X (∈-all X∈A)
+    cong I.⇑ᵛ (dynamic X (∈-all X∈A))
 
   dynamic-under-ext : ∀ {Δ} {μ : I.ImpEnv Δ}
       {A : Ty (Nat.suc Δ)}
@@ -445,7 +468,7 @@ private
   dynamic-under-ext dynamic zero∉A zero zero∈A =
     ⊥-elim (not-occurs zero∉A zero∈A)
   dynamic-under-ext dynamic zero∉A (suc X) X∈A =
-    dynamic X (∈-all X∈A)
+    cong I.⇑ᵛ (dynamic X (∈-all X∈A))
 
   data Shape : ∀ {Δ} → Ty Δ → Set where
     var-shape : ∀ {Δ} {X : TyVar Δ} → Shape (＇ X)
@@ -524,6 +547,82 @@ imprecise-star : ∀ (A : Ty 0) → I._⊑_ A ★
 imprecise-star A = imprecise-star-shape (shape A) (\ ())
 
 ------------------------------------------------------------------------
+-- Alias freshness
+------------------------------------------------------------------------
+
+-- The `∀⊑` side conditions travel along a derivation via
+-- `target-occurs-source` and `source-nonvar-from-target`, and both are
+-- false at the `alias` leaf: an aliased variable is imprecise for its
+-- representative, which is neither a variable nor confined to the
+-- variable's own occurrences.  Both become vacuous once the environment
+-- is fresh for the variable in question -- no alias representative
+-- mentions it -- which is the allocation-order condition the world
+-- model already enforces for dynamic seals.
+
+AliasesAvoid : ∀ {Δ} → I.ImpEnv Δ → TyVar Δ → Set
+AliasesAvoid μ X = ∀ Y {T} → μ Y ≡ I.X⊑ᵗ T → X ∉ᵗ T
+
+-- Lifting a mode preserves its kind, so an alias in a lifted mode comes
+-- from an alias whose representative is weakened.
+
+lift-alias-inv : ∀ {Δ} {v : I.VarImp Δ} {T : Ty (Nat.suc Δ)}
+  → I.⇑ᵛ v ≡ I.X⊑ᵗ T
+  → ∃[ T₀ ] (v ≡ I.X⊑ᵗ T₀ × T ≡ ⇑ᵗ T₀)
+lift-alias-inv {v = I.X⊑ᵗ T₀} refl = T₀ , refl , refl
+
+-- A freshly bound variable is avoided by every inherited alias, because
+-- `extendᵐ` weakens the representatives it shifts.
+
+extend-aliases-avoid-zero : ∀ {Δ} {v : I.VarImp (Nat.suc Δ)}
+    (μ : I.ImpEnv Δ)
+  → (∀ {T} → v ≡ I.X⊑ᵗ T → ⊥)
+  → AliasesAvoid (I.extendᵐ v μ) zero
+extend-aliases-avoid-zero μ head-not-alias zero eq =
+  ⊥-elim (head-not-alias eq)
+extend-aliases-avoid-zero μ head-not-alias (suc Y) eq
+    with lift-alias-inv eq
+extend-aliases-avoid-zero μ head-not-alias (suc Y) eq
+    | T₀ , _ , refl = insert-fresh zero T₀
+
+-- Freshness for an old variable is inherited by its shift.
+
+extend-aliases-avoid-suc : ∀ {Δ} {v : I.VarImp (Nat.suc Δ)}
+    {μ : I.ImpEnv Δ} {X : TyVar Δ}
+  → (∀ {T} → v ≡ I.X⊑ᵗ T → ⊥)
+  → AliasesAvoid μ X
+  → AliasesAvoid (I.extendᵐ v μ) (suc X)
+extend-aliases-avoid-suc head-not-alias avoid zero eq =
+  ⊥-elim (head-not-alias eq)
+extend-aliases-avoid-suc head-not-alias avoid (suc Y) eq
+    with lift-alias-inv eq
+extend-aliases-avoid-suc head-not-alias avoid (suc Y) eq
+    | T₀ , mode , refl = shift-fresh (avoid Y mode)
+
+paired-head-not-alias : ∀ {Δ} {T : Ty Δ} → I.X⊑X ≡ I.X⊑ᵗ T → ⊥
+paired-head-not-alias ()
+
+star-head-not-alias : ∀ {Δ} {T : Ty Δ} → I.X⊑★ ≡ I.X⊑ᵗ T → ⊥
+star-head-not-alias ()
+
+ext-aliases-avoid-zero : ∀ {Δ} (μ : I.ImpEnv Δ)
+  → AliasesAvoid (I.extᵐ μ) zero
+ext-aliases-avoid-zero μ = extend-aliases-avoid-zero μ paired-head-not-alias
+
+inst-aliases-avoid-zero : ∀ {Δ} (μ : I.ImpEnv Δ)
+  → AliasesAvoid (I.instᵐ μ) zero
+inst-aliases-avoid-zero μ = extend-aliases-avoid-zero μ star-head-not-alias
+
+ext-aliases-avoid-suc : ∀ {Δ} {μ : I.ImpEnv Δ} {X : TyVar Δ}
+  → AliasesAvoid μ X
+  → AliasesAvoid (I.extᵐ μ) (suc X)
+ext-aliases-avoid-suc = extend-aliases-avoid-suc paired-head-not-alias
+
+inst-aliases-avoid-suc : ∀ {Δ} {μ : I.ImpEnv Δ} {X : TyVar Δ}
+  → AliasesAvoid μ X
+  → AliasesAvoid (I.instᵐ μ) (suc X)
+inst-aliases-avoid-suc = extend-aliases-avoid-suc star-head-not-alias
+
+------------------------------------------------------------------------
 -- Plain type-imprecision inversion
 ------------------------------------------------------------------------
 
@@ -558,15 +657,23 @@ imprecision-no-to-distinct-variable Y★ XX (I.X⊑X {X = X}) var-∈ =
   varImp-disjoint XX Y★
 imprecision-no-to-distinct-variable Y★ XX
     (I.∀⊑ Anv zero∈A A⊑X) (∈-all Y∈A) =
-  imprecision-no-to-distinct-variable Y★ XX A⊑X Y∈A
+  imprecision-no-to-distinct-variable (cong I.⇑ᵛ Y★)
+    (cong I.⇑ᵛ XX) A⊑X Y∈A
+imprecision-no-to-distinct-variable Y★ XX (I.alias eq A⊑X) var-∈ =
+  varImp-star-alias-disjoint Y★ eq
 
 imprecision-to-fresh : ∀ {Δ : TyCtx} {μ : I.ImpEnv Δ}
     {A : Ty (Nat.suc Δ)}
+  → AliasesAvoid (I.extᵐ μ) zero
   → I._⊢_⊑_ (I.extᵐ μ) A (＇ zero)
   → A ≡ ＇ zero
-imprecision-to-fresh (I.X⊑X {X = zero}) = refl
-imprecision-to-fresh (I.∀⊑ Anv zero∈A A⊑X) =
+imprecision-to-fresh avoid (I.X⊑X {X = zero}) = refl
+imprecision-to-fresh avoid (I.∀⊑ Anv zero∈A A⊑X) =
   ⊥-elim (imprecision-no-to-distinct-variable refl refl A⊑X zero∈A)
+imprecision-to-fresh avoid (I.alias {X = Z} eq A⊑X)
+    with imprecision-to-fresh avoid A⊑X
+imprecision-to-fresh avoid (I.alias {X = Z} eq A⊑X) | refl =
+  ⊥-elim (not-occurs (avoid Z eq) var-∈)
 
 imprecision-no-star-to-bot : ∀ {Δ : TyCtx}
     {μ : I.ImpEnv Δ} {A : Ty Δ} {Y : TyVar Δ}
@@ -576,10 +683,12 @@ imprecision-no-star-to-bot : ∀ {Δ : TyCtx}
   → ⊥
 imprecision-no-star-to-bot {Y = Y} Y★ (I.∀⊑∀ A⊑X) (∈-all Y∈A) =
   imprecision-no-to-distinct-variable {X = zero} {Y = suc Y}
-    Y★ refl A⊑X Y∈A
+    (cong I.⇑ᵛ Y★) refl A⊑X Y∈A
+imprecision-no-star-to-bot Y★ (I.alias eq A⊑X) var-∈ =
+  ⊥-elim (varImp-star-alias-disjoint Y★ eq)
 imprecision-no-star-to-bot {Y = Y} Y★
     (I.∀⊑ Anv zero∈A A⊑B) (∈-all Y∈A) =
-  imprecision-no-star-to-bot {Y = suc Y} Y★ A⊑B Y∈A
+  imprecision-no-star-to-bot {Y = suc Y} (cong I.⇑ᵛ Y★) A⊑B Y∈A
 
 ------------------------------------------------------------------------
 -- Uniqueness of occurrence evidence
@@ -623,10 +732,31 @@ imprecision-no-star-to-bot {Y = Y} Y★
 -- Uniqueness of type imprecision
 ------------------------------------------------------------------------
 
-varImp-eq-unique : ∀ {v w : I.VarImp}
+varImp-eq-unique : ∀ {Δ} {v w : I.VarImp Δ}
   → (p q : v ≡ w)
   → p ≡ q
 varImp-eq-unique refl refl = refl
+
+-- The `alias` side condition lives in `False`, which is `⊤` when the
+-- decision goes the right way, so it is unique where it is inhabited.
+
+false-unique : ∀ {P : Set} {Q : Dec P} (p q : False Q) → p ≡ q
+false-unique {Q = yes _} ()
+false-unique {Q = no _} tt tt = refl
+
+-- An alias never concludes about its own variable, which is what keeps
+-- it from overlapping the unguarded `X⊑X`.
+
+self-alias-⊥ : ∀ {Δ} {X : TyVar Δ}
+  → False (isVar? X (＇ X))
+  → ⊥
+self-alias-⊥ notSelf = toWitnessFalse notSelf refl
+
+alias-mode-unique : ∀ {Δ} {v : I.VarImp Δ} {T T′ : Ty Δ}
+  → v ≡ I.X⊑ᵗ T
+  → v ≡ I.X⊑ᵗ T′
+  → T ≡ T′
+alias-mode-unique refl refl = refl
 
 ⊑-unique : ∀ {Δ} {μ : I.ImpEnv Δ} {A B : Ty Δ}
   → (p q : I._⊢_⊑_ μ A B)
@@ -634,6 +764,20 @@ varImp-eq-unique refl refl = refl
 ⊑-unique I.★⊑★ I.★⊑★ = refl
 ⊑-unique I.ι⊑ι I.ι⊑ι = refl
 ⊑-unique I.X⊑X I.X⊑X = refl
+⊑-unique I.X⊑X (I.alias eq {notSelf} q) =
+  ⊥-elim (self-alias-⊥ notSelf)
+⊑-unique (I.alias eq {notSelf} p) I.X⊑X =
+  ⊥-elim (self-alias-⊥ notSelf)
+⊑-unique (I.X⊑★ to-star) (I.alias eq q) =
+  ⊥-elim (varImp-star-alias-disjoint to-star eq)
+⊑-unique (I.alias eq p) (I.X⊑★ to-star) =
+  ⊥-elim (varImp-star-alias-disjoint to-star eq)
+⊑-unique (I.alias eq {ns} p) (I.alias eq′ {ns′} q)
+    with alias-mode-unique eq eq′
+⊑-unique (I.alias eq {ns} p) (I.alias eq′ {ns′} q) | refl
+    rewrite varImp-eq-unique eq eq′
+          | false-unique ns ns′
+          | ⊑-unique p q = refl
 ⊑-unique (I.⇒⊑⇒ A⊑A′ B⊑B′) (I.⇒⊑⇒ A⊑A″ B⊑B″)
     rewrite ⊑-unique A⊑A′ A⊑A″
           | ⊑-unique B⊑B′ B⊑B″ =

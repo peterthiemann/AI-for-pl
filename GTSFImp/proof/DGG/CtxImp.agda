@@ -76,7 +76,7 @@ _⊑ᵂ⟨_⟩_ : ∀ {Δᴸ Δᴿ Δ}
 A ⊑ᵂ⟨ W ⟩ B = impEnvʷ W ⊢ embedᴸ W A ⊑ embedᴿ W B
 
 liftWorldBoth : ∀ {Δᴸ Δᴿ Δ}
-  → VarImp
+  → VarImp (Nat.suc Δ)
   → World Δᴸ Δᴿ Δ
   → World (Nat.suc Δᴸ) (Nat.suc Δᴿ) (Nat.suc Δ)
 liftWorldBoth v W =
@@ -90,7 +90,7 @@ liftWorldBoth v W =
 -- the binder unweakened.
 
 liftWorldLeft : ∀ {Δᴸ Δᴿ Δ}
-  → VarImp
+  → VarImp (Nat.suc Δ)
   → World Δᴸ Δᴿ Δ
   → World (Nat.suc Δᴸ) Δᴿ (Nat.suc Δ)
 liftWorldLeft v W =
@@ -100,7 +100,7 @@ liftWorldLeft v W =
     (targetStoreʷ W)
 
 leftOnlyWorld : ∀ {Δᴸ Δᴿ Δ}
-  → VarImp
+  → VarImp (Nat.suc Δ)
   → World Δᴸ Δᴿ Δ
   → Ty Δᴸ
   → World (Nat.suc Δᴸ) Δᴿ (Nat.suc Δ)
@@ -121,7 +121,7 @@ rightOnlyWorld W B =
     (store-bind (targetStoreʷ W) B)
 
 bothBindWorld : ∀ {Δᴸ Δᴿ Δ}
-  → VarImp
+  → VarImp (Nat.suc Δ)
   → World Δᴸ Δᴿ Δ
   → Ty Δᴸ
   → Ty Δᴿ
@@ -220,7 +220,8 @@ data SameCtx {Δᴸ Δᴿ Δ Δ′}
       ------------------------------------------------------
     → SameCtx (ctx-imp A B p ∷ γ) (ctx-imp A B p′ ∷ γ′)
 
-data LiftCtx {Δᴸ Δᴿ Δ} (v : VarImp) {W : World Δᴸ Δᴿ Δ} :
+data LiftCtx {Δᴸ Δᴿ Δ} (v : VarImp (Nat.suc Δ))
+    {W : World Δᴸ Δᴿ Δ} :
     CtxImp W → CtxImp (liftWorldBoth v W) → Set where
   lift-[] : LiftCtx v [] []
 
@@ -230,7 +231,8 @@ data LiftCtx {Δᴸ Δᴿ Δ} (v : VarImp) {W : World Δᴸ Δᴿ Δ} :
     → LiftCtx v (ctx-imp A B p ∷ γ)
         (ctx-imp (⇑ᵗ A) (⇑ᵗ B) p′ ∷ γ′)
 
-data LiftCtxᴸ {Δᴸ Δᴿ Δ} (v : VarImp) {W : World Δᴸ Δᴿ Δ} :
+data LiftCtxᴸ {Δᴸ Δᴿ Δ} (v : VarImp (Nat.suc Δ))
+    {W : World Δᴸ Δᴿ Δ} :
     CtxImp W → CtxImp (liftWorldLeft v W) → Set where
   liftᴸ-[] : LiftCtxᴸ v [] []
 
