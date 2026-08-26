@@ -43,11 +43,11 @@ structural-Λ-replay : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
       ⊢ F ⦂ applyTys χs B
   → CTX.liftWorldLeft X⊑★ W′ CTI2.∣
       ECR.mapCtxᴿ
-        (structural-world-extendᴿ (structural-lift-left plan X⊑★)) γᴸ
+        (structural-world-extendᴿ (structural-lift-left plan CTX.cX⊑★)) γᴸ
       ⊢² U ⊑ F ∶
         ECR.transport⊑ᵂ
           (structural-world-extendᴿ
-            (structural-lift-left plan X⊑★)) p
+            (structural-lift-left plan CTX.cX⊑★)) p
   → W′ CTI2.∣ ECR.mapCtxᴿ (structural-world-extendᴿ plan) γ
       ⊢² Λ U ⊑ F ∶
         ECR.transport⊑ᵂ (structural-world-extendᴿ plan) q
@@ -55,7 +55,7 @@ structural-Λ-replay plan Anv z∈A liftγ vU F⊢ rel =
   CTI2.Λ⊑² Anv z∈A
     (mapCtxᴿ-liftCtxᴸ
       (structural-world-extendᴿ plan)
-      (structural-world-extendᴿ (structural-lift-left plan X⊑★))
+      (structural-world-extendᴿ (structural-lift-left plan CTX.cX⊑★))
       liftγ)
     vU F⊢ rel (ECR.transport⊑ᵂ (structural-world-extendᴿ plan) _)
 

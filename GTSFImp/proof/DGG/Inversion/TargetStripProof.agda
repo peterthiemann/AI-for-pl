@@ -156,7 +156,7 @@ private
       (subst≡
         (λ L → instᵐ (impEnvʷ W) ⊢ L ⊑ ⇑ᵗ (CTX.embedᴿ W B))
         (sym (renameᵗ-shift (toRenameᵗ (ηᴸʷ W)) A))
-        (rename-⊑ Fin.suc fin-suc-injective (λ _ eq → eq) p))
+        (shift-⊑ p))
 
   liftCtxᴸ-canonical : ∀ {Δᴸ Δᴿ Δ}
       {W : World Δᴸ Δᴿ Δ}

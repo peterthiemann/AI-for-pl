@@ -4,10 +4,13 @@ module proof.DGG.Catchup.StructuralWorldExtendDef where
 --   * Records the keep/bind insertion history of a right-world extension.
 --   * Retains center insertion evidence needed by source-wrapper recursion.
 
+open import Data.Product using (Σ-syntax; _,_)
 import Data.Fin as Fin
 open import Data.Nat using (ℕ; zero; suc)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl)
-open import Data.Maybe using (Maybe)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; refl; sym; trans)
+  renaming (subst to subst≡)
+open import Data.Maybe using (Maybe; just; nothing)
 
 open import Types using (Ty; TyVar)
 open import Consistency using (_↪ᵗ_; keep; wk↪ᵗ; toRenameᵗ)
@@ -17,6 +20,8 @@ open import Reduction using
 open import proof.Reduction using (_++χ_)
 import proof.DGG.CtxImp as CTI2
 import proof.DGG.TargetExtend as TE
+import proof.DGG.CenterRename as CR
+import Imprecision as I
 open CTI2 using (World)
 
 
@@ -102,6 +107,45 @@ data StructuralWorldExtendᴿ {Δᴸ} :
     → StructuralWorldExtendᴿ χs W₁ W′
     → StructuralWorldExtendᴿ (bind B ∷ χs) W W′
 
+
+-- A structural extension never aliases a center variable: the bind
+-- steps insert through a target insertion, whose environment law
+-- renames the modes of the old centers and dynamizes the new ones.
+
+no-alias-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
+    {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
+    {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
+  → TE.TargetInsert ρ π W W′
+  → CTI2.NoAliasWorld W
+  → CTI2.NoAliasWorld W′
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    with CR.preimage? π Z′ in pre
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    | just Z
+    with I.renameᵛ-alias-inv
+      (trans
+        (sym (TE.impEnv-insert ins Z))
+        (subst≡
+          (λ C → CTI2.impEnvʷ W′ C ≡ I.X⊑ᵗ T)
+          (CR.preimage?-sound π pre) eq))
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    | just Z | T₀ , mode , eq₂ = na Z mode
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    | nothing
+    with trans (sym (TE.impEnv-off-insert ins pre)) eq
+no-alias-insert ins na Z′ eq | nothing | ()
+
+no-alias-extendᴿ : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
+    {χs : StoreChanges Δᴿ Δᴿ′}
+    {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
+  → StructuralWorldExtendᴿ χs W W′
+  → CTI2.NoAliasWorld W
+  → CTI2.NoAliasWorld W′
+no-alias-extendᴿ structural-[] na = na
+no-alias-extendᴿ (structural-keep plan) na =
+  no-alias-extendᴿ plan na
+no-alias-extendᴿ (structural-bind ins follows plan) na =
+  no-alias-extendᴿ plan (no-alias-insert ins na)
 
 data FrozenEmbedding : ℕ → ∀ {Δ Δ′} → Δ ↪ᵗ Δ′ → Set where
   frozen-embedding-zero : ∀ {Δ Δ′} {π : Δ ↪ᵗ Δ′}

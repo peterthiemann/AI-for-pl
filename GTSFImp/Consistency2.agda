@@ -19,7 +19,7 @@ open import Data.Nat.Properties using
    n≤1+n; +-comm; ≤-<-trans)
 open import Induction.WellFounded using (Acc; acc)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; inspect; [_])
+  using (_≡_; refl; inspect; [_]; cong)
 open import Relation.Nullary using (no; yes)
 
 open import Types
@@ -71,7 +71,7 @@ dynamic-under-inst : ∀ {Δ} {μ : I.ImpEnv Δ}
   → AllDynamic (I.instᵐ μ) A
 dynamic-under-inst dynamic zero X∈A = refl
 dynamic-under-inst dynamic (suc X) X∈A =
-  dynamic X (∈-all X∈A)
+  cong I.⇑ᵛ (dynamic X (∈-all X∈A))
 
 dynamic-under-ext : ∀ {Δ} {μ : I.ImpEnv Δ}
     {A : Ty (Nat.suc Δ)}
@@ -95,7 +95,7 @@ dynamic-under-ext dynamic zero∉A zero X∈A =
   not-occurs (∉-all X∉B) (∈-all X∈B) =
     not-occurs X∉B X∈B
 dynamic-under-ext dynamic zero∉A (suc X) X∈A =
-  dynamic X (∈-all X∈A)
+  cong I.⇑ᵛ (dynamic X (∈-all X∈A))
 
 data AllChoice {Δ : TyCtx} : Ty (Nat.suc Δ) → Set where
   bottom-choice : AllChoice (＇ zero)
@@ -151,6 +151,7 @@ dynamic? μ (＇ X) with μ X | inspect μ X
 dynamic? μ (＇ X) | I.X⊑X | [ eq ] = nothing
 dynamic? μ (＇ X) | I.X⊑★ | [ eq ] =
   just (λ { .X var-∈ → eq })
+dynamic? μ (＇ X) | I.X⊑ᵗ T | [ eq ] = nothing
 dynamic? μ (‵ ι) = just (λ X ())
 dynamic? μ ★ = just (λ X ())
 dynamic? μ (A ⇒ B) with dynamic? μ A
@@ -169,7 +170,8 @@ dynamic? μ (`∀ A) | just dynamic-A =
   just under-all
   where
   under-all : AllDynamic μ (`∀ A)
-  under-all X (∈-all X∈A) = dynamic-A (suc X) X∈A
+  under-all X (∈-all X∈A) =
+    I.lift-star-inv (dynamic-A (suc X) X∈A)
 
 ------------------------------------------------------------------------
 -- Proof-carrying search for a common lower bound

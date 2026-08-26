@@ -17,6 +17,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
 open import Types
 open import TyStore using (TyStore)
 open import Consistency using (toRenameᵗ)
+import Imprecision as I
 open import Imprecision using (ImpEnv; X⊑X; X⊑★)
 import proof.DGG.CtxImp as CTI2
 import proof.DGG.CompilePreservesImprecision2 as CPI2
@@ -88,7 +89,8 @@ compile-image-precise-source-occupied (compile-image-liftBoth img)
   zero , refl
 compile-image-precise-source-occupied (compile-image-liftBoth img)
     (suc X) precise
-    with compile-image-precise-source-occupied img X precise
+    with compile-image-precise-source-occupied img X
+      (I.lift-paired-inv precise)
 compile-image-precise-source-occupied (compile-image-liftBoth img)
     (suc X) precise | Y , target-eq =
   suc Y , cong suc target-eq
@@ -96,7 +98,8 @@ compile-image-precise-source-occupied (compile-image-liftLeft img)
     zero ()
 compile-image-precise-source-occupied (compile-image-liftLeft img)
     (suc X) precise
-    with compile-image-precise-source-occupied img X precise
+    with compile-image-precise-source-occupied img X
+      (I.lift-paired-inv precise)
 compile-image-precise-source-occupied (compile-image-liftLeft img)
     (suc X) precise | Y , target-eq =
   Y , cong suc target-eq

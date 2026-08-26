@@ -649,7 +649,7 @@ checkpoint₈-YZ-conceal :
 checkpoint₈-YZ-conceal =
   CTI2.conceal⊑conceal²
     (CTX.matched-seal-star-partner (CTX.rep★-nonvar-tag nonvar-base))
-    (λ _ eq → eq) Ex2.left-path-rebase-Z-YZ₃ CTX.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) Ex2.left-path-rebase-Z-YZ₃ CTX.same-[]
     (Conv.⊢↓-sealˣ Ex2.left-path-source-Z∋₃)
     (Conv.⊢↓-sealˣ Ex2.left-path-target-Z∋₃)
     checkpoint₈-YZ-base Ex2.left-path-Z-var⊑YZ₃
@@ -676,7 +676,7 @@ checkpoint₈-YZ-fragment :
           ↓ seal (Fin.suc Fin.zero) ★))
       ↑ unseal (Fin.suc Fin.zero) ★ ∶ Ex2.left-path-Z-var⊑★-YZ₃
 checkpoint₈-YZ-fragment =
-  CTI2.⊑reveal² (λ _ eq → eq)
+  CTI2.⊑reveal² (CTX.eqᵉᵐ (λ _ → refl))
     (CTX.rebase-varᴿ Ex2.left-path-rebase-Z-YZ₃) CTX.same-[]
     (Conv.⊢↑-unsealˣ Ex2.left-path-target-Z∋₃)
     checkpoint₈-YZ-application Ex2.left-path-Z-var⊑★-YZ₃

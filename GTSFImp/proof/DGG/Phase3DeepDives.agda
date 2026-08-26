@@ -159,7 +159,7 @@ adversarial-source-chain-function₁ :
       C.↑ 〖 Fin.zero , ⇑ᵗ RC.ℕ₀ ↑ RC.X₀⇒X₀ 〗
     ∶ Ex2.ℕ⇒ℕ⊑ℕ⇒ℕ² {W = adversarial-source-chain-world₁}
 adversarial-source-chain-function₁ =
-  CTI2.reveal⊑reveal² (λ _ eq → eq)
+  CTI2.reveal⊑reveal² (CTX.eqᵉᵐ (λ _ → refl))
     adversarial-source-chain-rebase₁ CTX.same-[]
     adversarial-source-chain-reveal₁-⊢ˣ
     adversarial-source-chain-reveal₁-⊢ˣ
@@ -499,7 +499,7 @@ star-inst-function₁ :
       C.↑ 〖 Fin.zero , ★ ↑ RC.X₀⇒★ 〗
     ∶ Ex2.★⇒★⊑★⇒★² {W = star-inst-world₁}
 star-inst-function₁ =
-  CTI2.reveal⊑reveal² (λ _ eq → eq)
+  CTI2.reveal⊑reveal² (CTX.eqᵉᵐ (λ _ → refl))
     star-inst-rebase₁ CTX.same-[]
     star-inst-reveal₁-⊢ˣ star-inst-reveal₁-⊢ˣ
     star-inst-lambda₁

@@ -168,6 +168,7 @@ residual-cast-stop-package : ∀ {fuel Δᴸ Δᴿ Δ}
     {p : A CTI2.⊑ᵂ⟨ W ⟩ B}
     {q : A CTI2.⊑ᵂ⟨ W ⟩ C}
     {c : μ ⊢ B ∼ C}
+  → CTI2.NoAliasWorld W
   → FuelStepSurface fuel
   → ResidualCastBuilderᵀ
   → W CTIR.∣ γ ⊢² M ⊑ V ∶ p
@@ -177,9 +178,11 @@ residual-cast-stop-package : ∀ {fuel Δᴸ Δᴿ Δ}
   → ResidualFrameProvenance c
   → InstSpineDescentPackage W γ M (V ⟨ c ⟩) q
 residual-cast-stop-package {p = p} {q = q} {c = c}
-    fuel-step residual-cast-builder rel vM vV residual<fuel prov
+    na fuel-step residual-cast-builder rel vM vV residual<fuel
+    prov
     with FuelStepSurface.smaller-extra fuel-step residual<fuel
-      c (n<1+n (castSize c)) (prov {χs = []} {p = p} {q = q} rel)
+      na c (n<1+n (castSize c))
+      (prov {χs = []} {p = p} {q = q} rel)
       vM vV
 ... | Δᴿ′ , χs , Δ′ , W′ , ext , N′ ,
     (vN′ , post↠N′ , rel′) =

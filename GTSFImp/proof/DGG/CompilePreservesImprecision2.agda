@@ -128,7 +128,7 @@ sourceId-initial : ∀ {Δ} {μ : ImpEnv Δ} {Σ : TyStore Δ}
 sourceId-initial = toRename-id-eq
 
 sourceId-liftBoth : ∀ {Δᴿ Δ} {W : World Δ Δᴿ Δ}
-  → (v : VarImp)
+  → (v : VarImp (Nat.suc Δ))
   → SourceId W
   → SourceId (CTX.liftWorldBoth v W)
 sourceId-liftBoth v sid zero = refl
@@ -136,7 +136,7 @@ sourceId-liftBoth v sid (Fin.suc X) =
   cong Fin.suc (sid X)
 
 sourceId-liftLeft : ∀ {Δᴿ Δ} {W : World Δ Δᴿ Δ}
-  → (v : VarImp)
+  → (v : VarImp (Nat.suc Δ))
   → SourceId W
   → SourceId (CTX.liftWorldLeft v W)
 sourceId-liftLeft v sid zero = refl
@@ -180,7 +180,7 @@ renameᵗ-skip-eq η B =
     (sym (renameᵗ-comp (toRenameᵗ η) Fin.suc B))
 
 embedᴿ-liftBoth-shift : ∀ {Δᴿ Δ} {W : World Δ Δᴿ Δ}
-  → (v : VarImp)
+  → (v : VarImp (Nat.suc Δ))
   → (B : Ty Δᴿ)
   → CTX.embedᴿ (CTX.liftWorldBoth v W) (⇑ᵗ B)
       ≡ ⇑ᵗ (CTX.embedᴿ W B)
@@ -189,7 +189,7 @@ embedᴿ-liftBoth-shift {W = W} v B =
     (renameᵗ-shift (toRenameᵗ (CTX.ηᴿʷ W)) B)
 
 embedᴿ-liftLeft : ∀ {Δᴿ Δ} {W : World Δ Δᴿ Δ}
-  → (v : VarImp)
+  → (v : VarImp (Nat.suc Δ))
   → (B : Ty Δᴿ)
   → CTX.embedᴿ (CTX.liftWorldLeft v W) B
       ≡ ⇑ᵗ (CTX.embedᴿ W B)

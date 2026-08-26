@@ -658,7 +658,7 @@ module _
 
   right-inj-reveal-all-id² {W = W} {A = A} {B = B}
       {H = H} {c = c} sv vN sc c⊢ prem q =
-    CTI2.reveal⊑² (λ _ eq → eq) CTX.rebase-idᴸ sc
+    CTI2.reveal⊑² (CTX.eqᵉᵐ (λ _ → refl)) CTX.rebase-idᴸ sc
       (Conv.⊢↑-∀-idˣ c⊢)
       (right-inj-inversion² sv vN prem
         (subst≡ (λ T → T ⊑ᵂ⟨ W ⟩ H)

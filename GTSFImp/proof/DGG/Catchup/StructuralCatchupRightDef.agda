@@ -479,13 +479,13 @@ source-Λ-stack-transport
   record
     { Δ′ = _
     ; W′ = CTX.liftWorldLeft X⊑★ W′
-    ; current-plan = structural-lift-left plan X⊑★
+    ; current-plan = structural-lift-left plan CTX.cX⊑★
     ; stack′ =
         source-Λ-stack-plain stack′ Anv z∈A
           (mapCtxᴿ-liftCtxᴸ
             (structural-world-extendᴿ plan)
             (structural-world-extendᴿ
-              (structural-lift-left plan X⊑★))
+              (structural-lift-left plan CTX.cX⊑★))
             liftγ)
           vU
     }
@@ -1905,6 +1905,7 @@ StructuralValueCatchupRight² = ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M″ : Term Δᴿ}
     {A : Ty Δᴸ} {B : Ty Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ B}
+  → CTX.NoAliasWorld W
   → Value M
   → W ∣ γ ⊢² M ⊑ M″ ∶ q
   → StructuralCatchupRightResult W γ M M″ q
@@ -1912,8 +1913,8 @@ StructuralValueCatchupRight² = ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
 
 erase-structural-value-catchup-right² :
   StructuralValueCatchupRight² → ValueCatchupRight²
-erase-structural-value-catchup-right² worker vM rel =
-  erase-structural-catchup-result (worker vM rel)
+erase-structural-value-catchup-right² worker na vM rel =
+  erase-structural-catchup-result (worker na vM rel)
 
 
 StructuralExtraCastRightAt : ℕ → Set₁
@@ -1922,6 +1923,7 @@ StructuralExtraCastRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M′ : Term Δᴿ}
     {A : Ty Δᴸ} {B B′ : Ty Δᴿ} {ν : Env∼ Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ B′}
+  → CTX.NoAliasWorld W
   → (c′ : ν ⊢ B ∼ B′)
   → castSize c′ < fuel
   → W ∣ γ ⊢² M ⊑ (M′ ⟨ c′ ⟩) ∶ q
@@ -1933,8 +1935,10 @@ StructuralExtraCastRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
 erase-structural-extra-cast-right-at : ∀ {fuel}
   → StructuralExtraCastRightAt fuel
   → ExtraCastRightAt fuel
-erase-structural-extra-cast-right-at worker c′ c′<fuel rel vM vM′ =
-  erase-structural-catchup-result (worker c′ c′<fuel rel vM vM′)
+erase-structural-extra-cast-right-at worker na c′ c′<fuel
+    rel vM vM′ =
+  erase-structural-catchup-result
+    (worker na c′ c′<fuel rel vM vM′)
 
 
 StructuralValueCatchupRightAt : ℕ → Set₁
@@ -1943,6 +1947,7 @@ StructuralValueCatchupRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M″ : Term Δᴿ}
     {A : Ty Δᴸ} {B : Ty Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ B}
+  → CTX.NoAliasWorld W
   → Value M
   → (rel : W ∣ γ ⊢² M ⊑ M″ ∶ q)
   → TargetCastBound fuel rel
@@ -1952,8 +1957,8 @@ StructuralValueCatchupRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
 erase-structural-value-catchup-right-at : ∀ {fuel}
   → StructuralValueCatchupRightAt fuel
   → ValueCatchupRightAt fuel
-erase-structural-value-catchup-right-at worker vM rel bound =
-  erase-structural-catchup-result (worker vM rel bound)
+erase-structural-value-catchup-right-at worker na vM rel bound =
+  erase-structural-catchup-result (worker na vM rel bound)
 
 
 StructuralInstCatchupRightAt : ℕ → Set₁
@@ -1962,6 +1967,7 @@ StructuralInstCatchupRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M′ : Term Δᴿ}
     {A : Ty Δᴸ} {B : Ty (suc Δᴿ)} {B′ : Ty Δᴿ}
     {ν : Env∼ Δᴿ} {p : A ⊑ᵂ⟨ W ⟩ `∀ B}
+  → CTX.NoAliasWorld W
   → W ∣ γ ⊢² M ⊑ M′ ∶ p
   → Value M
   → Value M′
@@ -1979,7 +1985,7 @@ StructuralInstCatchupRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
 erase-structural-inst-catchup-right-at : ∀ {fuel}
   → StructuralInstCatchupRightAt fuel
   → InstCatchupRightAt fuel
-erase-structural-inst-catchup-right-at worker rel vM vM′ spine c′
-    B′≢★ c′<fuel q =
+erase-structural-inst-catchup-right-at worker na rel vM vM′
+    spine c′ B′≢★ c′<fuel q =
   erase-structural-catchup-result
-    (worker rel vM vM′ spine c′ B′≢★ c′<fuel q)
+    (worker na rel vM vM′ spine c′ B′≢★ c′<fuel q)

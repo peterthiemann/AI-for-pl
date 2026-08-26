@@ -222,7 +222,7 @@ probe-inner-seal² =
   CTI2.conceal⊑conceal²
     (CTX.matched-seal-star-partner
       (CTX.rep★-nonvar-tag nonvar-base))
-    (λ _ eq → eq) probe-inner-pair-rebase
+    (CTX.eqᵉᵐ (λ _ → refl)) probe-inner-pair-rebase
     CTX.same-[] probe-X-seal-⊢ probe-Y′-seal-⊢ probe-base² pTag
 
 probe-tag² :
@@ -232,7 +232,7 @@ probe-tag² = CTI2.⊑cast² probe-Y′! probe-inner-seal² p₄
 probe-input :
   probe-W₁ ∣ [] ⊢² probe-V ⊑ (probe-U ↓ seal Y ★) ∶ pIn
 probe-input =
-  CTI2.⊑conceal² (λ _ eq → eq)
+  CTI2.⊑conceal² (CTX.eqᵉᵐ (λ _ → refl))
     (CTX.rebase-varᴿ probe-outer-target-rebase)
     CTX.same-[] probe-Y-seal-⊢ probe-tag² pIn
 

@@ -192,14 +192,14 @@ inner-source² : W ∣ [] ⊢² source-inner ⊑ target-core ∶ inner-type
 inner-source² =
   CTI2.conceal⊑²-seal-star-open
     X-no-target-occupant
-    (λ Z eq → eq) inner-source-only-rebase CTX.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) inner-source-only-rebase CTX.same-[]
     source-X-seal-⊢ base² inner-type
 
 output : W ∣ [] ⊢² M ⊑ target-sealed ∶ q
 output =
   CTI2.conceal⊑conceal²
     (CTX.matched-seal-nonstar nonstar-X)
-    (λ Z eq → eq) outer-rebase CTX.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) outer-rebase CTX.same-[]
     source-Xᴸ-seal-⊢ target-Y-seal-⊢ inner-source² q
 
 input : W ∣ [] ⊢² M ⊑ N ∶ input-type

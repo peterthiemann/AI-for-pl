@@ -154,7 +154,7 @@ D =
   CTI2.conceal⊑conceal²
     (CTX.matched-seal-star-partner
       (CTX.rep★-nonvar-tag nonvar-base))
-    (λ Z eq → eq) link₁ CTX.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) link₁ CTX.same-[]
     (Conv.⊢↓-sealˣ X₁∈) (Conv.⊢↓-sealˣ Y₁∈) base² q₁
 
 private

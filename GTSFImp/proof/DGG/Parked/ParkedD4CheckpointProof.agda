@@ -91,7 +91,7 @@ D4-checkpoint-proofᵀ =
   CTI2.·⊑·²
     (CTI2.cast⊑cast² _ _
       (CTI2.cast⊑cast² _ _
-        (CTI2.reveal⊑reveal² (λ Z eq → eq)
+        (CTI2.reveal⊑reveal² (CTX.eqᵉᵐ (λ _ → refl))
           D4-callee-rebase₂ CTX.same-[]
           (Conv.⊢↑-⇒ˣ Conv.join-both
             (Conv.⊢↓-sealˣ (Z∋ refl))

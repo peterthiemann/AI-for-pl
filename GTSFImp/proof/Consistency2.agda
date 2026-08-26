@@ -24,6 +24,7 @@ open import Types
 import Consistency as C
 open import Consistency2
 import Imprecision as I
+open import proof.Imprecision using (ext-aliases-avoid-zero)
 open import proof.ImprecisionConsistency
   using (CrossFree; CrossFree∼★; CrossFree★∼; LowerEnv; VarLower;
          both-to-star; cf-!; cf-↦; cf-∀ᶜ; cf-？; cf-bot-elim;
@@ -133,12 +134,15 @@ inst-lower-success : ∀ {Δ} {φ ψ : I.ImpEnv Δ}
 inst-lower-success {result = just (lower D D⊑A D⊑B)} Anv zero∈A
     is-just
     with nonVar? D | nonVar-success
-      (source-nonvar-from-target D⊑A Anv zero∈A)
+      (source-nonvar-from-target (ext-aliases-avoid-zero _)
+        D⊑A Anv zero∈A)
 inst-lower-success {result = just (lower D D⊑A D⊑B)} Anv zero∈A
     is-just | nothing | ()
 inst-lower-success {result = just (lower D D⊑A D⊑B)} Anv zero∈A
     is-just | just Dnv | is-just
-    with occurs? zero D | occurs-success (target-occurs-source D⊑A zero∈A)
+    with occurs? zero D | occurs-success
+      (target-occurs-source (ext-aliases-avoid-zero _)
+        D⊑A zero∈A)
 inst-lower-success {result = just (lower D D⊑A D⊑B)} Anv zero∈A
     is-just | just Dnv | is-just | absent zero∉D | D∈ , ()
 inst-lower-success {result = just (lower D D⊑A D⊑B)} Anv zero∈A
@@ -155,12 +159,15 @@ gen-lower-success : ∀ {Δ} {φ ψ : I.ImpEnv Δ}
 gen-lower-success {result = just (lower D D⊑A D⊑B)} Bnv zero∈B
     is-just
     with nonVar? D | nonVar-success
-      (source-nonvar-from-target D⊑B Bnv zero∈B)
+      (source-nonvar-from-target (ext-aliases-avoid-zero _)
+        D⊑B Bnv zero∈B)
 gen-lower-success {result = just (lower D D⊑A D⊑B)} Bnv zero∈B
     is-just | nothing | ()
 gen-lower-success {result = just (lower D D⊑A D⊑B)} Bnv zero∈B
     is-just | just Dnv | is-just
-    with occurs? zero D | occurs-success (target-occurs-source D⊑B zero∈B)
+    with occurs? zero D | occurs-success
+      (target-occurs-source (ext-aliases-avoid-zero _)
+        D⊑B zero∈B)
 gen-lower-success {result = just (lower D D⊑A D⊑B)} Bnv zero∈B
     is-just | just Dnv | is-just | absent zero∉D | D∈ , ()
 gen-lower-success {result = just (lower D D⊑A D⊑B)} Bnv zero∈B
@@ -193,6 +200,12 @@ dynamic-success {μ = μ} {A = ＇ X} dynamic
 dynamic-success {μ = μ} {A = ＇ X} dynamic
     | I.X⊑★ | [ eq ] =
   is-just
+dynamic-success {μ = μ} {A = ＇ X} dynamic
+    | I.X⊑ᵗ T | [ eq ] =
+  ⊥-elim (not-star (trans (sym eq) (dynamic X var-∈)))
+  where
+  not-star : ∀ {Δ†} {T† : Ty Δ†} → I.X⊑ᵗ T† ≢ I.X⊑★
+  not-star ()
 dynamic-success {A = ‵ ι} dynamic = is-just
 dynamic-success {A = ★} dynamic = is-just
 dynamic-success {μ = μ} {A = A ⇒ B} dynamic
@@ -352,7 +365,7 @@ mutual
   target-occurs-source-safe not-star C.bot-elim cf-bot-elim (∈-all ())
   target-occurs-source-safe not-star C.bot-intro cf-bot-intro (∈-all ())
 
-right-dynamic-at : ∀ {r : C.Var∼} {l u : I.VarImp}
+right-dynamic-at : ∀ {Δ} {r : C.Var∼} {l u : I.VarImp Δ}
   → VarLower r l u
   → (r ≢ C.X∼★ → ⊥)
   → u ≡ I.X⊑★
@@ -365,7 +378,7 @@ right-dynamic-at var-from-star impossible =
   ⊥-elim (impossible (λ ()))
 right-dynamic-at both-to-star impossible = refl
 
-left-dynamic-at : ∀ {r : C.Var∼} {l u : I.VarImp}
+left-dynamic-at : ∀ {Δ} {r : C.Var∼} {l u : I.VarImp Δ}
   → VarLower r l u
   → (r ≢ C.★∼X → ⊥)
   → l ≡ I.X⊑★

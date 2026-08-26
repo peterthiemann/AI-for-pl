@@ -101,13 +101,13 @@ initial-no-see-through-emptyᴼ {μ = μ} {Σ = Σ} Z no-target =
 
 liftWorldLeft-fresh-no-targetᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.NoTargetOccupant (CTI2.liftWorldLeft v W) Fin.zero
 liftWorldLeft-fresh-no-targetᴼ v (Y , ())
 
 liftWorldLeft-old-no-targetᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.NoTargetOccupant W Z
   → CTI2.NoTargetOccupant (CTI2.liftWorldLeft v W) (Fin.suc Z)
 liftWorldLeft-old-no-targetᴼ v no-target (Y , eq) =
@@ -115,7 +115,7 @@ liftWorldLeft-old-no-targetᴼ v no-target (Y , eq) =
 
 liftWorldLeft-old-occupiedᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.Occupied W Z
   → CTI2.Occupied (CTI2.liftWorldLeft v W) (Fin.suc Z)
 liftWorldLeft-old-occupiedᴼ v (Y , eq) =
@@ -123,7 +123,7 @@ liftWorldLeft-old-occupiedᴼ v (Y , eq) =
 
 liftWorldLeft-old-no-target-at-sourceᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {X}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.NoTargetOccupantAtSource W X
   → CTI2.NoTargetOccupantAtSource
       (CTI2.liftWorldLeft v W) (Fin.suc X)
@@ -133,13 +133,13 @@ liftWorldLeft-old-no-target-at-sourceᴼ {W = W} {X = X} v =
 
 liftWorldBoth-fresh-occupiedᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.Occupied (CTI2.liftWorldBoth v W) Fin.zero
 liftWorldBoth-fresh-occupiedᴼ v = Fin.zero , refl
 
 liftWorldBoth-old-occupiedᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.Occupied W Z
   → CTI2.Occupied (CTI2.liftWorldBoth v W) (Fin.suc Z)
 liftWorldBoth-old-occupiedᴼ v (Y , eq) =
@@ -147,7 +147,7 @@ liftWorldBoth-old-occupiedᴼ v (Y , eq) =
 
 liftWorldBoth-old-no-targetᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp)
+    (v : VarImp (Nat.suc Δ))
   → CTI2.NoTargetOccupant W Z
   → CTI2.NoTargetOccupant (CTI2.liftWorldBoth v W) (Fin.suc Z)
 liftWorldBoth-old-no-targetᴼ v no-target (Fin.zero , ())
@@ -156,14 +156,14 @@ liftWorldBoth-old-no-targetᴼ v no-target (Fin.suc Y , eq) =
 
 leftOnly-fresh-no-targetᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ}
-    (v : VarImp) (A : Ty Δᴸ)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ)
   → CTI2.NoTargetOccupant
       (CTI2.leftOnlyWorld v W A) Fin.zero
 leftOnly-fresh-no-targetᴼ v A (Y , ())
 
 leftOnly-old-occupiedᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp) (A : Ty Δᴸ)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ)
   → CTI2.Occupied W Z
   → CTI2.Occupied (CTI2.leftOnlyWorld v W A) (Fin.suc Z)
 leftOnly-old-occupiedᴼ v A (Y , eq) =
@@ -171,7 +171,7 @@ leftOnly-old-occupiedᴼ v A (Y , eq) =
 
 leftOnly-old-no-targetᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp) (A : Ty Δᴸ)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ)
   → CTI2.NoTargetOccupant W Z
   → CTI2.NoTargetOccupant
       (CTI2.leftOnlyWorld v W A) (Fin.suc Z)
@@ -212,13 +212,13 @@ rightOnly-old-no-target-at-sourceᴼ {W = W} {X = X} B =
 
 bothBind-new-target-occupiedᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ}
-    (v : VarImp) (A : Ty Δᴸ) (B : Ty Δᴿ)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ) (B : Ty Δᴿ)
   → CTI2.Occupied (CTI2.bothBindWorld v W A B) Fin.zero
 bothBind-new-target-occupiedᴼ v A B = Fin.zero , refl
 
 bothBind-old-occupiedᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp) (A : Ty Δᴸ) (B : Ty Δᴿ)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ) (B : Ty Δᴿ)
   → CTI2.Occupied W Z
   → CTI2.Occupied (CTI2.bothBindWorld v W A B) (Fin.suc Z)
 bothBind-old-occupiedᴼ v A B (Y , eq) =
@@ -226,7 +226,7 @@ bothBind-old-occupiedᴼ v A B (Y , eq) =
 
 bothBind-old-no-targetᴼ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {Z}
-    (v : VarImp) (A : Ty Δᴸ) (B : Ty Δᴿ)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ) (B : Ty Δᴿ)
   → CTI2.NoTargetOccupant W Z
   → CTI2.NoTargetOccupant
       (CTI2.bothBindWorld v W A B) (Fin.suc Z)
@@ -312,7 +312,7 @@ decay-no-target-forwardᴼ : ∀ {Δᴸ Δᴿ Δ}
   → CTI2.NoTargetOccupant W Z
   → CTI2.NoTargetOccupant Wᵈ Z
 decay-no-target-forwardᴼ
-    (WD.env-decay refl refl refl refl _) no-target =
+    (WD.env-decay refl refl refl refl _ _) no-target =
   no-target
 
 decay-occupied-forwardᴼ : ∀ {Δᴸ Δᴿ Δ}
@@ -321,7 +321,7 @@ decay-occupied-forwardᴼ : ∀ {Δᴸ Δᴿ Δ}
   → CTI2.Occupied W Z
   → CTI2.Occupied Wᵈ Z
 decay-occupied-forwardᴼ
-    (WD.env-decay refl refl refl refl _) occupied =
+    (WD.env-decay refl refl refl refl _ _) occupied =
   occupied
 
 decay-occupied-backwardᴼ : ∀ {Δᴸ Δᴿ Δ}
@@ -330,7 +330,7 @@ decay-occupied-backwardᴼ : ∀ {Δᴸ Δᴿ Δ}
   → CTI2.Occupied Wᵈ Z
   → CTI2.Occupied W Z
 decay-occupied-backwardᴼ
-    (WD.env-decay refl refl refl refl _) occupied =
+    (WD.env-decay refl refl refl refl _ _) occupied =
   occupied
 
 decay-no-target-at-source-forwardᴼ : ∀ {Δᴸ Δᴿ Δ}
@@ -339,7 +339,7 @@ decay-no-target-at-source-forwardᴼ : ∀ {Δᴸ Δᴿ Δ}
   → CTI2.NoTargetOccupantAtSource W X
   → CTI2.NoTargetOccupantAtSource Wᵈ X
 decay-no-target-at-source-forwardᴼ
-    (WD.env-decay refl refl refl refl _) no-target =
+    (WD.env-decay refl refl refl refl _ _) no-target =
   no-target
 
 ------------------------------------------------------------------------

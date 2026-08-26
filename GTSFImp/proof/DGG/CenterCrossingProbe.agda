@@ -221,13 +221,13 @@ inner² =
   CTI2.conceal⊑conceal²
     (CTX.matched-seal-star-partner
       (CTX.rep★-nonvar-tag nonvar-base))
-    (λ Z eq → eq) rb-inner CTX.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) rb-inner CTX.same-[]
     (Conv.⊢↓-sealˣ X₁∈) (Conv.⊢↓-sealˣ Y₁∈) base² p-inner
 
 input-target-seal-variable :
   W′ ∣ [] ⊢² V ⊑ U ↓ seal Y₀ (＇ Y₁) ∶ p-input
 input-target-seal-variable =
-  CTI2.⊑conceal² (λ Z eq → eq) (CTX.rebase-varᴿ rb-target-input)
+  CTI2.⊑conceal² (CTX.eqᵉᵐ (λ _ → refl)) (CTX.rebase-varᴿ rb-target-input)
     CTX.same-[] (Conv.⊢↓-sealˣ Y₀∈) inner² p-input
 
 source-spine : SVD.SpineValue V

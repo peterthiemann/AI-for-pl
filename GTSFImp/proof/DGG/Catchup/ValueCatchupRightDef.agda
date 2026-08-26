@@ -112,6 +112,7 @@ ValueCatchupRight² = ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M″ : Term Δᴿ}
     {A : Ty Δᴸ} {B : Ty Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ B}
+  → CTX.NoAliasWorld W
   → Value M
   → W ∣ γ ⊢² M ⊑ M″ ∶ q
   → Σ[ Δᴿ′ ∈ TyCtx ] Σ[ χs ∈ StoreChanges Δᴿ Δᴿ′ ]
@@ -129,6 +130,7 @@ ExtraCastRightAt fuel = ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M′ : Term Δᴿ}
     {A : Ty Δᴸ} {B B′ : Ty Δᴿ} {ν : Env∼ Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ B′}
+  → CTX.NoAliasWorld W
   → (c′ : ν ⊢ B ∼ B′)
   → castSize c′ < fuel
   → W ∣ γ ⊢² M ⊑ (M′ ⟨ c′ ⟩) ∶ q
@@ -149,6 +151,7 @@ InstCatchupRightAt fuel = ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M′ : Term Δᴿ}
     {A : Ty Δᴸ} {B : Ty (suc Δᴿ)} {B′ : Ty Δᴿ}
     {ν : Env∼ Δᴿ} {p : A ⊑ᵂ⟨ W ⟩ `∀ B}
+  → CTX.NoAliasWorld W
   → W ∣ γ ⊢² M ⊑ M′ ∶ p
   → Value M
   → Value M′
@@ -190,6 +193,7 @@ ValueCatchupRightAt fuel = ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M″ : Term Δᴿ}
     {A : Ty Δᴸ} {B : Ty Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ B}
+  → CTX.NoAliasWorld W
   → Value M
   → (rel : W ∣ γ ⊢² M ⊑ M″ ∶ q)
   → TargetCastBound fuel rel

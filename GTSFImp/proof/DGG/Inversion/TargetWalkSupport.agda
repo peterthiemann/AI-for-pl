@@ -133,7 +133,7 @@ liftWorldBoth-⊑ᵂ {W = W} {A = A} {B = B} {v = v} p =
         ⇑ᵗ (CTX.embedᴸ W A) ⊑ R)
       (sym (trans (renameᵗ-cong (⇑ᵗ B) (toRename-keep-eq (ηᴿʷ W)))
                   (renameᵗ-shift (toRenameᵗ (ηᴿʷ W)) B)))
-      (rename-⊑ Fin.suc fin-suc-injective (λ _ eq → eq) p))
+      (shift-⊑ p))
 
 -- Rebasing is stable under a binder introduced on both sides.  This is
 -- the world-level counterpart of the shifted-pivot conversion rules.
@@ -160,7 +160,7 @@ liftRebaseAt {Δᴸ = Δᴸ} {W = W} {W′ = W′} {Xᴸ = Xᴸ}
       (CTX.RebaseAt.storeRepresentations rb)
 
   renamed-represented =
-    rename-⊑ Fin.suc fin-suc-injective (λ _ eq → eq) old-represented
+    shift-⊑ old-represented
 
   lift-represented :
     CTX.resolveVar

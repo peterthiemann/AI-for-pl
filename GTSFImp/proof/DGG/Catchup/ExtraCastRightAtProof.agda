@@ -56,6 +56,7 @@ open import proof.DGG.Catchup.TargetCastStepInversionProof using
    matched-conceal-partner-target-id-framed-core;
    target-id-step-inversion)
 import proof.DGG.CastTermImprecision as CTI2
+import proof.Imprecision as PIM
 import proof.DGG.CtxImp as CTX
 import proof.DGG.ExtraCastRight2 as ECR
 open import proof.DGG.Inversion.RightInjInversion2Def using
@@ -72,10 +73,11 @@ source-value-target-bottom-impossible : ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {A : Ty Δᴸ}
   → Value M
   → ⟨ Δᴸ , CTX.sourceStoreʷ W , CTX.srcCtxʷ γ ⟩ ⊢ M ⦂ A
+  → CTX.NoAliasWorld W
   → A ⊑ᵂ⟨ W ⟩ `∀ (＇ zero)
   → ⊥
 source-value-target-bottom-impossible {W = W} {γ = γ}
-    {M = M} {A = `∀ A} vM M⊢ (I.∀⊑∀ body) =
+    {M = M} {A = `∀ A} vM M⊢ na (I.∀⊑∀ body) =
   no-bot-value vM
     (subst≡
       (λ A′ → ⟨ _ , CTX.sourceStoreʷ W , CTX.srcCtxʷ γ ⟩
@@ -86,10 +88,13 @@ source-value-target-bottom-impossible {W = W} {γ = γ}
   body-eq =
     renameᵗ-injective
       (ext-injective (toRenameᵗ-injective (CTX.ηᴸʷ W)))
-      (imprecision-to-fresh body)
-source-value-target-bottom-impossible {A = `∀ A} vM M⊢
+      (imprecision-to-fresh (PIM.ext-aliases-avoid-zero _) body)
+source-value-target-bottom-impossible {A = `∀ A} vM M⊢ na
     (I.∀⊑ Anv z∈A body) =
   imprecision-no-star-to-bot refl body z∈A
+source-value-target-bottom-impossible {W = W} {A = ＇ X}
+    vM M⊢ na (I.alias eq body) =
+  na _ eq
 
 
 target-bot-elim-refutation : ∀ {Δᴸ Δᴿ Δ}
@@ -111,11 +116,13 @@ target-bot-intro-refutation : ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M′ : Term Δᴿ}
     {A : Ty Δᴸ} {ν : Env∼ Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ `∀ (＇ zero)}
+  → CTX.NoAliasWorld W
   → Value M
   → W ∣ γ ⊢² M ⊑ M′ ⟨ bot-intro {μ = ν} ⟩ ∶ q
   → ⊥
-target-bot-intro-refutation {q = q} vM rel =
-  source-value-target-bottom-impossible vM (CTI2T.source-typing² rel) q
+target-bot-intro-refutation {q = q} na vM rel =
+  source-value-target-bottom-impossible vM
+    (CTI2T.source-typing² rel) na q
 
 
 rep★-ground-step-core : ∀ {Δᴸ Δᴿ Δ}
@@ -562,6 +569,7 @@ structural-source-injection-ground-extra-cast-right-at :
     ⦃ Bns : NonStar B ⦄
     {p : H ⊑ᵂ⟨ W ⟩ B}
     {q★ : ★ ⊑ᵂ⟨ W ⟩ ★}
+  → CTX.NoAliasWorld W
   → (cᴿ : νᴿ ⊢ B ∼ G)
   → StructuralExtraCastRightAt (castSize (_! cᴿ))
   → ground-other-decreaseᵀ
@@ -580,7 +588,7 @@ structural-source-injection-ground-extra-cast-right-at
     ⦃ Hᵍ = Hᵍ ⦄ ⦃ H∼★ = H∼★ ⦄
     ⦃ Gᵍ = Gᵍ ⦄ ⦃ G∼★ = G∼★ ⦄
     ⦃ Bns = Bns ⦄ {p = p} {q★ = q★}
-    cᴿ smaller-extra ground-other-decrease B≢G vM vM′ rel =
+    na cᴿ smaller-extra ground-other-decrease B≢G vM vM′ rel =
   structural-catchup-prepend-keep-stutter
     (pure-step (ground ⦃ Gns = ground-nonstar Gᵍ ⦄ vM′ B≢G))
     after-ground
@@ -592,7 +600,7 @@ structural-source-injection-ground-extra-cast-right-at
 
   qHG : H ⊑ᵂ⟨ W ⟩ G
   qHG = source-ground-cast-witness {W = W} {H = H} {B = B}
-    {G = G} {ν = νᴿ} Hᵍ Gᵍ Bns cᴿ p
+    {G = G} {ν = νᴿ} na Hᵍ Gᵍ Bns cᴿ p
 
   child : StructuralCatchupRightResult W γ M (M′ ⟨ cᴿ ⟩) qHG
   child =
@@ -885,10 +893,11 @@ structural-bot-intro-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     {M : Term Δᴸ} {M′ : Term Δᴿ}
     {A : Ty Δᴸ} {ν : Env∼ Δᴿ}
     {q : A ⊑ᵂ⟨ W ⟩ `∀ (＇ zero)}
+  → CTX.NoAliasWorld W
   → W ∣ γ ⊢² M ⊑ M′ ⟨ bot-intro {μ = ν} ⟩ ∶ q
   → Value M
   → Value M′
   → StructuralCatchupRightResult W γ M
       (M′ ⟨ bot-intro {μ = ν} ⟩) q
-structural-bot-intro-extra-cast-right-at rel vM vM′ =
-  ⊥-elim (target-bot-intro-refutation vM rel)
+structural-bot-intro-extra-cast-right-at na rel vM vM′ =
+  ⊥-elim (target-bot-intro-refutation na vM rel)

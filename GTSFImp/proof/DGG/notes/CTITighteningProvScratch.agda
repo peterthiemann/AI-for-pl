@@ -323,7 +323,7 @@ matching-outputᴾ =
   conceal⊑concealᴾ
     (CTI2.matched-seal-star-partner
       (CTI2.rep★-nonvar-tag nonvar-base))
-    (λ _ eq → eq) N.X-Y-rebase CTI2.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) N.X-Y-rebase CTI2.same-[]
     N.source-seal-typed N.target-seal-typed baseᴾ N.qXY
 
 matching-inputᴾ :

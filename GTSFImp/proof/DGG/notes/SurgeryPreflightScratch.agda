@@ -179,7 +179,7 @@ target-rep-tagʳᵗᵈ = ⊑castʳᵗᵈ TD.ℕ! baseʳᵗᵈ ι⊑★
 paired-name-sealʳᵗᵈ : TD.probe-world ∣ [] ⊢ʳᵗᵈ
     TD.source-term ⊑ TD.target-tagged ↓ seal Fin.zero ★ ∶ TD.probe-q
 paired-name-sealʳᵗᵈ =
-  conceal⊑concealʳᵗᵈ (λ _ eq → eq) TD.U-Y-rebase CTX.same-[]
+  conceal⊑concealʳᵗᵈ (CTX.eqᵉᵐ (λ _ → refl)) TD.U-Y-rebase CTX.same-[]
     TD.source-U-seal-typed TD.target-Y-seal-typed
     target-rep-tagʳᵗᵈ TD.probe-q
 

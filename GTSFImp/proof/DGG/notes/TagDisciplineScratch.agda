@@ -283,7 +283,7 @@ target-rep-tagᵗᵈ = ⊑castᵗᵈ ℕ! baseᵗᵈ ι⊑★
 paired-name-sealᵗᵈ : probe-world ∣ [] ⊢ᵗᵈ
     source-term ⊑ target-tagged ↓ seal Y ★ ∶ probe-q
 paired-name-sealᵗᵈ =
-  conceal⊑concealᵗᵈ (λ _ eq → eq) U-Y-rebase same-[]
+  conceal⊑concealᵗᵈ (CTX.eqᵉᵐ (λ _ → refl)) U-Y-rebase same-[]
     source-U-seal-typed target-Y-seal-typed target-rep-tagᵗᵈ probe-q
 
 sealed-source-name-tag-positiveᵗᵈ : probe-world ∣ [] ⊢ᵗᵈ

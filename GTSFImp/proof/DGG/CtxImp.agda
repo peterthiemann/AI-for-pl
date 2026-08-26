@@ -17,7 +17,7 @@ open import Data.Nat as Nat using (ℕ)
 open import Data.Product using (Σ-syntax; _×_; _,_)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; _≢_; refl; cong)
+  using (_≡_; _≢_; refl; cong; sym; trans)
 
 open import Types
 open import TyStore using
@@ -290,6 +290,17 @@ ImpEnvAlias W W′ =
 idᵉᵐ : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
   → ImpEnvMono W W
 idᵉᵐ = imp-env-mono (λ Z eq → eq) alias-same-refl
+
+-- Monotonicity between worlds whose environments agree pointwise,
+-- e.g. worlds differing only in their embeddings or stores.
+
+eqᵉᵐ : ∀ {Δᴸ Δᴿ Δ} {W W′ : World Δᴸ Δᴿ Δ}
+  → (∀ Z → impEnvʷ W Z ≡ impEnvʷ W′ Z)
+  → ImpEnvMono W W′
+eqᵉᵐ f =
+  imp-env-mono (λ Z eq → trans (sym (f Z)) eq)
+    (alias-same (λ Z eq → trans (sym (f Z)) eq)
+      (λ Z eq → trans (f Z) eq))
 
 module _ {Δᴸ Δᴿ Δ} {W W′ : World Δᴸ Δᴿ Δ} where
 

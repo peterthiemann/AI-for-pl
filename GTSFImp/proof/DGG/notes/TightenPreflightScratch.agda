@@ -305,13 +305,13 @@ star-rep-chain-inner-source²ᵀ :
   SRC.W ∣ [] ⊢² SRC.source-inner ⊑ SRC.target-core ∶ SRC.inner-type
 star-rep-chain-inner-source²ᵀ =
   conceal⊑²ᵀ star-rep-chain-inner-okᵀ
-    (λ Z eq → eq) SRC.inner-source-only-rebase CTX.same-[]
+    (CTX.eqᵉᵐ (λ _ → refl)) SRC.inner-source-only-rebase CTX.same-[]
     SRC.source-X-seal-⊢ SRC.base² SRC.inner-type
 
 star-rep-chain-outputᵀ :
   SRC.W ∣ [] ⊢² SRC.M ⊑ SRC.target-sealed ∶ SRC.q
 star-rep-chain-outputᵀ =
-  CTI2.conceal⊑conceal² (λ Z eq → eq) SRC.outer-rebase
+  CTI2.conceal⊑conceal² (CTX.eqᵉᵐ (λ _ → refl)) SRC.outer-rebase
     CTX.same-[] SRC.source-Xᴸ-seal-⊢ SRC.target-Y-seal-⊢
     star-rep-chain-inner-source²ᵀ SRC.q
 
@@ -352,7 +352,7 @@ tag-boundary-source-seal²ᵀ :
   TBP.probe-W₅ ∣ [] ⊢² TBP.probe-V ⊑ TBP.probe-M₅ ∶ TBP.p₅
 tag-boundary-source-seal²ᵀ =
   conceal⊑²ᵀ tag-boundary-source-okᵀ
-    (λ _ eq → eq) (CTX.tag-rebase-varᴸ TBP.probe-inner-source-rebase)
+    (CTX.eqᵉᵐ (λ _ → refl)) (CTX.tag-rebase-varᴸ TBP.probe-inner-source-rebase)
     CTX.same-[] TBP.probe-X-seal-⊢ TBP.probe-base² TBP.p₅
 
 ------------------------------------------------------------------------

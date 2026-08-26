@@ -107,6 +107,7 @@ target-expand-cast-witness {W = W} Gᵍ Bns c p q =
 source-ground-cast-witness : ∀ {Δᴸ Δᴿ Δ}
     {W : World Δᴸ Δᴿ Δ}
     {H : Ty Δᴸ} {B G : Ty Δᴿ} {ν : Env∼ Δᴿ}
+  → CTX.NoAliasWorld W
   → (Hᵍ : Ground H)
   → (Gᵍ : Ground G)
   → (Bns : NonStar B)
@@ -114,14 +115,14 @@ source-ground-cast-witness : ∀ {Δᴸ Δᴿ Δ}
   → H ⊑ᵂ⟨ W ⟩ B
   → H ⊑ᵂ⟨ W ⟩ G
 source-ground-cast-witness {W = W} {H = H} {G = G}
-    Hᵍ Gᵍ Bns c p =
+    na Hᵍ Gᵍ Bns c p =
   subst≡ (λ T → I._⊢_⊑_ (CTX.impEnvʷ W) (CTX.embedᴸ W H) T)
     center-eq
     (PI.refl⊑ (CTX.embedᴸ W H))
   where
   center-eq : CTX.embedᴸ W H ≡ CTX.embedᴿ W G
   center-eq =
-    PI.ground-cast-target-unique⊑
+    PI.ground-cast-target-unique⊑ na
       (C.renameGround (toRenameᵗ (CTX.ηᴸʷ W)) Hᵍ)
       (C.renameGround (toRenameᵗ (CTX.ηᴸʷ W)) Hᵍ)
       (C.renameGround (toRenameᵗ (CTX.ηᴿʷ W)) Gᵍ)
