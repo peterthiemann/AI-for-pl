@@ -7,7 +7,6 @@ module proof.DGG.Catchup.StructuralTargetSourceTransportProof where
 open import Data.Nat using (suc)
 
 open import Types using (Ty)
-open import Imprecision using (VarImp)
 open import CastTerms using (Term)
 import proof.DGG.CtxImp as CTI2
 open import proof.DGG.Catchup.StructuralValueInstantiationStateDef
@@ -23,18 +22,19 @@ open import proof.DGG.Catchup.StructuralTargetInstantiationDef
 structural-target-lift-left : ∀ {Δᴸ Δᴿ Δ}
     {W : CTI2.World Δᴸ Δᴿ Δ} {V : Term Δᴿ}
     {B E : Ty Δᴿ} {spine : InstantiationSpine B E}
-  → (v : VarImp)
+  → (c : CTI2.VarImpᶜ)
   → StructuralTargetInstantiationPackage W V spine
-  → StructuralTargetInstantiationPackage (CTI2.liftWorldLeft v W)
+  → StructuralTargetInstantiationPackage
+      (CTI2.liftWorldLeft CTI2.⟦ c ⟧ᶜ W)
       V spine
-structural-target-lift-left v pkg = record
+structural-target-lift-left c pkg = record
   { Δᴿ′ = StructuralTargetInstantiationPackage.Δᴿ′ pkg
   ; χs = StructuralTargetInstantiationPackage.χs pkg
   ; Δ′ = suc (StructuralTargetInstantiationPackage.Δ′ pkg)
-  ; W′ = CTI2.liftWorldLeft v
+  ; W′ = CTI2.liftWorldLeft CTI2.⟦ c ⟧ᶜ
       (StructuralTargetInstantiationPackage.W′ pkg)
   ; structural-ext = structural-lift-left
-      (StructuralTargetInstantiationPackage.structural-ext pkg) v
+      (StructuralTargetInstantiationPackage.structural-ext pkg) c
   ; final = StructuralTargetInstantiationPackage.final pkg
   ; final-value = StructuralTargetInstantiationPackage.final-value pkg
   ; post-reduction =

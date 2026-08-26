@@ -212,6 +212,7 @@ structural-name-package :
     → FuelStepSurface fuel
     → ResidualCastBuilderᵀ
     → inst-alloc-decreaseᵀ
+    → CTI2.NoAliasWorld W
     → (plan : StructuralNamePostPlan W A E q)
     → StructuralNameChainPlan {fuel = fuel} W γ A E q plan
     → W CTIR.∣ γ ⊢² M ⊑ V ∶ p
@@ -228,11 +229,13 @@ structural-name-package :
     → StructuralInstantiationDescentPackage W γ M V
         (name-type-app-frame B X refl refl ▻ⁱ spine) q
 structural-name-package surfaces worker fuel-step residual-cast-builder
-    inst-decrease plan chain-plan rel vM vV view spine chain typed target =
+    inst-decrease na plan chain-plan rel vM vV view spine chain typed
+    target =
   record
     { target-descent = target
     ; final-relation =
-        worker surfaces fuel-step residual-cast-builder inst-decrease plan chain-plan
+        worker surfaces fuel-step residual-cast-builder inst-decrease
+          na plan chain-plan
           rel vM vV view spine chain typed target
     }
 
@@ -250,6 +253,7 @@ erase-structural-name-root :
     → FuelStepSurface fuel
     → ResidualCastBuilderᵀ
     → inst-alloc-decreaseᵀ
+    → CTI2.NoAliasWorld W
     → (plan : StructuralNamePostPlan W A E q)
     → StructuralNameChainPlan {fuel = fuel} W γ A E q plan
     → W CTIR.∣ γ ⊢² M ⊑ V ∶ p
@@ -267,7 +271,9 @@ erase-structural-name-root :
         (applyInstantiationSpine V
           (name-type-app-frame B X refl refl ▻ⁱ spine)) q
 erase-structural-name-root surfaces worker fuel-step residual-cast-builder
-    inst-decrease plan chain-plan rel vM vV view spine chain typed target =
+    inst-decrease na plan chain-plan rel vM vV view spine chain typed
+    target =
   erase-structural-descent
     (structural-name-package surfaces worker fuel-step residual-cast-builder
-      inst-decrease plan chain-plan rel vM vV view spine chain typed target)
+      inst-decrease na plan chain-plan rel vM vV view spine chain typed
+      target)

@@ -330,6 +330,7 @@ StructuralNameInstantiationᵀ =
   → FuelStepSurface fuel
   → ResidualCastBuilderᵀ
   → inst-alloc-decreaseᵀ
+  → CTI2.NoAliasWorld W
   → (plan : StructuralNamePostPlan W A E q)
   → StructuralNameChainPlan {fuel = fuel} W γ A E q plan
   → W CTIR.∣ γ ⊢² M ⊑ V ∶ p

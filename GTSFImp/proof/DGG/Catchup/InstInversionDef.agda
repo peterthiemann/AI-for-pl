@@ -356,6 +356,7 @@ StructuralValueInstantiationᵀ =
   → FuelStepSurface fuel
   → ResidualCastBuilderᵀ
   → inst-alloc-decreaseᵀ
+  → CTX.NoAliasWorld W
   → (plan : StructuralNamePostPlan W A
       (applyBody (bind R) B [ ＇ Fin.zero ]ᵗ) q)
   → StructuralNameChainPlan {fuel = fuel} W γ A
