@@ -29,7 +29,7 @@ open import Conversion using (seal)
 open import Consistency using (toRenameᵗ; keep)
 import Imprecision as I
 open import proof.ImprecisionConsistency using
-  (fin-suc-injective; rename-⊑)
+  (fin-suc-injective; rename-⊑; shift-star-map; shift-alias-map)
 open import LR-narrow.WorldCore
 
 ------------------------------------------------------------------------
@@ -125,7 +125,7 @@ record TargetSemanticAtom {Δᴾ Δᴵ Δᶜ}
 open TargetSemanticAtom public
 
 data SemanticEntry {Δᴾ Δᴵ Δᶜ} (W : CoreWorld Δᴾ Δᴵ Δᶜ)
-    (Z : TyVar Δᶜ) : I.VarImp → Set where
+    (Z : TyVar Δᶜ) : I.VarImp Δᶜ → Set where
   paired-entry : ∀ {mode}
     → SemanticAtom W Z
     → SemanticEntry W Z mode
@@ -308,10 +308,13 @@ transport-⊑ refl refl p = p
 -- Center imprecision shifts behind any fresh binding: the new center does
 -- not occur and the old modes are preserved.
 
-shift-⊑ : ∀ {Δᶜ} {μ : I.ImpEnv Δᶜ} (v : I.VarImp) {A B : Ty Δᶜ}
+shift-⊑ : ∀ {Δᶜ} {μ : I.ImpEnv Δᶜ} (v : I.VarImp (suc Δᶜ)) {A B : Ty Δᶜ}
   → μ I.⊢ A ⊑ B
   → I.extendᵐ v μ I.⊢ ⇑ᵗ A ⊑ ⇑ᵗ B
-shift-⊑ v p = rename-⊑ Fin.suc fin-suc-injective (λ Z eq → eq) p
+shift-⊑ {μ = μ} v p =
+  rename-⊑ Fin.suc fin-suc-injective
+    (shift-star-map {ν = μ} {v = v})
+    (shift-alias-map {ν = μ} {v = v}) p
 
 weaken-semantic-atom : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
@@ -518,7 +521,7 @@ weaken-entry : ∀ {Δᴾ Δᴵ Δᶜ mode}
   → (Aᴾ : Ty Δᴾ)
   → (Aᴵ : Ty Δᴵ)
   → SemanticEntry W Z mode
-  → SemanticEntry (pairedBindCore W Aᴾ Aᴵ) (Fin.suc Z) mode
+  → SemanticEntry (pairedBindCore W Aᴾ Aᴵ) (Fin.suc Z) (I.⇑ᵛ mode)
 weaken-entry Aᴾ Aᴵ (paired-entry a) =
   paired-entry (weaken-semantic-atom Aᴾ Aᴵ a)
 weaken-entry Aᴾ Aᴵ (dynamic-entry a) =
@@ -530,7 +533,7 @@ weaken-entry-precise : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
   → (Aᴾ : Ty Δᴾ)
   → SemanticEntry W Z mode
-  → SemanticEntry (preciseBindCore W Aᴾ) (Fin.suc Z) mode
+  → SemanticEntry (preciseBindCore W Aᴾ) (Fin.suc Z) (I.⇑ᵛ mode)
 weaken-entry-precise Aᴾ (paired-entry a) =
   paired-entry (weaken-semantic-atom-precise Aᴾ a)
 weaken-entry-precise Aᴾ (dynamic-entry a) =
@@ -542,7 +545,7 @@ weaken-entry-imprecise : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
   → (Aᴵ : Ty Δᴵ)
   → SemanticEntry W Z mode
-  → SemanticEntry (impreciseBindCore W Aᴵ) (Fin.suc Z) mode
+  → SemanticEntry (impreciseBindCore W Aᴵ) (Fin.suc Z) (I.⇑ᵛ mode)
 weaken-entry-imprecise Aᴵ (paired-entry a) =
   paired-entry (weaken-semantic-atom-imprecise Aᴵ a)
 weaken-entry-imprecise Aᴵ (dynamic-entry a) =

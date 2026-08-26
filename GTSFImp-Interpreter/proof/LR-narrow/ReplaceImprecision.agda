@@ -17,15 +17,18 @@ open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; _≢_; refl; sym; trans; cong; cong₂)
   renaming (subst to subst≡)
-open import Relation.Nullary using (yes; no)
+open import Relation.Nullary using (yes; no; False)
 open import Data.Fin.Properties using (_≟_)
 
 open import Types
 open import Conversion using (replaceTy)
 import Imprecision as I
 open import LR-narrow.Atoms using (shift-⊑)
+import proof.Imprecision as PI
+open import proof.Imprecision using
+  (AliasesAvoid; ext-aliases-avoid-suc; inst-aliases-avoid-suc)
 open import proof.ImprecisionConsistency using
-  (fin-suc-injective; ty-var-injective)
+  (fin-suc-injective; ty-var-injective; target-occurs-source)
 open import proof.LR-narrow.StarNoOccurrence using
   (renameᵗ-∉ᵗ; star-no-occurrence; ⊑-base-right-no-var)
 open import proof.LR-narrow.RevealLifting using (shift-replace)
@@ -138,46 +141,89 @@ replace-star Z R {A = A} mode p =
   subst≡ (λ T → _ I.⊢ T ⊑ ★)
     (sym (replaceTy-absent Z R (star-no-occurrence Z mode p))) p
 
+-- Replacing the paired variable on the right of an alias derivation
+-- cannot create a self-alias: the alias variable is distinct from the
+-- old right-hand side by `notSelf`, and equal to the replacement's
+-- target only if the paired variable occurred in the representative,
+-- which alias avoidance excludes.
+
+replace-alias-not-self : ∀ {Δ} {μ : I.ImpEnv Δ} (Z : TyVar Δ)
+    (Rᴵ : Ty Δ) {X : TyVar Δ} {T B : Ty Δ}
+  → AliasesAvoid μ Z
+  → μ X ≡ I.X⊑ᵗ T
+  → μ I.⊢ T ⊑ B
+  → False (isVar? X B)
+  → False (isVar? X (replaceTy Z Rᴵ B))
+replace-alias-not-self Z Rᴵ {X = X} {B = ＇ Y} avoid eq p notSelf
+    with Z ≟ Y
+replace-alias-not-self Z Rᴵ {X = X} {B = ＇ Y} avoid eq p notSelf
+    | yes refl =
+  ⊥-elim (PI.∈∉-⊥ (avoid X eq)
+    (target-occurs-source avoid p var-∈))
+replace-alias-not-self Z Rᴵ {B = ＇ Y} avoid eq p notSelf
+    | no _ = notSelf
+replace-alias-not-self Z Rᴵ {B = ‵ ι} avoid eq p notSelf = notSelf
+replace-alias-not-self Z Rᴵ {B = ★} avoid eq p notSelf = notSelf
+replace-alias-not-self Z Rᴵ {B = B₁ ⇒ B₂} avoid eq p notSelf =
+  notSelf
+replace-alias-not-self Z Rᴵ {B = `∀ B₁} avoid eq p notSelf =
+  notSelf
+
 replace-⊑ : ∀ {Δ} {μ : I.ImpEnv Δ} (Z : TyVar Δ)
     {Rᴾ Rᴵ : Ty Δ} {A B : Ty Δ}
   → μ Z ≡ I.X⊑X
+  → AliasesAvoid μ Z
   → μ I.⊢ Rᴾ ⊑ Rᴵ
   → μ I.⊢ A ⊑ B
   → μ I.⊢ replaceTy Z Rᴾ A ⊑ replaceTy Z Rᴵ B
-replace-⊑ Z mode r I.★⊑★ = I.★⊑★
-replace-⊑ Z mode r I.ι⊑ι = I.ι⊑ι
-replace-⊑ Z mode r (I.X⊑X {X = X}) with Z ≟ X
-replace-⊑ Z mode r I.X⊑X | yes refl = r
-replace-⊑ Z mode r I.X⊑X | no _ = I.X⊑X
-replace-⊑ Z mode r (I.⇒⊑⇒ p q) =
-  I.⇒⊑⇒ (replace-⊑ Z mode r p) (replace-⊑ Z mode r q)
-replace-⊑ Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode r (I.∀⊑∀ p) =
-  I.∀⊑∀ (replace-⊑ (Fin.suc Z) mode (shift-⊑ I.X⊑X r) p)
-replace-⊑ Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode r (I.⇒⊑★ p q) =
+replace-⊑ Z mode avoid r I.★⊑★ = I.★⊑★
+replace-⊑ Z mode avoid r I.ι⊑ι = I.ι⊑ι
+replace-⊑ Z mode avoid r (I.X⊑X {X = X}) with Z ≟ X
+replace-⊑ Z mode avoid r I.X⊑X | yes refl = r
+replace-⊑ Z mode avoid r I.X⊑X | no _ = I.X⊑X
+replace-⊑ Z mode avoid r (I.⇒⊑⇒ p q) =
+  I.⇒⊑⇒ (replace-⊑ Z mode avoid r p) (replace-⊑ Z mode avoid r q)
+replace-⊑ Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode avoid r (I.∀⊑∀ p) =
+  I.∀⊑∀ (replace-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
+    (ext-aliases-avoid-suc avoid) (shift-⊑ I.X⊑X r) p)
+replace-⊑ Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode avoid r (I.⇒⊑★ p q) =
   I.⇒⊑★ (replace-star Z Rᴾ mode p) (replace-star Z Rᴾ mode q)
-replace-⊑ Z mode r I.ι⊑★ = I.ι⊑★
-replace-⊑ Z mode r (I.X⊑★ {X = X} eq) with Z ≟ X
-replace-⊑ Z mode r (I.X⊑★ eq) | yes refl
+replace-⊑ Z mode avoid r I.ι⊑★ = I.ι⊑★
+replace-⊑ Z mode avoid r (I.X⊑★ {X = X} eq) with Z ≟ X
+replace-⊑ Z mode avoid r (I.X⊑★ eq) | yes refl
     with trans (sym mode) eq
-replace-⊑ Z mode r (I.X⊑★ eq) | yes refl | ()
-replace-⊑ Z mode r (I.X⊑★ eq) | no _ = I.X⊑★ eq
-replace-⊑ Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode r
+replace-⊑ Z mode avoid r (I.X⊑★ eq) | yes refl | ()
+replace-⊑ Z mode avoid r (I.X⊑★ eq) | no _ = I.X⊑★ eq
+replace-⊑ Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode avoid r
     (I.∀⊑ {A = A} {B = B} nonvar occurs p) =
   I.∀⊑ (replaceTy-nonvar (Fin.suc Z) (⇑ᵗ Rᴾ) nonvar)
     (replaceTy-occurs (Fin.suc Z) (⇑ᵗ Rᴾ) (λ ())
       (shift-no-zero Rᴾ) occurs)
     (subst≡ (λ T → I.instᵐ _ I.⊢ replaceTy (Fin.suc Z) (⇑ᵗ Rᴾ) A ⊑ T)
       (sym (shift-replace Z Rᴵ B))
-      (replace-⊑ (Fin.suc Z) mode (shift-⊑ I.X⊑★ r) p))
-replace-⊑ Z mode r I.∀★⊑★ = I.∀★⊑★
-replace-⊑ {μ = μ} Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode r
+      (replace-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
+        (inst-aliases-avoid-suc avoid) (shift-⊑ I.X⊑★ r) p))
+replace-⊑ Z mode avoid r I.∀★⊑★ = I.∀★⊑★
+replace-⊑ {μ = μ} Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode avoid r
     (I.∀⊑★ {A = A} nonstar p) =
   subst≡ (λ T → μ I.⊢ T ⊑ ★)
     (sym (replaceTy-absent Z Rᴾ
-      (∉-all (star-no-occurrence (Fin.suc Z) mode p))))
+      (∉-all (star-no-occurrence (Fin.suc Z) (cong I.⇑ᵛ mode) p))))
     (I.∀⊑★ nonstar p)
-replace-⊑ Z mode r I.bot-elim = I.bot-elim
-replace-⊑ Z mode r I.bot⊑★ = I.bot⊑★
+replace-⊑ Z mode avoid r I.bot-elim = I.bot-elim
+replace-⊑ Z mode avoid r I.bot⊑★ = I.bot⊑★
+replace-⊑ Z mode avoid r (I.alias {X = X} eq {notSelf} p)
+    with Z ≟ X
+replace-⊑ Z mode avoid r (I.alias eq p) | yes refl
+    with trans (sym mode) eq
+replace-⊑ Z mode avoid r (I.alias eq p) | yes refl | ()
+replace-⊑ {μ = μ} Z {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} mode avoid r
+    (I.alias {X = X} {T = T} {B = B} eq {notSelf} p) | no Z≢X =
+  I.alias eq
+    {notSelf = replace-alias-not-self Z Rᴵ avoid eq p notSelf}
+    (subst≡ (λ T′ → μ I.⊢ T′ ⊑ replaceTy Z Rᴵ B)
+      (replaceTy-absent Z Rᴾ (avoid X eq))
+      (replace-⊑ Z mode avoid r p))
 
 ------------------------------------------------------------------------
 -- Replacement as a simultaneous substitution
@@ -261,49 +307,60 @@ star-or-not (`∀ A) = inj₂ nonstar-∀
 
 replace-left-⊑ : ∀ {Δ} {μ : I.ImpEnv Δ} (Z : TyVar Δ)
     {R : Ty Δ} {A B : Ty Δ}
+  → μ Z ≡ I.X⊑★
   → μ I.⊢ R ⊑ ★
   → Z ∉ᵗ B
   → μ I.⊢ A ⊑ B
   → μ I.⊢ replaceTy Z R A ⊑ B
-replace-left-⊑ Z r★ avoid I.★⊑★ = I.★⊑★
-replace-left-⊑ Z r★ avoid I.ι⊑ι = I.ι⊑ι
-replace-left-⊑ Z r★ avoid (I.X⊑X {X = X}) with Z ≟ X
-replace-left-⊑ Z r★ (∉-var Z≢Z) I.X⊑X | yes refl =
+replace-left-⊑ Z mode r★ avoid I.★⊑★ = I.★⊑★
+replace-left-⊑ Z mode r★ avoid I.ι⊑ι = I.ι⊑ι
+replace-left-⊑ Z mode r★ avoid (I.X⊑X {X = X}) with Z ≟ X
+replace-left-⊑ Z mode r★ (∉-var Z≢Z) I.X⊑X | yes refl =
   ⊥-elim (≢ᶠ→≢ Z≢Z refl)
-replace-left-⊑ Z r★ avoid I.X⊑X | no _ = I.X⊑X
-replace-left-⊑ Z r★ avoid (I.⇒⊑⇒ p q) with avoid
-replace-left-⊑ Z r★ avoid (I.⇒⊑⇒ p q) | ∉-fun avoidA avoidB =
-  I.⇒⊑⇒ (replace-left-⊑ Z r★ avoidA p)
-    (replace-left-⊑ Z r★ avoidB q)
-replace-left-⊑ Z r★ avoid (I.∀⊑∀ p) with avoid
-replace-left-⊑ Z r★ avoid (I.∀⊑∀ p) | ∉-all avoidB =
-  I.∀⊑∀ (replace-left-⊑ (Fin.suc Z)
+replace-left-⊑ Z mode r★ avoid I.X⊑X | no _ = I.X⊑X
+replace-left-⊑ Z mode r★ avoid (I.⇒⊑⇒ p q) with avoid
+replace-left-⊑ Z mode r★ avoid (I.⇒⊑⇒ p q) | ∉-fun avoidA avoidB =
+  I.⇒⊑⇒ (replace-left-⊑ Z mode r★ avoidA p)
+    (replace-left-⊑ Z mode r★ avoidB q)
+replace-left-⊑ Z mode r★ avoid (I.∀⊑∀ p) with avoid
+replace-left-⊑ Z mode r★ avoid (I.∀⊑∀ p) | ∉-all avoidB =
+  I.∀⊑∀ (replace-left-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
     (shift-⊑ I.X⊑X r★) avoidB p)
-replace-left-⊑ Z r★ avoid (I.⇒⊑★ p q) =
-  I.⇒⊑★ (replace-left-⊑ Z r★ ∉-star p)
-    (replace-left-⊑ Z r★ ∉-star q)
-replace-left-⊑ Z r★ avoid I.ι⊑★ = I.ι⊑★
-replace-left-⊑ Z r★ avoid (I.X⊑★ {X = X} eq) with Z ≟ X
-replace-left-⊑ Z {R = R} r★ avoid (I.X⊑★ eq) | yes refl = r★
-replace-left-⊑ Z r★ avoid (I.X⊑★ eq) | no _ = I.X⊑★ eq
-replace-left-⊑ Z {R = R} r★ avoid (I.∀⊑ nonvar occurs p) =
+replace-left-⊑ Z mode r★ avoid (I.⇒⊑★ p q) =
+  I.⇒⊑★ (replace-left-⊑ Z mode r★ ∉-star p)
+    (replace-left-⊑ Z mode r★ ∉-star q)
+replace-left-⊑ Z mode r★ avoid I.ι⊑★ = I.ι⊑★
+replace-left-⊑ Z mode r★ avoid (I.X⊑★ {X = X} eq) with Z ≟ X
+replace-left-⊑ Z {R = R} mode r★ avoid (I.X⊑★ eq) | yes refl = r★
+replace-left-⊑ Z mode r★ avoid (I.X⊑★ eq) | no _ = I.X⊑★ eq
+replace-left-⊑ Z {R = R} mode r★ avoid (I.∀⊑ nonvar occurs p) =
   I.∀⊑ (replaceTy-nonvar (Fin.suc Z) (⇑ᵗ R) nonvar)
     (replaceTy-occurs (Fin.suc Z) (⇑ᵗ R) (λ ())
       (shift-no-zero R) occurs)
-    (replace-left-⊑ (Fin.suc Z) (shift-⊑ I.X⊑★ r★)
+    (replace-left-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
+      (shift-⊑ I.X⊑★ r★)
       (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid) p)
-replace-left-⊑ Z r★ avoid I.∀★⊑★ = I.∀★⊑★
-replace-left-⊑ Z {R = R} r★ avoid (I.∀⊑★ {A = A} nonstar p)
+replace-left-⊑ Z mode r★ avoid I.∀★⊑★ = I.∀★⊑★
+replace-left-⊑ Z {R = R} mode r★ avoid (I.∀⊑★ {A = A} nonstar p)
     with star-or-not (replaceTy (Fin.suc Z) (⇑ᵗ R) A)
-replace-left-⊑ Z {R = R} r★ avoid (I.∀⊑★ {A = A} nonstar p)
+replace-left-⊑ Z {R = R} mode r★ avoid (I.∀⊑★ {A = A} nonstar p)
     | inj₁ eq =
   subst≡ (λ T → _ I.⊢ `∀ T ⊑ ★) (sym eq) I.∀★⊑★
-replace-left-⊑ Z {R = R} r★ avoid (I.∀⊑★ {A = A} nonstar p)
+replace-left-⊑ Z {R = R} mode r★ avoid (I.∀⊑★ {A = A} nonstar p)
     | inj₂ nonstar′ =
   I.∀⊑★ nonstar′
-    (replace-left-⊑ (Fin.suc Z) (shift-⊑ I.X⊑X r★) ∉-star p)
-replace-left-⊑ Z r★ avoid I.bot-elim = I.bot-elim
-replace-left-⊑ Z r★ avoid I.bot⊑★ = I.bot⊑★
+    (replace-left-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
+      (shift-⊑ I.X⊑X r★) ∉-star p)
+replace-left-⊑ Z mode r★ avoid I.bot-elim = I.bot-elim
+replace-left-⊑ Z mode r★ avoid I.bot⊑★ = I.bot⊑★
+replace-left-⊑ Z mode r★ avoid (I.alias {X = X} eq {notSelf} p)
+    with Z ≟ X
+replace-left-⊑ Z mode r★ avoid (I.alias eq p) | yes refl
+    with trans (sym mode) eq
+replace-left-⊑ Z mode r★ avoid (I.alias eq p) | yes refl | ()
+replace-left-⊑ Z mode r★ avoid (I.alias eq {notSelf} p)
+    | no _ =
+  I.alias eq {notSelf = notSelf} p
 
 ------------------------------------------------------------------------
 -- Occurrence reflection through a replacement
@@ -418,4 +475,4 @@ conceal-shape-ι : ∀ {Δ} {μ : I.ImpEnv Δ}
     {L : Ty (suc Δ)} {ι : Base}
   → μ I.⊢ `∀ L ⊑ ‵ ι
   → ⊥
-conceal-shape-ι (I.∀⊑ nv oc d) = ⊑-base-right-no-var d oc
+conceal-shape-ι (I.∀⊑ nv oc d) = ⊑-base-right-no-var refl d oc

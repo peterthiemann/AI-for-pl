@@ -72,6 +72,7 @@ NotPairedStructural I.∀★⊑★ = ⊤
 NotPairedStructural (I.∀⊑★ _ _) = ⊤
 NotPairedStructural I.bot-elim = ⊤
 NotPairedStructural I.bot⊑★ = ⊤
+NotPairedStructural (I.alias _ _) = ⊤
 
 NotRightStructural : ∀ {Δ} {μ : I.ImpEnv Δ} {A B : Ty Δ}
   → μ I.⊢ A ⊑ B → Set
@@ -88,6 +89,7 @@ NotRightStructural I.∀★⊑★ = ⊤
 NotRightStructural (I.∀⊑★ _ _) = ⊤
 NotRightStructural I.bot-elim = ⊤
 NotRightStructural I.bot⊑★ = ⊤
+NotRightStructural (I.alias _ _) = ⊤
 
 -- The views are computed at variable indices, so the recursion can
 -- dispatch on them even though the embedded operator types are stuck

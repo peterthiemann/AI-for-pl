@@ -44,12 +44,18 @@ star-no-occurrence Z mode (I.X⊑★ eq) | no Z≢X =
 star-no-occurrence Z mode (I.⇒⊑★ p q) =
   ∉-fun (star-no-occurrence Z mode p) (star-no-occurrence Z mode q)
 star-no-occurrence Z mode (I.∀⊑ nonvar occurs p) =
-  ∉-all (star-no-occurrence (Fin.suc Z) mode p)
+  ∉-all (star-no-occurrence (Fin.suc Z) (cong I.⇑ᵛ mode) p)
 star-no-occurrence Z mode I.∀★⊑★ = ∉-all ∉-star
 star-no-occurrence Z mode (I.∀⊑★ nonstar p) =
-  ∉-all (star-no-occurrence (Fin.suc Z) mode p)
+  ∉-all (star-no-occurrence (Fin.suc Z) (cong I.⇑ᵛ mode) p)
 star-no-occurrence Z mode I.bot⊑★ =
   ∉-all (∉-var (≢→≢ᶠ (λ ())))
+star-no-occurrence Z mode (I.alias {X = X} eq p) with Z ≟ X
+star-no-occurrence Z mode (I.alias eq p) | yes refl
+    with trans (sym mode) eq
+star-no-occurrence Z mode (I.alias eq p) | yes refl | ()
+star-no-occurrence Z mode (I.alias eq p) | no Z≢X =
+  ∉-var (≢→≢ᶠ Z≢X)
 
 ------------------------------------------------------------------------
 -- Absent variables are not replaced
@@ -127,22 +133,30 @@ paired-no-occurrence Z mode (I.⇒⊑⇒ p q) (∉-fun absentA absentB) =
   ∉-fun (paired-no-occurrence Z mode p absentA)
     (paired-no-occurrence Z mode q absentB)
 paired-no-occurrence Z mode (I.∀⊑∀ p) (∉-all absentB) =
-  ∉-all (paired-no-occurrence (Fin.suc Z) mode p absentB)
+  ∉-all (paired-no-occurrence (Fin.suc Z) (cong I.⇑ᵛ mode) p
+    absentB)
 paired-no-occurrence Z mode (I.⇒⊑★ p q) avoid =
   star-no-occurrence Z mode (I.⇒⊑★ p q)
 paired-no-occurrence Z mode I.ι⊑★ avoid = ∉-base
 paired-no-occurrence Z mode (I.X⊑★ eq) avoid =
   star-no-occurrence Z mode (I.X⊑★ eq)
 paired-no-occurrence Z mode (I.∀⊑ nonvar occurs p) avoid =
-  ∉-all (paired-no-occurrence (Fin.suc Z) mode p
+  ∉-all (paired-no-occurrence (Fin.suc Z) (cong I.⇑ᵛ mode) p
     (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid))
 paired-no-occurrence Z mode I.∀★⊑★ avoid = ∉-all ∉-star
 paired-no-occurrence Z mode (I.∀⊑★ nonstar p) avoid =
-  ∉-all (star-no-occurrence (Fin.suc Z) mode p)
+  ∉-all (star-no-occurrence (Fin.suc Z) (cong I.⇑ᵛ mode) p)
 paired-no-occurrence Z mode I.bot-elim avoid =
   ∉-all (∉-var (≢→≢ᶠ (λ ())))
 paired-no-occurrence Z mode I.bot⊑★ avoid =
   ∉-all (∉-var (≢→≢ᶠ (λ ())))
+paired-no-occurrence Z mode (I.alias {X = X} eq p) avoid
+    with Z ≟ X
+paired-no-occurrence Z mode (I.alias eq p) avoid | yes refl
+    with trans (sym mode) eq
+paired-no-occurrence Z mode (I.alias eq p) avoid | yes refl | ()
+paired-no-occurrence Z mode (I.alias eq p) avoid | no Z≢X =
+  ∉-var (≢→≢ᶠ Z≢X)
 
 ------------------------------------------------------------------------
 -- Non-occurrence is preserved by center lifting
@@ -177,13 +191,20 @@ liftCenter-∉ᵗ (future-imprecise W≼W′) avoid =
 ⊑-var-right-nonvar I.X⊑X ()
 ⊑-var-right-nonvar (I.∀⊑ nonvar occurs p) nv =
   ⊑-var-right-nonvar p nonvar
+⊑-var-right-nonvar (I.alias eq p) ()
 
--- A type imprecise below a base type contains no variables at all.
+-- A type imprecise below a base type contains no variable at the
+-- dynamic mode: the only leaf with a base right-hand side is the
+-- alias one, whose center-variable mode contradicts `X⊑★`.
 
 ⊑-base-right-no-var : ∀ {Δ} {μ : I.ImpEnv Δ} {A : Ty Δ} {ι}
     {Z : TyVar Δ}
+  → μ Z ≡ I.X⊑★
   → μ I.⊢ A ⊑ ‵ ι
   → Z ∈ᵗ A
   → ⊥
-⊑-base-right-no-var (I.∀⊑ nonvar occurs p) (∈-all occ) =
-  ⊑-base-right-no-var p occ
+⊑-base-right-no-var mode (I.∀⊑ nonvar occurs p) (∈-all occ) =
+  ⊑-base-right-no-var (cong I.⇑ᵛ mode) p occ
+⊑-base-right-no-var mode (I.alias eq p) var-∈
+    with trans (sym mode) eq
+⊑-base-right-no-var mode (I.alias eq p) var-∈ | ()

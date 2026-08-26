@@ -16,7 +16,8 @@ import Data.Fin as Fin
 
 open import Types
 import Imprecision as I
-open import proof.ImprecisionConsistency using (rename-⊑)
+open import proof.ImprecisionConsistency using
+  (rename-⊑; RenameAliasMap)
 open import LR-narrow.World
 
 sizeᵖ : ∀ {Δ} {μ : I.ImpEnv Δ} {A B : Ty Δ} → μ I.⊢ A ⊑ B → ℕ
@@ -33,6 +34,7 @@ sizeᵖ I.∀★⊑★ = 1
 sizeᵖ (I.∀⊑★ nonstar p) = suc (sizeᵖ p)
 sizeᵖ I.bot-elim = 1
 sizeᵖ I.bot⊑★ = 1
+sizeᵖ (I.alias eq p) = suc (sizeᵖ p)
 
 size-subst-right : ∀ {Δ} {μ : I.ImpEnv Δ} {A B B′ : Ty Δ}
     (eq : B ≡ B′) (p : μ I.⊢ A ⊑ B)
@@ -44,29 +46,32 @@ rename-⊑-size : ∀ {Δ Δ′} {μ : I.ImpEnv Δ} {μ′ : I.ImpEnv Δ′}
     (ρ : Δ ⇒ʳ Δ′)
     (injective : ∀ {Y Z} → ρ Y ≡ ρ Z → Y ≡ Z)
     (h : ∀ X → μ X ≡ I.X⊑★ → μ′ (ρ X) ≡ I.X⊑★)
+    (ha : RenameAliasMap ρ μ μ′)
     (p : μ I.⊢ A ⊑ B)
-  → sizeᵖ (rename-⊑ {μ = μ} {μ′ = μ′} ρ injective h p) ≡ sizeᵖ p
-rename-⊑-size ρ injective h I.★⊑★ = refl
-rename-⊑-size ρ injective h I.ι⊑ι = refl
-rename-⊑-size ρ injective h I.X⊑X = refl
-rename-⊑-size ρ injective h (I.⇒⊑⇒ p q) =
-  cong suc (cong₂ _+_ (rename-⊑-size ρ injective h p)
-    (rename-⊑-size ρ injective h q))
-rename-⊑-size ρ injective h (I.∀⊑∀ p) =
-  cong suc (rename-⊑-size _ _ _ p)
-rename-⊑-size ρ injective h (I.⇒⊑★ p q) =
-  cong suc (cong₂ _+_ (rename-⊑-size ρ injective h p)
-    (rename-⊑-size ρ injective h q))
-rename-⊑-size ρ injective h I.ι⊑★ = refl
-rename-⊑-size ρ injective h (I.X⊑★ eq) = refl
-rename-⊑-size ρ injective h (I.∀⊑ nonvar occurs p) =
+  → sizeᵖ (rename-⊑ {μ = μ} {μ′ = μ′} ρ injective h ha p) ≡ sizeᵖ p
+rename-⊑-size ρ injective h ha I.★⊑★ = refl
+rename-⊑-size ρ injective h ha I.ι⊑ι = refl
+rename-⊑-size ρ injective h ha I.X⊑X = refl
+rename-⊑-size ρ injective h ha (I.⇒⊑⇒ p q) =
+  cong suc (cong₂ _+_ (rename-⊑-size ρ injective h ha p)
+    (rename-⊑-size ρ injective h ha q))
+rename-⊑-size ρ injective h ha (I.∀⊑∀ p) =
+  cong suc (rename-⊑-size _ _ _ _ p)
+rename-⊑-size ρ injective h ha (I.⇒⊑★ p q) =
+  cong suc (cong₂ _+_ (rename-⊑-size ρ injective h ha p)
+    (rename-⊑-size ρ injective h ha q))
+rename-⊑-size ρ injective h ha I.ι⊑★ = refl
+rename-⊑-size ρ injective h ha (I.X⊑★ eq) = refl
+rename-⊑-size ρ injective h ha (I.∀⊑ nonvar occurs p) =
   cong suc (trans (size-subst-right (renameᵗ-shift ρ _) _)
-    (rename-⊑-size _ _ _ p))
-rename-⊑-size ρ injective h I.∀★⊑★ = refl
-rename-⊑-size ρ injective h (I.∀⊑★ nonstar p) =
-  cong suc (rename-⊑-size _ _ _ p)
-rename-⊑-size ρ injective h I.bot-elim = refl
-rename-⊑-size ρ injective h I.bot⊑★ = refl
+    (rename-⊑-size _ _ _ _ p))
+rename-⊑-size ρ injective h ha I.∀★⊑★ = refl
+rename-⊑-size ρ injective h ha (I.∀⊑★ nonstar p) =
+  cong suc (rename-⊑-size _ _ _ _ p)
+rename-⊑-size ρ injective h ha I.bot-elim = refl
+rename-⊑-size ρ injective h ha I.bot⊑★ = refl
+rename-⊑-size ρ injective h ha (I.alias eq p) =
+  cong suc (rename-⊑-size ρ injective h ha p)
 
 lift-center-size : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -76,13 +81,13 @@ lift-center-size : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
   → sizeᵖ (liftCenterImprecision W≼W′ p) ≡ sizeᵖ p
 lift-center-size future-refl p = refl
 lift-center-size (future-paired W≼W′ r) p =
-  trans (rename-⊑-size Fin.suc _ _ (liftCenterImprecision W≼W′ p))
+  trans (rename-⊑-size Fin.suc _ _ _ (liftCenterImprecision W≼W′ p))
     (lift-center-size W≼W′ p)
 lift-center-size (future-precise W≼W′ r) p =
-  trans (rename-⊑-size Fin.suc _ _ (liftCenterImprecision W≼W′ p))
+  trans (rename-⊑-size Fin.suc _ _ _ (liftCenterImprecision W≼W′ p))
     (lift-center-size W≼W′ p)
 lift-center-size (future-imprecise W≼W′) p =
-  trans (rename-⊑-size Fin.suc _ _ (liftCenterImprecision W≼W′ p))
+  trans (rename-⊑-size Fin.suc _ _ _ (liftCenterImprecision W≼W′ p))
     (lift-center-size W≼W′ p)
 
 size-subst-left : ∀ {Δ} {μ : I.ImpEnv Δ} {A A′ B : Ty Δ}
@@ -98,14 +103,14 @@ lift-center-dynamic-body-size : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ�
   → sizeᵖ (liftCenterDynamicBodyImprecision W≼W′ p) ≡ sizeᵖ p
 lift-center-dynamic-body-size future-refl p = refl
 lift-center-dynamic-body-size (future-paired W≼W′ r) p =
-  trans (rename-⊑-size _ _ _
+  trans (rename-⊑-size _ _ _ _
     (liftCenterDynamicBodyImprecision W≼W′ p))
     (lift-center-dynamic-body-size W≼W′ p)
 lift-center-dynamic-body-size (future-precise W≼W′ r) p =
-  trans (rename-⊑-size _ _ _
+  trans (rename-⊑-size _ _ _ _
     (liftCenterDynamicBodyImprecision W≼W′ p))
     (lift-center-dynamic-body-size W≼W′ p)
 lift-center-dynamic-body-size (future-imprecise W≼W′) p =
-  trans (rename-⊑-size _ _ _
+  trans (rename-⊑-size _ _ _ _
     (liftCenterDynamicBodyImprecision W≼W′ p))
     (lift-center-dynamic-body-size W≼W′ p)

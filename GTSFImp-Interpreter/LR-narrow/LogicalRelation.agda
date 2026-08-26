@@ -276,6 +276,15 @@ mutual
   ValueImprecisionᵏ (suc k) W I.bot⊑★ Vᴵ Vᴾ =
     TypedEndpoints W I.bot⊑★ Vᴵ Vᴾ
 
+  -- An alias derivation unfolds the center variable to its
+  -- representative; run-time worlds stay alias-free until the alias
+  -- bind expansion lands, so like the bot leaves only the endpoint
+  -- typings are recorded here.  The alias atom strengthens this
+  -- clause together with the alias bind expansion.
+  ValueImprecisionᵏ (suc k) W
+      (I.alias eq {notSelf} p) Vᴵ Vᴾ =
+    TypedEndpoints W (I.alias eq {notSelf = notSelf} p) Vᴵ Vᴾ
+
   FutureValueRelation : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
       {W : World Δᴾ Δᴵ Δᶜ}
     → impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ

@@ -8,6 +8,9 @@ module LR-narrow.World where
 
 import Data.Fin as Fin
 open import Data.Nat using (suc)
+open import Data.Empty using (⊥; ⊥-elim)
+open import Data.Product using (_,_)
+open import Data.Sum using (inj₂)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; cong; cong₂; refl; subst; sym; trans)
 
@@ -21,7 +24,10 @@ open import Consistency using
 import Imprecision as I
 open import proof.ImprecisionConsistency
   using (ext-injective; fin-suc-injective; rename-⊑; subst-⊑;
-         subst₂-⊑; rename-occurs)
+         subst₂-⊑; rename-occurs; SubstAliasMap;
+         shift-star-map; shift-alias-map;
+         rename-star-map-ext; rename-star-map-inst;
+         rename-alias-map-ext; rename-alias-map-inst)
 open import proof.TypeInTermSubst using
   (toRename-keep-eq; rename-openᵗ; renameᵗᵐ-preserves-Value;
    toRename-wk-eq; renameᵗ-wk-eq)
@@ -34,12 +40,16 @@ record World (Δᴾ Δᴵ Δᶜ : TyCtx) : Set where
     core : CoreWorld Δᴾ Δᴵ Δᶜ
     semanticEntry : (Z : TyVar Δᶜ)
       → SemanticEntry core Z (impEnv core Z)
+    -- Worlds are alias-free until the alias bind expansion lands;
+    -- the reveal machinery consumes this as alias avoidance.
+    noAlias : ∀ Z {T : Ty Δᶜ} → impEnv core Z ≡ I.X⊑ᵗ T → ⊥
 
 open World public
 
 emptyWorld : World 0 0 0
 emptyWorld = world
   (core-world empty empty (λ ()) store-empty store-empty) (λ ())
+  (λ ())
 
 pairedBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → (W : World Δᴾ Δᴵ Δᶜ)
@@ -48,7 +58,7 @@ pairedBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → Aᴾ ⊑ᵂ⟨ core W ⟩ Aᴵ
   → World (suc Δᴾ) (suc Δᴵ) (suc Δᶜ)
 pairedBindWorld W Aᴾ Aᴵ r =
-  world (pairedBindCore (core W) Aᴾ Aᴵ) atoms
+  world (pairedBindCore (core W) Aᴾ Aᴵ) atoms no-alias
   where
   atoms : (Z : TyVar _)
     → SemanticEntry (pairedBindCore (core W) Aᴾ Aᴵ) Z
@@ -56,13 +66,19 @@ pairedBindWorld W Aᴾ Aᴵ r =
   atoms Fin.zero = paired-entry (fresh-semantic-atom (core W) Aᴾ Aᴵ r)
   atoms (Fin.suc Z) = weaken-entry Aᴾ Aᴵ (semanticEntry W Z)
 
+  no-alias : ∀ Z {T}
+    → impEnv (pairedBindCore (core W) Aᴾ Aᴵ) Z ≡ I.X⊑ᵗ T → ⊥
+  no-alias Fin.zero ()
+  no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
+  no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
+
 preciseBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → (W : World Δᴾ Δᴵ Δᶜ)
   → (Aᴾ : Ty Δᴾ)
   → impEnv (core W) I.⊢ embedPrecise (core W) Aᴾ ⊑ ★
   → World (suc Δᴾ) Δᴵ (suc Δᶜ)
 preciseBindWorld W Aᴾ r =
-  world (preciseBindCore (core W) Aᴾ) atoms
+  world (preciseBindCore (core W) Aᴾ) atoms no-alias
   where
   atoms : (Z : TyVar _)
     → SemanticEntry (preciseBindCore (core W) Aᴾ) Z
@@ -71,18 +87,38 @@ preciseBindWorld W Aᴾ r =
     dynamic-entry (fresh-dynamic-semantic-atom (core W) Aᴾ r)
   atoms (Fin.suc Z) = weaken-entry-precise Aᴾ (semanticEntry W Z)
 
+  no-alias : ∀ Z {T}
+    → impEnv (preciseBindCore (core W) Aᴾ) Z ≡ I.X⊑ᵗ T → ⊥
+  no-alias Fin.zero ()
+  no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
+  no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
+
 impreciseBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → (W : World Δᴾ Δᴵ Δᶜ)
   → (Aᴵ : Ty Δᴵ)
   → World Δᴾ (suc Δᴵ) (suc Δᶜ)
 impreciseBindWorld W Aᴵ =
-  world (impreciseBindCore (core W) Aᴵ) atoms
+  world (impreciseBindCore (core W) Aᴵ) atoms no-alias
   where
   atoms : (Z : TyVar _)
     → SemanticEntry (impreciseBindCore (core W) Aᴵ) Z
         (impEnv (impreciseBindCore (core W) Aᴵ) Z)
   atoms Fin.zero = target-entry (fresh-target-semantic-atom Aᴵ)
   atoms (Fin.suc Z) = weaken-entry-imprecise Aᴵ (semanticEntry W Z)
+
+  no-alias : ∀ Z {T}
+    → impEnv (impreciseBindCore (core W) Aᴵ) Z ≡ I.X⊑ᵗ T → ⊥
+  no-alias Fin.zero ()
+  no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
+  no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
+
+-- An alias-free world trivially avoids every variable; this
+-- discharges the alias-avoidance premises of the reveal machinery.
+
+world-aliases-avoid : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (Z : TyVar Δᶜ)
+  → ∀ Y {T : Ty Δᶜ} → impEnv (core W) Y ≡ I.X⊑ᵗ T → Z ∉ᵗ T
+world-aliases-avoid W Z Y eq = ⊥-elim (noAlias W Y eq)
 
 data Future {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
@@ -189,17 +225,31 @@ liftCenterTy-variable (future-precise W≼W′ related) X =
 liftCenterTy-variable (future-imprecise W≼W′) X =
   cong ⇑ᵗ (liftCenterTy-variable W≼W′ X)
 
-liftCenterMode : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+liftCenterMode-star : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
     (W≼W′ : Future W W′) (X : TyVar Δᶜ)
-  → impEnv (core W′) (liftCenterVariable W≼W′ X)
-      ≡ impEnv (core W) X
-liftCenterMode future-refl X = refl
-liftCenterMode (future-paired W≼W′ related) X =
-  liftCenterMode W≼W′ X
-liftCenterMode (future-precise W≼W′ related) X =
-  liftCenterMode W≼W′ X
-liftCenterMode (future-imprecise W≼W′) X = liftCenterMode W≼W′ X
+  → impEnv (core W) X ≡ I.X⊑★
+  → impEnv (core W′) (liftCenterVariable W≼W′ X) ≡ I.X⊑★
+liftCenterMode-star future-refl X eq = eq
+liftCenterMode-star (future-paired W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
+liftCenterMode-star (future-precise W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
+liftCenterMode-star (future-imprecise W≼W′) X eq =
+  cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
+
+liftCenterMode-paired : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (W≼W′ : Future W W′) (X : TyVar Δᶜ)
+  → impEnv (core W) X ≡ I.X⊑X
+  → impEnv (core W′) (liftCenterVariable W≼W′ X) ≡ I.X⊑X
+liftCenterMode-paired future-refl X eq = eq
+liftCenterMode-paired (future-paired W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
+liftCenterMode-paired (future-precise W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
+liftCenterMode-paired (future-imprecise W≼W′) X eq =
+  cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
 
 liftPreciseTerm : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -610,14 +660,11 @@ liftCenterImprecision : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
       ⊑ liftCenterTy W≼W′ Aᴵ
 liftCenterImprecision future-refl Aᴾ⊑Aᴵ = Aᴾ⊑Aᴵ
 liftCenterImprecision (future-paired W≼W′ related) Aᴾ⊑Aᴵ =
-  rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq)
-    (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
+  shift-⊑ I.X⊑X (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterImprecision (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
-  rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq)
-    (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
+  shift-⊑ I.X⊑★ (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterImprecision (future-imprecise W≼W′) Aᴾ⊑Aᴵ =
-  rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq)
-    (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
+  shift-⊑ I.X⊑★ (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 
 liftCenterBodyImprecision :
     ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -631,15 +678,18 @@ liftCenterBodyImprecision future-refl Aᴾ⊑Aᴵ = Aᴾ⊑Aᴵ
 liftCenterBodyImprecision
     (future-paired W≼W′ related) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
-    (λ { Fin.zero () ; (Fin.suc X) eq → eq })
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑X}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑X}))
     (liftCenterBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterBodyImprecision (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
-    (λ { Fin.zero () ; (Fin.suc X) eq → eq })
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
     (liftCenterBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterBodyImprecision (future-imprecise W≼W′) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
-    (λ { Fin.zero () ; (Fin.suc X) eq → eq })
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
     (liftCenterBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 
 liftCenterDynamicBodyImprecision :
@@ -654,18 +704,38 @@ liftCenterDynamicBodyImprecision future-refl Aᴾ⊑Aᴵ = Aᴾ⊑Aᴵ
 liftCenterDynamicBodyImprecision
     (future-paired W≼W′ related) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
-    (λ { Fin.zero eq → eq ; (Fin.suc X) eq → eq })
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑X}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑X}))
     (liftCenterDynamicBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterDynamicBodyImprecision
     (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
-    (λ { Fin.zero eq → eq ; (Fin.suc X) eq → eq })
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
     (liftCenterDynamicBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterDynamicBodyImprecision
     (future-imprecise W≼W′) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
-    (λ { Fin.zero eq → eq ; (Fin.suc X) eq → eq })
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
     (liftCenterDynamicBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
+
+-- Opening a fresh binder with any type keeps aliases: the substitution
+-- maps each old variable to itself, so the representative survives up
+-- to cancelling the shift.
+
+open-head-alias-map : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {v : I.VarImp (suc Δ)} (B : Ty Δ)
+  → (∀ {T} → v ≡ I.X⊑ᵗ T → ⊥)
+  → SubstAliasMap (I.extendᵐ v μ) μ (singleSubᵗ B)
+open-head-alias-map B head-not-alias Fin.zero eq =
+  ⊥-elim (head-not-alias eq)
+open-head-alias-map B head-not-alias (Fin.suc X) eq
+    with I.lift-alias-inv eq
+open-head-alias-map B head-not-alias (Fin.suc X) eq
+    | T₀ , mode , refl =
+  inj₂ (X , refl ,
+    trans mode (cong I.X⊑ᵗ (sym (shift-openᵗ T₀ B))))
 
 openFreshImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ (suc Δᶜ)} {Aᴾ Aᴵ : Ty (suc (suc Δᶜ))}
@@ -673,7 +743,11 @@ openFreshImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
   → impEnv (core W) I.⊢ Aᴾ [ ＇ Fin.zero ]ᵗ
       ⊑ Aᴵ [ ＇ Fin.zero ]ᵗ
 openFreshImprecision Aᴾ⊑Aᴵ =
-  subst-⊑ (λ { Fin.zero () ; (Fin.suc X) eq → I.X⊑★ eq }) Aᴾ⊑Aᴵ
+  subst-⊑
+    (λ { Fin.zero ()
+       ; (Fin.suc X) eq → I.X⊑★ (I.lift-star-inv eq) })
+    (open-head-alias-map (＇ Fin.zero) (λ ()))
+    Aᴾ⊑Aᴵ
 
 openRelatedBodyImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -691,7 +765,9 @@ openRelatedBodyImprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
     (subst (λ R → impEnv (core W) I.⊢ opened-left ⊑ R)
       (sym (rename-openᵗ
         (toRenameᵗ (impreciseEmbedding (core W))) Aᴵ Rᴵ))
-      (subst₂-⊑ same star body-related))
+      (subst₂-⊑ same star
+        (open-head-alias-map (embedPrecise (core W) Rᴾ) (λ ()))
+        body-related))
   where
   opened-left = renameᵗ (extᵗ
     (toRenameᵗ (preciseEmbedding (core W)))) Aᴾ
@@ -709,7 +785,7 @@ openRelatedBodyImprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
     → impEnv (core W) I.⊢
         singleSubᵗ (embedPrecise (core W) Rᴾ) X ⊑ ★
   star Fin.zero ()
-  star (Fin.suc X) eq = I.X⊑★ eq
+  star (Fin.suc X) eq = I.X⊑★ (I.lift-star-inv eq)
 
 openFreshDynamicImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ (suc Δᶜ)} {Aᴾ Aᴵ : Ty (suc (suc Δᶜ))}
@@ -720,7 +796,8 @@ openFreshDynamicImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
 openFreshDynamicImprecision fresh-mode Aᴾ⊑Aᴵ =
   subst-⊑
     (λ { Fin.zero eq → I.X⊑★ fresh-mode
-       ; (Fin.suc X) eq → I.X⊑★ eq })
+       ; (Fin.suc X) eq → I.X⊑★ (I.lift-star-inv eq) })
+    (open-head-alias-map (＇ Fin.zero) (λ ()))
     Aᴾ⊑Aᴵ
 
 embed-keep-shift : ∀ {Δ Δ′} (η : Δ ↪ᵗ Δ′) (A : Ty Δ)
@@ -799,7 +876,7 @@ paired-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
       (λ R → impEnv (pairedBindCore (core W) Bᴾ Bᴵ) I.⊢
         ⇑ᵗ (embedPrecise (core W) Aᴾ) ⊑ R)
       (sym (embed-keep-shift (impreciseEmbedding (core W)) Aᴵ))
-      (rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq) p))
+      (shift-⊑ I.X⊑X p))
 
 precise-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
@@ -817,7 +894,7 @@ precise-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
       (λ R → impEnv (preciseBindCore (core W) Bᴾ) I.⊢
         ⇑ᵗ (embedPrecise (core W) Aᴾ) ⊑ R)
       (sym (renameᵗ-skip-eq (impreciseEmbedding (core W)) Aᴵ))
-      (rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq) p))
+      (shift-⊑ I.X⊑★ p))
 
 imprecise-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᴾ} {Aᴵ Bᴵ : Ty Δᴵ}
@@ -833,7 +910,7 @@ imprecise-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
       (λ R → impEnv (impreciseBindCore (core W) Bᴵ) I.⊢
         ⇑ᵗ (embedPrecise (core W) Aᴾ) ⊑ R)
       (sym (embed-keep-shift (impreciseEmbedding (core W)) Aᴵ))
-      (rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq) p))
+      (shift-⊑ I.X⊑★ p))
 
 liftLocalImprecision : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}

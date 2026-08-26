@@ -518,6 +518,7 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
   ClosureProof.value-imprecision-reindex q
     (I.∀⊑★ nonstar′
       (replace-left-⊑ (Fin.suc (dcenter d))
+        (cong I.⇑ᵛ (dmode-eq d))
         (shift-⊑ I.X⊑X (dynamicRep-related (datom d)))
         ∉-star p₀))
     {k = suc k}
@@ -525,6 +526,7 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
     (dyn-reveal-endpoints W d (I.∀⊑★ nonstar p₀) sourceᴾ
       (I.∀⊑★ nonstar′
         (replace-left-⊑ (Fin.suc (dcenter d))
+          (cong I.⇑ᵛ (dmode-eq d))
           (shift-⊑ I.X⊑X (dynamicRep-related (datom d)))
           ∉-star p₀))
       chain endpoints
@@ -552,7 +554,8 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
     (right-imprecise-ground-to-star shape)
     (right-dynamic-imprecise-payload shape)
     (right-dynamic-imprecise-shape shape)
-    (replace-left-⊑ (dcenter d) (dynamicRep-related (datom d))
+    (replace-left-⊑ (dcenter d) (dmode-eq d)
+      (dynamicRep-related (datom d))
       (dyn-embed-∉ d (right-imprecise-ground shape))
       (right-payload-imprecision shape))
 
@@ -597,7 +600,8 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
     (right-imprecise-ground-to-star shape)
     (right-dynamic-imprecise-payload shape)
     (right-dynamic-imprecise-shape shape)
-    (replace-left-⊑ (dcenter d) (dynamicRep-related (datom d))
+    (replace-left-⊑ (dcenter d) (dmode-eq d)
+      (dynamicRep-related (datom d))
       (dyn-embed-∉ d (right-imprecise-ground shape))
       (right-payload-imprecision shape))
 
@@ -641,12 +645,13 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
   avoidᴵ = subst≡ (dcenter d ∉ᵗ_) (impreciseEmbedded endpoints)
     (dyn-embed-∉ d (impreciseType endpoints))
 
-  alt₀ = replace-left-⊑ (dcenter d)
+  alt₀ = replace-left-⊑ (dcenter d) (dmode-eq d)
     (dynamicRep-related (datom d)) avoidᴵ
     (I.∀⊑ nonvar occurs p₀)
 
   fam₀ : RightUniversalFamily W
       (replace-left-⊑ (Fin.suc (dcenter d))
+        (cong I.⇑ᵛ (dmode-eq d))
         (shift-⊑ I.X⊑★ (dynamicRep-related (datom d)))
         (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoidᴵ) p₀)
       (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁)
@@ -657,6 +662,7 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
       (liftCenterDynamicBodyImprecision W≼W′ p₀)
       (liftCenterDynamicBodyImprecision W≼W′
         (replace-left-⊑ (Fin.suc (dcenter d))
+          (cong I.⇑ᵛ (dmode-eq d))
           (shift-⊑ I.X⊑★ (dynamicRep-related (datom d)))
           (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoidᴵ) p₀))
       (ClosureProof.right-universals-related-transport
@@ -691,6 +697,7 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
         (⇑ᵗ (embedPrecise (core W) (dslotRᴾ d))) (λ ())
         (shift-no-zero (embedPrecise (core W) (dslotRᴾ d))) occurs)
       (replace-left-⊑ (Fin.suc (dcenter d))
+        (cong I.⇑ᵛ (dmode-eq d))
         (shift-⊑ I.X⊑★ (dynamicRep-related (datom d)))
         (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoidᴵ) p₀)
       chain embI*
@@ -836,6 +843,7 @@ dyn-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
     with ClosureProof.value-imprecision-reindex
       (I.∀⊑★ nonstar′
         (replace-left-⊑ (Fin.suc (dcenter d))
+          (cong I.⇑ᵛ (dmode-eq d))
           (shift-⊑ I.X⊑X (dynamicRep-related (datom d)))
           ∉-star p₀))
       q {k = suc k}
@@ -1022,11 +1030,12 @@ dyn-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
   avoidᴵ = subst≡ (dcenter d ∉ᵗ_) (impreciseEmbedded endpoints)
     (dyn-embed-∉ d (impreciseType endpoints))
 
-  alt = replace-left-⊑ (dcenter d)
+  alt = replace-left-⊑ (dcenter d) (dmode-eq d)
     (dynamicRep-related (datom d)) avoidᴵ
     (I.∀⊑ nonvar occurs p₀)
 
   q₀ᵃ = replace-left-⊑ (Fin.suc (dcenter d))
+    (cong I.⇑ᵛ (dmode-eq d))
     (shift-⊑ I.X⊑★ (dynamicRep-related (datom d)))
     (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoidᴵ) p₀
 
@@ -1139,6 +1148,9 @@ mutual
       (trans (sym (var-injective sourceᴾ))
         (dynamicPreciseAligned (datom d)))
       related)
+  dyn-reveal-go fuel j sz below W d {Bᴾ = ＇ Y} (I.alias eq p) size
+      sourceᴾ q targetᴾ related | yes refl =
+    ⊥-elim (noAlias W _ eq)
   dyn-reveal-go fuel zero sz below W d {Bᴾ = ＇ Y} (I.X⊑★ eqm) size
       sourceᴾ q targetᴾ related | yes refl =
     ClosureProof.computations-related-zero
@@ -1249,6 +1261,9 @@ mutual
       (trans (sym (var-injective sourceᴾ))
         (dynamicPreciseAligned (datom d)))
       related)
+  dyn-conceal-go fuel j sz below W d {Bᴾ = ＇ Y} (I.alias eq p) size
+      sourceᴾ q targetᴾ related | yes refl =
+    ⊥-elim (noAlias W _ eq)
   dyn-conceal-go fuel zero sz below W d {Bᴾ = ＇ Y} (I.X⊑★ eqm) size
       sourceᴾ q targetᴾ related | yes refl =
     ClosureProof.computations-related-zero

@@ -336,4 +336,4 @@ slot-future s W≼W′ = paired-slot
   (liftCenterVariable W≼W′ (center s))
   (lifted-atom (slot-lift s W≼W′))
   (lifted-entry-eq (slot-lift s W≼W′))
-  (trans (liftCenterMode W≼W′ (center s)) (mode-eq s))
+  (liftCenterMode-paired W≼W′ (center s) (mode-eq s))

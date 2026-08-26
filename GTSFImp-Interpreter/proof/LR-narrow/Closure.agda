@@ -139,6 +139,10 @@ value-imprecision-downward {p = I.bot-elim} {k = suc k} endpoints =
   endpoints
 value-imprecision-downward {p = I.bot⊑★} {k = suc k} endpoints =
   endpoints
+value-imprecision-downward {p = I.alias eq p} {k = zero}
+    endpoints = endpoints
+value-imprecision-downward {p = I.alias eq p} {k = suc k}
+    endpoints = endpoints
 
 value-imprecision-downward-to : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -193,6 +197,8 @@ value-imprecision-endpoints {p = I.bot-elim} {k = zero} related =
   related
 value-imprecision-endpoints {p = I.bot⊑★} {k = zero} related =
   related
+value-imprecision-endpoints {p = I.alias eq p} {k = zero}
+    related = related
 value-imprecision-endpoints {k = suc k} related =
   value-imprecision-endpoints (value-imprecision-downward related)
 
@@ -1082,11 +1088,11 @@ dynamic-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
   → (eq : impEnv (core W) Z ≡ I.X⊑★)
   → DynamicAtomHolds ℛ (semanticEntry W Z) eq Vᴵ Vᴾ
   → DynamicAtomHolds ℛ′ (semanticEntry W′ (liftCenterVariable W≼W′ Z))
-      (trans (liftCenterMode W≼W′ Z) eq)
+      (liftCenterMode-star W≼W′ Z eq)
       (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
 dynamic-holds-future {Z = Z} W≼W′ f reindex eq holds =
   dynamic-holds-lift W≼W′ f reindex (entry-future W≼W′ Z) eq
-    (trans (liftCenterMode W≼W′ Z) eq) holds
+    (liftCenterMode-star W≼W′ Z eq) holds
 
 dynamic-atom-tag-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1115,9 +1121,8 @@ dynamic-atom-tag-future {W′ = W′} W≼W′ f reindex related =
     (dynamic-holds-future W≼W′ f reindex (dynamic-mode related)
       (atom-relation-holds related))
   where
-  mode′ = trans
-    (liftCenterMode W≼W′ (dynamic-center-variable related))
-    (dynamic-mode related)
+  mode′ = liftCenterMode-star W≼W′
+    (dynamic-center-variable related) (dynamic-mode related)
 
   ground-center′ = trans
     (cong (embedPrecise (core W′))
@@ -1480,6 +1485,12 @@ value-imprecision-paired W r {p = I.bot-elim} {k = suc k}
     endpoints = typed-endpoints-future (paired-future W r) endpoints
 value-imprecision-paired W r {p = I.bot⊑★} {k = suc k}
     endpoints = typed-endpoints-future (paired-future W r) endpoints
+value-imprecision-paired W r {p = I.alias eq p} {k = zero}
+    endpoints =
+  typed-endpoints-future (paired-future W r) endpoints
+value-imprecision-paired W r {p = I.alias eq p} {k = suc k}
+    endpoints =
+  typed-endpoints-future (paired-future W r) endpoints
 
 -- Termination note: the `X⊑★` dynamic case recurses at the same step
 -- index into the slot's representation imprecision; well-founded by
@@ -1662,6 +1673,12 @@ value-imprecision-precise W r {p = I.bot-elim} {k = suc k}
     endpoints = typed-endpoints-future (precise-future W r) endpoints
 value-imprecision-precise W r {p = I.bot⊑★} {k = suc k}
     endpoints = typed-endpoints-future (precise-future W r) endpoints
+value-imprecision-precise W r {p = I.alias eq p} {k = zero}
+    endpoints =
+  typed-endpoints-future (precise-future W r) endpoints
+value-imprecision-precise W r {p = I.alias eq p} {k = suc k}
+    endpoints =
+  typed-endpoints-future (precise-future W r) endpoints
 
 -- Termination note: the `X⊑★` dynamic case recurses at the same step
 -- index into the slot's representation imprecision; well-founded by
@@ -1842,6 +1859,12 @@ value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.bot-elim}
     {k = suc k} endpoints =
   typed-endpoints-future (imprecise-future W Rᴵ) endpoints
 value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.bot⊑★}
+    {k = suc k} endpoints =
+  typed-endpoints-future (imprecise-future W Rᴵ) endpoints
+value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.alias eq p}
+    {k = zero} endpoints =
+  typed-endpoints-future (imprecise-future W Rᴵ) endpoints
+value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.alias eq p}
     {k = suc k} endpoints =
   typed-endpoints-future (imprecise-future W Rᴵ) endpoints
 

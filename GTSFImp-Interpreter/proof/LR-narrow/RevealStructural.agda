@@ -103,6 +103,8 @@ open import proof.LR-narrow.UniversalReveal using
 open import proof.LR-narrow.ReplaceImprecision using
   (replace-⊑; replace-left-⊑; replace-zero-open; open-shifted-body;
    replaceTy-nonvar; replaceTy-occurs; shift-no-zero)
+open import proof.Imprecision using
+  (ext-aliases-avoid-suc; inst-aliases-avoid-suc)
 open import proof.LR-narrow.ImprecisionSize using
   (sizeᵖ; lift-center-size; size-subst-left; size-subst-right;
    lift-center-dynamic-body-size)
@@ -1064,7 +1066,9 @@ reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
         (embedPrecise (core Wb) B₀ᴾ′)
       ⊑ replaceTy (center s₁) (embedImprecise (core Wb) (slotRᴵ s₁))
           (embedImprecise (core Wb) B₀ᴵ′)
-  t₁ = replace-⊑ (center s₁) (mode-eq s₁) (rep-related (atom s₁)) t₀
+  t₁ = replace-⊑ (center s₁) (mode-eq s₁)
+    (world-aliases-avoid Wb (center s₁))
+    (rep-related (atom s₁)) t₀
 
   target₁-P : embedPrecise (core Wb)
       (replaceTy (slotXᴾ s₁) (slotRᴾ s₁) B₀ᴾ′)
@@ -2311,7 +2315,9 @@ reveal-right-universal-inner W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
         (embedPrecise (core Wb) B₀ᴾ′)
       ⊑ replaceTy (center s₁) (embedImprecise (core Wb) (slotRᴵ s₁))
           (embedImprecise (core Wb) Bᴵ′)
-  t₁ = replace-⊑ (center s₁) (mode-eq s₁) (rep-related (atom s₁)) t₀
+  t₁ = replace-⊑ (center s₁) (mode-eq s₁)
+    (world-aliases-avoid Wb (center s₁))
+    (rep-related (atom s₁)) t₀
 
   target₁-P : embedPrecise (core Wb)
       (replaceTy (slotXᴾ s₁) (slotRᴾ s₁) B₀ᴾ′)
@@ -3513,7 +3519,8 @@ conceal-right-universal-absent W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
       (cong Fin.suc (sym (preciseAligned (atom s))))
       (subst≡ (Fin.suc (center s) ∉ᵗ_)
         (sym (ty-all-injective sourceᴾ))
-        (paired-no-occurrence (Fin.suc (center s)) (mode-eq s) p₀
+        (paired-no-occurrence (Fin.suc (center s))
+          (cong I.⇑ᵛ (mode-eq s)) p₀
           (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid)))))
 
   absent-endpoints : TypedEndpoints W
@@ -3932,7 +3939,7 @@ reveal-dyn-universal-inner W d {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
         (embedPrecise (core Wb) (dslotRᴾ d₁))
         (embedPrecise (core Wb) B₀ᴾ′)
       ⊑ embedImprecise (core Wb) (liftImpreciseTy W≼Wb Bᴵ)
-  t₁ = replace-left-⊑ (dcenter d₁)
+  t₁ = replace-left-⊑ (dcenter d₁) (dmode-eq d₁)
     (dynamicRep-related (datom d₁)) avoidᴵ t₀
 
   target₁-P : embedPrecise (core Wb)
@@ -4608,7 +4615,8 @@ reveal-right-universal-absent W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
       (cong Fin.suc (sym (preciseAligned (atom s))))
       (subst≡ (Fin.suc (center s) ∉ᵗ_)
         (sym (ty-all-injective sourceᴾ))
-        (paired-no-occurrence (Fin.suc (center s)) (mode-eq s) p₀
+        (paired-no-occurrence (Fin.suc (center s))
+          (cong I.⇑ᵛ (mode-eq s)) p₀
           (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid))))
 
   no-occur : slotXᴾ s ∉ᵗ `∀ B₀ᴾ
@@ -4757,7 +4765,8 @@ conceal-right-universal-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
           (renameᵗ (extᵗ ρᴾ) B₀ᴾ) ⊑ R)
       (trans (sym (shift-replace c₀ RembI Bc))
         (sym (cong ⇑ᵗ commute-I)))
-      (replace-⊑ (Fin.suc c₀) (mode-eq s)
+      (replace-⊑ (Fin.suc c₀) (cong I.⇑ᵛ (mode-eq s))
+        (inst-aliases-avoid-suc (world-aliases-avoid W c₀))
         (shift-⊑ I.X⊑★ (rep-related (atom s)))
         (subst≡
           (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
@@ -4800,7 +4809,8 @@ conceal-right-universal-absent-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
   ρᴾ = toRenameᵗ (preciseEmbedding (core W))
 
   no-occ : Fin.suc (center s) ∉ᵗ Ac
-  no-occ = paired-no-occurrence (Fin.suc (center s)) (mode-eq s) p₀
+  no-occ = paired-no-occurrence (Fin.suc (center s))
+          (cong I.⇑ᵛ (mode-eq s)) p₀
     (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid)
 
   absent-B : Fin.suc (slotXᴾ s) ∉ᵗ B₀ᴾ
@@ -4874,7 +4884,8 @@ right-universal-absent-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
   ρᴾ = toRenameᵗ (preciseEmbedding (core W))
 
   no-occ : Fin.suc (center s) ∉ᵗ Ac
-  no-occ = paired-no-occurrence (Fin.suc (center s)) (mode-eq s) p₀
+  no-occ = paired-no-occurrence (Fin.suc (center s))
+          (cong I.⇑ᵛ (mode-eq s)) p₀
     (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid)
 
   absent-B : Fin.suc (slotXᴾ s) ∉ᵗ B₀ᴾ
@@ -5004,7 +5015,8 @@ right-universal-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
           (renameᵗ (extᵗ ρᴾ) B₀ᴾ) ⊑ R)
       (trans (sym (shift-replace c₀ RembI Bc))
         (sym (cong ⇑ᵗ commute-I)))
-      (replace-⊑ (Fin.suc c₀) (mode-eq s)
+      (replace-⊑ (Fin.suc c₀) (cong I.⇑ᵛ (mode-eq s))
+        (inst-aliases-avoid-suc (world-aliases-avoid W c₀))
         (shift-⊑ I.X⊑★ (rep-related (atom s)))
         (subst≡
           (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
@@ -5208,7 +5220,9 @@ reveal-conceal-step k n below = reveal-at , conceal-at
         ⊑ replaceTy (Fin.suc (center s))
             (⇑ᵗ (embedImprecise (core W) (slotRᴵ s)))
             (renameᵗ (extᵗ ρᴵ) B₀ᴵ)
-    raw = replace-⊑ (Fin.suc (center s)) (mode-eq s) rep′ base
+    raw = replace-⊑ (Fin.suc (center s)) (cong I.⇑ᵛ (mode-eq s))
+      (ext-aliases-avoid-suc (world-aliases-avoid W (center s)))
+      rep′ base
 
     alt-body : I.extᵐ (impEnv (core W)) I.⊢
         renameᵗ (extᵗ ρᴾ)
@@ -5238,7 +5252,7 @@ reveal-conceal-step k n below = reveal-at , conceal-at
   reveal-at W s {Bᴵ = ‵ ι₀}
       (I.∀⊑ {A = Ac} nonvar occurs p₀) size≤
       sourceᴾ sourceᴵ q targetᴾ targetᴵ related =
-    ⊥-elim (⊑-base-right-no-var
+    ⊥-elim (⊑-base-right-no-var refl
       (subst≡
         (λ B → I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ B)
         (sym sourceᴵ) p₀)
@@ -5360,6 +5374,9 @@ reveal-conceal-step k n below = reveal-at , conceal-at
   reveal-at W s I.bot⊑★ size≤ sourceᴾ sourceᴵ q
       targetᴾ targetᴵ related =
     ⊥-elim (no-precise-bottom-value related)
+  reveal-at W s (I.alias eq p) size≤ sourceᴾ sourceᴵ q
+      targetᴾ targetᴵ related =
+    ⊥-elim (noAlias W _ eq)
 
   conceal-at : ConcealAtSized k n
   conceal-at W s I.★⊑★ size≤ sourceᴾ sourceᴵ q targetᴾ targetᴵ related =
@@ -5508,7 +5525,9 @@ reveal-conceal-step k n below = reveal-at , conceal-at
         ⊑ replaceTy (Fin.suc (center s))
             (⇑ᵗ (embedImprecise (core W) (slotRᴵ s)))
             (renameᵗ (extᵗ ρᴵ) B₀ᴵ)
-    raw = replace-⊑ (Fin.suc (center s)) (mode-eq s) rep′ base
+    raw = replace-⊑ (Fin.suc (center s)) (cong I.⇑ᵛ (mode-eq s))
+      (ext-aliases-avoid-suc (world-aliases-avoid W (center s)))
+      rep′ base
 
     alt-body : I.extᵐ (impEnv (core W)) I.⊢
         renameᵗ (extᵗ ρᴾ)
@@ -5538,7 +5557,7 @@ reveal-conceal-step k n below = reveal-at , conceal-at
   conceal-at W s {Bᴵ = ‵ ι₀}
       (I.∀⊑ {A = Ac} nonvar occurs p₀) size≤
       sourceᴾ sourceᴵ q targetᴾ targetᴵ related =
-    ⊥-elim (⊑-base-right-no-var
+    ⊥-elim (⊑-base-right-no-var refl
       (subst≡
         (λ B → I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ B)
         (sym sourceᴵ) p₀)
@@ -5653,6 +5672,9 @@ reveal-conceal-step k n below = reveal-at , conceal-at
   conceal-at W s I.bot⊑★ size≤ sourceᴾ sourceᴵ q
       targetᴾ targetᴵ related =
     ⊥-elim (bottom-conceal-impossible W s sourceᴾ q targetᴾ related)
+  conceal-at W s (I.alias eq p) size≤ sourceᴾ sourceᴵ q
+      targetᴾ targetᴵ related =
+    ⊥-elim (noAlias W _ eq)
 
 -- Strong induction on the lexicographic (step index, derivation
 -- size), producing the paired, one-sided, and dynamic statements
