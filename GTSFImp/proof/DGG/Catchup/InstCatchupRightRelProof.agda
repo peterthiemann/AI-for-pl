@@ -26,10 +26,10 @@ inst-inversion→rel-surface pkg = record
       InstInversionPackage.all-value-step-catalog pkg
   ; inst-alloc-decrease = InstInversionPackage.inst-alloc-decrease pkg
   ; residual-cast-builder = InstInversionPackage.residual-cast-builder pkg
-  ; Λ-cont = λ rel vM vM′ vV′ eq c′ B′≢★ c<fuel q →
+  ; Λ-cont = λ na rel vM vM′ vV′ eq c′ B′≢★ c<fuel q →
       InstPostCatalogPackage.finish
         (InstInversionPackage.Λ-package pkg
-          rel vM vM′ vV′ eq c′ B′≢★ c<fuel q)
+          na rel vM vM′ vV′ eq c′ B′≢★ c<fuel q)
   ; ∀-cont = λ rel vM vM′ vV′ eq c′ B′≢★ c<fuel q →
       InstPostCatalogPackage.finish
         (InstInversionPackage.∀-package pkg
@@ -53,23 +53,23 @@ inst-inversion→rel-surface pkg = record
 inst-catchup-rel : ∀ {fuel}
   → InstRelContinuationSurface fuel
   → InstCatchupRightAt fuel
-inst-catchup-rel rel M⊑M′ vM vM′
+inst-catchup-rel rel na M⊑M′ vM vM′
     (allv-Λ vV′ eq) c′ B′≢★ c<fuel q =
   InstRelContinuationSurface.Λ-cont rel
-    M⊑M′ vM vM′ vV′ eq c′ B′≢★ c<fuel q
-inst-catchup-rel rel M⊑M′ vM vM′
+    na M⊑M′ vM vM′ vV′ eq c′ B′≢★ c<fuel q
+inst-catchup-rel rel na M⊑M′ vM vM′
     (allv-∀ vV′ eq) c′ B′≢★ c<fuel q =
   InstRelContinuationSurface.∀-cont rel
     M⊑M′ vM vM′ vV′ eq c′ B′≢★ c<fuel q
-inst-catchup-rel rel M⊑M′ vM vM′
+inst-catchup-rel rel na M⊑M′ vM vM′
     (allv-gen vV′ B₀≢★ safe eq) c′ B′≢★ c<fuel q =
   InstRelContinuationSurface.gen-cont rel
     M⊑M′ vM vM′ vV′ B₀≢★ safe eq c′ B′≢★ c<fuel q
-inst-catchup-rel rel M⊑M′ vM vM′
+inst-catchup-rel rel na M⊑M′ vM vM′
     (allv-reveal vV′ eq) c′ B′≢★ c<fuel q =
   InstRelContinuationSurface.reveal-cont rel
     M⊑M′ vM vM′ vV′ eq c′ B′≢★ c<fuel q
-inst-catchup-rel rel M⊑M′ vM vM′
+inst-catchup-rel rel na M⊑M′ vM vM′
     (allv-conceal vV′ eq) c′ B′≢★ c<fuel q =
   InstRelContinuationSurface.conceal-cont rel
     M⊑M′ vM vM′ vV′ eq c′ B′≢★ c<fuel q

@@ -173,7 +173,7 @@ open WorldAgree public
 ⊑ᵂ-support {Wa = Wa} {Wb} {A} {B} agree supportᴸ supportᴿ p =
   subst (λ A′ → CTI2.impEnvʷ Wb ⊢ A′ ⊑ embedᴿ Wb B) left-eq
     (subst (λ B′ → CTI2.impEnvʷ Wb ⊢ embedᴸ Wa A ⊑ B′) right-eq
-      (⊑-env-mono mark-mono p))
+      (⊑-env-mono mark-mono alias-mono p))
   where
   left-eq : embedᴸ Wa A ≡ embedᴸ Wb A
   left-eq = renameᵗ-support A λ X X∈A →
@@ -187,6 +187,11 @@ open WorldAgree public
     → CTI2.impEnvʷ Wa Z ≡ X⊑★
     → CTI2.impEnvʷ Wb Z ≡ X⊑★
   mark-mono Z eq = trans (sym (sameMarks agree Z)) eq
+
+  alias-mono : ∀ Z {T}
+    → CTI2.impEnvʷ Wa Z ≡ X⊑ᵗ T
+    → CTI2.impEnvʷ Wb Z ≡ X⊑ᵗ T
+  alias-mono Z eq = trans (sym (sameMarks agree Z)) eq
 
 storeRep-support : ∀ {Δᴸ Δᴿ Δ} {Wa Wb : World Δᴸ Δᴿ Δ}
     {P : TyVar Δᴸ → Set} {Q : TyVar Δᴿ → Set} {Xᴸ Xᴿ}

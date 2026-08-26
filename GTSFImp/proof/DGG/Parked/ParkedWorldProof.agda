@@ -228,7 +228,8 @@ parked-source-stable
 
 
 parked-target-identity-proofᵀ : ParkedTargetIdentityᵀ
-parked-target-identity-proofᵀ parked-initial Y = toRename-id-eq Y
+parked-target-identity-proofᵀ (parked-initial na₀) Y =
+  toRename-id-eq Y
 parked-target-identity-proofᵀ (parked-both-bind pw) zero = refl
 parked-target-identity-proofᵀ (parked-both-bind pw) (Fin.suc Y) =
   cong Fin.suc (parked-target-identity-proofᵀ pw Y)

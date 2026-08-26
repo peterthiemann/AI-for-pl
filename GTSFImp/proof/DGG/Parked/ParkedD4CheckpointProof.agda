@@ -55,7 +55,7 @@ D4-callee-rebase₂ =
 
 
 D4-parked-world₀-proofᵀ : D4-parked-world₀ᵀ
-D4-parked-world₀-proofᵀ = parked-initial
+D4-parked-world₀-proofᵀ = parked-initial (λ Z ())
 
 
 D4-keep-both₁ :
@@ -83,7 +83,7 @@ D4-parked-evolve₀₈-proofᵀ =
 
 D4-parked-world₂-proofᵀ : D4-parked-world₂ᵀ
 D4-parked-world₂-proofᵀ =
-  parked-both-bind (parked-both-bind parked-initial)
+  parked-both-bind (parked-both-bind (parked-initial (λ Z ())))
 
 
 D4-checkpoint-proofᵀ : D4-checkpointᵀ

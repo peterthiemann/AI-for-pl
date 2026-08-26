@@ -48,7 +48,8 @@ import proof.Imprecision as PI
 open CTX
 open CTI2
 open import proof.DGG.Parked.ParkedWorldDef
-  using (ParkedWorld; ParkedEvolve; evolve-refl; evolve-keepᴸ)
+  using (ParkedWorld; ParkedEvolve; evolve-refl; evolve-keepᴸ;
+         parked-no-alias)
 open import proof.DGG.Parked.ParkedWorldLemma using
   (parked-world-closed; transport⊑ᴾ)
 open import proof.DGG.Parked.ParkedEvolveCompositionProof using
@@ -136,7 +137,8 @@ module _
         ParkedEvolve (χᴸ ∷ Reduction.[]) χsᴿ W W′ ×
         (W′ ∣ List.[] ⊢² N ⊑ N′ ∶ r)
   sim-paired-cast-root parked V⊑M′ q vV Vc→N
-      with catchup parked boundary-refl V⊑M′ vV
+      with catchup parked boundary-refl (parked-no-alias parked)
+        V⊑M′ vV
   sim-paired-cast-root
       {χᴸ = χᴸ} {N = N} {B = B} {B′ = B′} {c′ = c′}
       parked V⊑M′ q vV Vc→N
@@ -199,7 +201,8 @@ module _
         ParkedEvolve (χᴸ ∷ Reduction.[]) χsᴿ W W′ ×
         (W′ ∣ List.[] ⊢² N ⊑ N′ ∶ r)
   sim-source-cast-root parked V⊑M′ q vV Vc→N
-      with catchup parked boundary-refl V⊑M′ vV
+      with catchup parked boundary-refl (parked-no-alias parked)
+        V⊑M′ vV
   sim-source-cast-root
       {χᴸ = χᴸ} {N = N} {B = B} {C = C}
       parked V⊑M′ q vV Vc→N
@@ -337,7 +340,8 @@ module _
         {A = A} {A′ = A′} {B = B} {B′ = B′}
         L⊑L′ M⊑M′)
       (ξ-·₂ {χ = χ} {M′ = N} vL M→N refl)
-      with catchup parked boundary-refl L⊑L′ vL
+      with catchup parked boundary-refl (parked-no-alias parked)
+        L⊑L′ vL
   sim parked
       (·⊑·² {L = L} {M′ = M′}
         {A = A} {A′ = A′} {B = B} {B′ = B′}
@@ -754,6 +758,7 @@ module _
       step@(pure-step (id-reveal vM))
       with catchup parked
         (boundary-source-reveal mono (toTagRebaseAtᴸ rebase))
+        (no-alias-same (aliasAgree mono) (parked-no-alias parked))
         M⊑M′ vM
   sim parked
       rel@(reveal⊑² mono rebase same-[] c⊢ M⊑M′ q)
@@ -766,6 +771,7 @@ module _
       step@(pure-step (conceal-reveal vM))
       with catchup parked
         (boundary-source-reveal mono (toTagRebaseAtᴸ rebase))
+        (no-alias-same (aliasAgree mono) (parked-no-alias parked))
         M⊑M′ (vM ↓ seal)
   sim parked
       rel@(reveal⊑² mono rebase same-[] c⊢ M⊑M′ q)
@@ -803,6 +809,7 @@ module _
       rel@(conceal⊑²-source-ok id-conceal-ok mono rebase same-[] c⊢
         M⊑M′ q) step@(pure-step (id-conceal vM))
       with catchup parked (boundary-source-conceal mono rebase)
+        (no-alias-same (aliasAgree mono) (parked-no-alias parked))
         M⊑M′ vM
   sim parked
       rel@(conceal⊑²-source-ok id-conceal-ok mono rebase same-[] c⊢
@@ -828,6 +835,7 @@ module _
       step@(pure-step (id-reveal vM))
       with catchup parked
         (boundary-source-reveal mono (tag-rebase-varᴸ rebase))
+        (no-alias-same (aliasAgree mono) (parked-no-alias parked))
         M⊑M′ vM
   sim parked
       rel@(reveal⊑reveal² mono rebase same-[] c⊢ c′⊢ M⊑M′ q)
@@ -840,6 +848,7 @@ module _
       step@(pure-step (conceal-reveal vM))
       with catchup parked
         (boundary-source-reveal mono (tag-rebase-varᴸ rebase))
+        (no-alias-same (aliasAgree mono) (parked-no-alias parked))
         M⊑M′ (vM ↓ seal)
   sim parked
       rel@(reveal⊑reveal² mono rebase same-[] c⊢ c′⊢ M⊑M′ q)
@@ -865,6 +874,7 @@ module _
         M⊑M′ q) step@(pure-step (id-conceal vM))
       with catchup parked
         (boundary-source-conceal mono (tag-rebase-varᴸ rebase))
+        (no-alias-same (aliasAgree mono) (parked-no-alias parked))
         M⊑M′ vM
   sim parked
       rel@(conceal⊑conceal² partner mono rebase same-[] c⊢ c′⊢
@@ -907,7 +917,8 @@ module _
       (⊕⊑⊕² op L⊑L′ M⊑M′ r)
       (pure-step
         (δ-⊕ {κ = κ} {κ′ = κ′} {κ″ = κ″} δ))
-      with catchup parked boundary-refl L⊑L′ ($ κ)
+      with catchup parked boundary-refl (parked-no-alias parked)
+        L⊑L′ ($ κ)
   sim parked
       (⊕⊑⊕² op L⊑L′ M⊑M′ r)
       (pure-step
@@ -916,7 +927,9 @@ module _
         boundary-refl , p₁ , _ ,
         L′↠V′ , vV′ , evol₁ , _ , _ , L⊑V′
       with catchup (parked-world-closed parked evol₁)
-        boundary-refl (tr evol₁ M⊑M′) ($ κ′)
+        boundary-refl
+        (parked-no-alias (parked-world-closed parked evol₁))
+        (tr evol₁ M⊑M′) ($ κ′)
   sim parked
       (⊕⊑⊕² op L⊑L′ M⊑M′ r)
       (pure-step
@@ -1127,7 +1140,8 @@ module _
   sim parked
       (⊕⊑⊕² op {L = L} {M′ = M′} L⊑L′ M⊑M′ r)
       (ξ-⊕₂ {χ = χ} {M′ = N} vL M→N refl)
-      with catchup parked boundary-refl L⊑L′ vL
+      with catchup parked boundary-refl (parked-no-alias parked)
+        L⊑L′ vL
   sim parked
       (⊕⊑⊕² op {L = L} {M′ = M′} L⊑L′ M⊑M′ r)
       (ξ-⊕₂ {χ = χ} {M′ = N} vL M→N refl)

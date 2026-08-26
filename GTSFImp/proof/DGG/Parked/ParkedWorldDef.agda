@@ -18,7 +18,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
 open import Types using (Ty; TyCtx; TyVar)
 open import TyStore using (TyStore)
 open import Consistency using (_↪ᵗ_; toRenameᵗ; wk↪ᵗ)
-open import Imprecision using (ImpEnv; X⊑X; X⊑★)
+open import Imprecision using (ImpEnv; X⊑X; X⊑★; X⊑ᵗ)
 open import Reduction using
   (StoreChanges; []; _∷_; keep; bind; applyStore)
 import Reduction as R
@@ -48,6 +48,7 @@ data ParkedWorld : ∀ {Δᴸ Δᴿ Δ}
     → Set where
 
   parked-initial : ∀ {Δ} {μ : ImpEnv Δ} {Σ : TyStore Δ}
+    → (∀ Z {T} → μ Z ≡ X⊑ᵗ T → ⊥)
       -----------------------------------
     → ParkedWorld (CPI2.initialWorld μ Σ)
 
@@ -78,6 +79,23 @@ data ParkedWorld : ∀ {Δᴸ Δᴿ Δ}
     → CTI2.targetStoreʷ W₁ ≡
         applyStore (bind B) (CTI2.targetStoreʷ W)
     → ParkedWorld W₁
+
+
+-- Parked worlds are exactly the concretely-built source-side worlds,
+-- and none of their construction steps introduces an alias mode.
+
+parked-no-alias : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
+  → ParkedWorld W
+  → CTI2.NoAliasWorld W
+parked-no-alias (parked-initial na₀) = na₀
+parked-no-alias (parked-both-bind pw) =
+  CTI2.no-alias-extendᵐ (λ ()) (parked-no-alias pw)
+parked-no-alias (parked-left-bind pw) =
+  CTI2.no-alias-extendᵐ (λ ()) (parked-no-alias pw)
+parked-no-alias (parked-right-bind pw) =
+  CTI2.no-alias-extendᵐ (λ ()) (parked-no-alias pw)
+parked-no-alias (parked-structural-right-insert pw ins follows) =
+  TE.no-alias-insert ins (parked-no-alias pw)
 
 
 data ParkedEvolve : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}

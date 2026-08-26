@@ -187,10 +187,10 @@ probe-moved :
 probe-moved ()
 
 probe-mono₁ₗ : CTX.ImpEnvMono W₁ Wₗ
-probe-mono₁ₗ X eq = eq
+probe-mono₁ₗ = CTX.eqᵉᵐ (λ X → refl)
 
 probe-monoₗ₂ : CTX.ImpEnvMono Wₗ W₂
-probe-monoₗ₂ X eq = eq
+probe-monoₗ₂ = CTX.eqᵉᵐ (λ X → refl)
 
 probe-same₁ₗ : CTX.SameCtx {W = W₁} {W′ = Wₗ} [] []
 probe-same₁ₗ = CTX.same-[]

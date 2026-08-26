@@ -157,7 +157,7 @@ inner-type : ＇ X ⊑ᵂ⟨ W ⟩ ★
 inner-type = X⊑★ refl
 
 no-inner-name-obligation : ¬ (＇ X ⊑ᵂ⟨ W ⟩ ＇ Y)
-no-inner-name-obligation ()
+no-inner-name-obligation (alias () p)
 
 Xᴸ-Y-rep : CTX.StoreRepImp W Xᴸ Y
 Xᴸ-Y-rep = store-rep-imp ★⊑★

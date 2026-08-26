@@ -223,10 +223,10 @@ target-cast-bound-mono {rel = CTI2.⊕⊑⊕² op rel₁ rel₂ r}
 
 value-catchup-right²-from-at : (∀ fuel → ValueCatchupRightAt fuel)
   → ValueCatchupRight²
-value-catchup-right²-from-at value-at vM rel
+value-catchup-right²-from-at value-at na vM rel
   with ⊢²-target-cast-bound rel
-value-catchup-right²-from-at value-at vM rel | fuel , bound =
-  value-at fuel vM rel bound
+value-catchup-right²-from-at value-at na vM rel | fuel , bound =
+  value-at fuel na vM rel bound
 
 
 value-catchup-right²-from-fuel-knot-factories : ExtraCastFactory
@@ -243,10 +243,10 @@ value-catchup-right²-from-fuel-knot-factories
 structural-value-catchup-right²-from-at :
     (∀ fuel → StructuralValueCatchupRightAt fuel)
   → StructuralValueCatchupRight²
-structural-value-catchup-right²-from-at value-at vM rel
+structural-value-catchup-right²-from-at value-at na vM rel
   with ⊢²-target-cast-bound rel
-structural-value-catchup-right²-from-at value-at vM rel
-  | fuel , bound = value-at fuel vM rel bound
+structural-value-catchup-right²-from-at value-at na vM rel
+  | fuel , bound = value-at fuel na vM rel bound
 
 
 structural-value-catchup-right²-from-fuel-knot-factories :
@@ -269,41 +269,42 @@ catchup-to-more-precise-from-fuel-knot-factories :
   → StructuralInstCatchupFactory
   → CatchupToMorePrecise
 catchup-to-more-precise-from-fuel-knot-factories
-    extra-factory value-factory inst-factory parked boundary-refl rel vM =
+    extra-factory value-factory inst-factory parked boundary-refl
+    na rel vM =
   same-boundary-value-adapter structural-right-parked-evolve parked
-    (worker vM rel)
+    (worker na vM rel)
   where
   worker = structural-value-catchup-right²-from-fuel-knot-factories
     extra-factory value-factory inst-factory
 catchup-to-more-precise-from-fuel-knot-factories
     extra-factory value-factory inst-factory parked
-    (boundary-source-reveal mono rb) rel vM =
+    (boundary-source-reveal mono rb) na rel vM =
   source-reveal-boundary-value-adapter structural-right-parked-evolve parked
-    mono rb (worker vM rel)
+    mono rb (worker na vM rel)
   where
   worker = structural-value-catchup-right²-from-fuel-knot-factories
     extra-factory value-factory inst-factory
 catchup-to-more-precise-from-fuel-knot-factories
     extra-factory value-factory inst-factory parked
-    (boundary-source-conceal mono rb) rel vM =
+    (boundary-source-conceal mono rb) na rel vM =
   source-conceal-boundary-value-adapter structural-right-parked-evolve parked
-    mono rb (worker vM rel)
+    mono rb (worker na vM rel)
   where
   worker = structural-value-catchup-right²-from-fuel-knot-factories
     extra-factory value-factory inst-factory
 catchup-to-more-precise-from-fuel-knot-factories
     extra-factory value-factory inst-factory parked
-    (boundary-target-reveal mono rb) rel vM =
+    (boundary-target-reveal mono rb) na rel vM =
   target-reveal-boundary-value-adapter structural-right-parked-evolve parked
-    mono rb (worker vM rel)
+    mono rb (worker na vM rel)
   where
   worker = structural-value-catchup-right²-from-fuel-knot-factories
     extra-factory value-factory inst-factory
 catchup-to-more-precise-from-fuel-knot-factories
     extra-factory value-factory inst-factory parked
-    (boundary-target-conceal mono rb) rel vM =
+    (boundary-target-conceal mono rb) na rel vM =
   target-conceal-boundary-value-adapter structural-right-parked-evolve parked
-    mono rb (worker vM rel)
+    mono rb (worker na vM rel)
   where
   worker = structural-value-catchup-right²-from-fuel-knot-factories
     extra-factory value-factory inst-factory

@@ -63,7 +63,7 @@ open import proof.Reduction.BlameIrreducibleDef
 open import proof.Reduction.BlameIrreducibleProof
   using (blame-irreducible*)
 open import proof.DGG.Parked.ParkedWorldDef
-  using (ParkedWorld; parked-initial)
+  using (ParkedWorld; parked-initial; no-alias-evolve)
 open import proof.DGG.Parked.ParkedWorldLemma
   using (parked-world-closed)
 open import proof.Reduction using (_++χ_; applyTys-++; composeReduction)
@@ -114,7 +114,7 @@ dynamic-gradual-guarantee-with-target-blame
   where
   initial-parked : ParkedWorld
       (CompileMonotone.initialWorld idᵐ store-empty)
-  initial-parked = parked-initial
+  initial-parked = parked-initial (λ ())
 
   initial-related :
     CompileMonotone.initialWorld idᵐ store-empty ∣ [] ⊢²
@@ -140,7 +140,8 @@ dynamic-gradual-guarantee-with-target-blame
         evol₁ , V⊑N′
       with catchup-to-more-precise
         (parked-world-closed initial-parked evol₁)
-        boundary-refl V⊑N′ vV
+        boundary-refl
+        (no-alias-evolve evol₁ (λ ())) V⊑N′ vV
   source-value {Δᴸ} V χsᴸ M↠V vV
       | Δᴿ₁ , χsᴿ₁ , N′ , Δ₁ , W₁ , q₁ , M′↠N′ ,
         evol₁ , V⊑N′

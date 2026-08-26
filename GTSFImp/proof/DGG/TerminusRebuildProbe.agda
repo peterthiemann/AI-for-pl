@@ -22,7 +22,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.List using ([])
 open import Data.Maybe using (just)
 open import Data.Product using (_,_)
-open import Relation.Binary.PropositionalEquality using (refl)
+open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
 open import Types
 open import TyStore using
@@ -73,7 +73,7 @@ dyn-id-value = (CTerms.ƛ (` 0)) CTerms.《 CTerms.inj 》
 
 mono-refl : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
   → CTX.ImpEnvMono W W
-mono-refl _ eq = eq
+mono-refl = CTX.idᵉᵐ
 
 ------------------------------------------------------------------------
 -- Instance A: the S = ★ terminus
@@ -314,8 +314,11 @@ module InstanceB where
       (λ _ → refl) refl X-Y-rep
 
   mono-W-Wᵖ : CTX.ImpEnvMono W Wᵖ
-  mono-W-Wᵖ Fin.zero eq = eq
-  mono-W-Wᵖ (Fin.suc Fin.zero) eq = eq
+  mono-W-Wᵖ = CTX.eqᵉᵐ env-eq
+    where
+    env-eq : ∀ Z → CTX.impEnvʷ W Z ≡ CTX.impEnvʷ Wᵖ Z
+    env-eq Fin.zero = refl
+    env-eq (Fin.suc Fin.zero) = refl
 
   source-seal-⊢ : source-store Conv.⊢↓[ just X ] seal X ★
   source-seal-⊢ = Conv.⊢↓-sealˣ X∈

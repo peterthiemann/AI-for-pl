@@ -216,6 +216,9 @@ private
       (extendTyName name ("♭" ++ show depth)) p ++ ")"
   showCostAt depth name I.bot-elim = "⊥-elim"
   showCostAt depth name I.bot⊑★ = "⊥⊑★"
+  showCostAt depth name (I.alias {X = X} mode p) =
+    "alias at " ++ name X ++ "(" ++
+    showCostAt depth name p ++ ")"
 
 showCost : ∀ {Δ : TyCtx} {μ : I.ImpEnv Δ} {A B : Ty Δ}
   → ℕ

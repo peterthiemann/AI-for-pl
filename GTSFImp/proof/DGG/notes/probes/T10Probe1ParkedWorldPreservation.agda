@@ -46,7 +46,8 @@ W : CTI2.World 1 2 2
 W = CTI2.rightOnlyWorld W-paired ★
 
 parked-W : ParkedWorld W
-parked-W = parked-right-bind (parked-both-bind parked-initial)
+parked-W =
+  parked-right-bind (parked-both-bind (parked-initial (λ Z ())))
 
 zero≢suc : ∀ {n} {Y : Fin.Fin n} → Fin.zero ≢ Fin.suc Y
 zero≢suc ()

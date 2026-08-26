@@ -188,11 +188,16 @@ no-source-star-var-output
     toRenameᵗ (ηᴸʷ W₀) X₁ ≡ toRenameᵗ (ηᴸʷ Wᵒ) X₁
   source-off = CTX.RebaseAt.ηᴸ-off-pivot rb X₁≢X₀
 
+  na-W₀ : CTX.NoAliasWorld W₀
+  na-W₀ Fin.zero ()
+  na-W₀ (Fin.suc Fin.zero) ()
+
   same-center :
     toRenameᵗ (ηᴸʷ Wᵒ) X₀ ≡ toRenameᵗ (ηᴸʷ Wᵒ) X₁
   same-center =
     trans (SVD.variable-obligation-aligns {W = Wᵒ} {X = X₀}
-      {Y = Y₁} qᵒ)
+      {Y = Y₁}
+      (CTX.no-alias-same (CTX.aliasAgree mono) na-W₀) qᵒ)
       (trans (sym target-off) source-off)
 
 ------------------------------------------------------------------------
@@ -229,6 +234,10 @@ no-source-star-branch-output
   zero≢one : Fin.zero ≢ Fin.suc Fin.zero
   zero≢one ()
 
+  na-W₀ : CTX.NoAliasWorld W₀
+  na-W₀ Fin.zero ()
+  na-W₀ (Fin.suc Fin.zero) ()
+
   same-center :
     Fin.zero ≡ Fin.suc Fin.zero
   same-center =
@@ -236,5 +245,6 @@ no-source-star-branch-output
       (sym (η₂-zero (ηᴸʷ Wᵒ)))
       (trans
         (SVD.variable-obligation-aligns {W = Wᵒ} {X = X₀}
-          {Y = Y₁} qᵒ)
+          {Y = Y₁}
+          (CTX.no-alias-same (CTX.aliasAgree mono) na-W₀) qᵒ)
         (η₂-one (ηᴿʷ Wᵒ)))

@@ -22,7 +22,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
 open import Types
 open import TyStore using (TyStore; store-empty; store-lift; store-bind)
-open import Imprecision using (VarImp; X⊑X; X⊑★)
+open import Imprecision using (VarImp; X⊑X; X⊑★; X⊑ᵗ)
 open import Consistency using (_↪ᵗ_; empty; keep; skip)
 import proof.DGG.CtxImp as CTX
 import proof.DGG.Example12Worlds as Ex12
@@ -82,9 +82,13 @@ centerVars : (Δ : TyCtx) → List (TyVar Δ)
 centerVars zero = []
 centerVars (suc Δ) = Fin.zero ∷ map Fin.suc (centerVars Δ)
 
-showMark : VarImp → String
-showMark X⊑X = "X⊑X"
-showMark X⊑★ = "X⊑★"
+showMark : ∀ {Δ}
+  → (TyVar Δ → String)
+  → VarImp Δ
+  → String
+showMark name X⊑X = "X⊑X"
+showMark name X⊑★ = "X⊑★"
+showMark name (X⊑ᵗ T) = "X⊑ᵗ " ++ showTy name T
 
 showEntry : ∀ {Δ}
   → (TyVar Δ → String)
@@ -105,7 +109,7 @@ worldCell : ∀ {Δᴸ Δᴿ Δ}
 worldCell nameᴸ nameᴿ nameᶜ W X =
   nameᶜ X ++ ": " ++
   showEntry nameᴸ (CTX.sourceStoreʷ W) (pivotAt (CTX.ηᴸʷ W) X) ++
-  " ⊑[" ++ showMark (CTX.impEnvʷ W X) ++ "] " ++
+  " ⊑[" ++ showMark nameᶜ (CTX.impEnvʷ W X) ++ "] " ++
   showEntry nameᴿ (CTX.targetStoreʷ W) (pivotAt (CTX.ηᴿʷ W) X)
 
 joinCells : List String → String

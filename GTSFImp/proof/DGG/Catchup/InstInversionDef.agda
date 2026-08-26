@@ -473,6 +473,7 @@ record InstInversionPackage (fuel : ℕ) : Set₁ where
         {M : Term Δᴸ} {M′ : Term Δᴿ} {V′ : Term (suc Δᴿ)}
         {A : Ty Δᴸ} {B : Ty (suc Δᴿ)} {B′ : Ty Δᴿ}
         {ν : Env∼ Δᴿ} {p : A ⊑ᵂ⟨ W ⟩ `∀ B}
+      → CTX.NoAliasWorld W
       → (rel : W ∣ γ ⊢² M ⊑ M′ ∶ p)
       → (vM : Value M)
       → (vM′ : Value M′)

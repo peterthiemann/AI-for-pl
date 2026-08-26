@@ -153,6 +153,7 @@ CatchupToMorePrecise =
     {A : Ty Δᴸ} {B : Ty Δᴿ} {p : A ⊑ᵂ⟨ Wᵖ ⟩ B}
   → ParkedWorld W
   → CatchupBoundary kind Xᴸ? Xᴿ? W Wᵖ
+  → CTX.NoAliasWorld Wᵖ
   → Wᵖ ∣ [] ⊢² V ⊑ M′ ∶ p
   → Value V
   → ValueCatchupResult
