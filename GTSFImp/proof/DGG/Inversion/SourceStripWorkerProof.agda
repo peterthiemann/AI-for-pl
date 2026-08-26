@@ -104,7 +104,11 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
       → NonStar R
     right-var-obligation-nonstar {W = W} {R = R} {Y = Y} p
         with SPT.right-var-obligation-view {W = W} {R = R} {Y = Y} p
-    right-var-obligation-nonstar p | X₂ , refl , aligned =
+    right-var-obligation-nonstar p
+        | SPT.rv-aligned X₂ refl aligned =
+      nonstar-X
+    right-var-obligation-nonstar p
+        | SPT.rv-aliased X₂ refl mode q′ =
       nonstar-X
 
     composeOuterRebase : ∀ {Δᴸ Δᴿ Δ}
@@ -168,7 +172,7 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
 
     impEnvMono-refl : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
       → CTX.ImpEnvMono W W
-    impEnvMono-refl Z eq = eq
+    impEnvMono-refl = CTX.idᵉᵐ
 
     sameCtx-refl : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
         {γ : CtxImp W}
@@ -184,6 +188,7 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
         {X : TyVar Δᴸ} {Y : TyVar Δᴿ}
         {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
         {q : (＇ X) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+      → CTX.NoAliasWorld W
       → RebaseAt W′ W X Y
       → targetStoreʷ W ∋ Y ⦂ S
       → SpineValue V
@@ -198,7 +203,7 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
            × SourceColumnStripBranch W γ V U X Y S cY q
                Core CoreTy Xᵒ Wᵒ γᵒ qᵒ)
     self-column-sealed {W = W} {γ = γ} {V = V} {U = U}
-        {S = S} {X = X} {Y = Y} {q = q} rb target∈ sv final =
+        {S = S} {X = X} {Y = Y} {q = q} na rb target∈ sv final =
       V , ＇ X , X , W , γ , q , sv ,
         column-sealed
           V (＇ X) sv
@@ -206,7 +211,8 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
             sameCtx-refl {γ = γ} ,
             CTX.rebase-varᴸ
               (CTX.sameWorldRebaseAt
-                (variable-obligation-aligns {W = W} {X = X} {Y = Y} q)
+                (variable-obligation-aligns
+                  {W = W} {X = X} {Y = Y} na q)
                 (CTX.RebaseAt.storeRepresentations rb)) ,
             target∈ , final)
           (λ _ → final)
@@ -219,6 +225,7 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
           {X : TyVar Δᴸ} {Y : TyVar Δᴿ}
           {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
           {q : (＇ X) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+        → CTX.NoAliasWorld W
         → RebaseAt W′ W X Y
         → targetStoreʷ W ∋ Y ⦂ S
         → SpineValue (V ↓ seal X R)
@@ -234,7 +241,7 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
                  Core CoreTy Xᵒ Wᵒ γᵒ qᵒ)
       self-spine-sealed {W = W} {γ = γ} {V = V} {U = U}
           {R = R} {S = S} {X = X} {Y = Y} {q = q}
-          rb target∈ sv final =
+          na rb target∈ sv final =
         V ↓ seal X R , ＇ X , X , W , γ , q , sv ,
           spine-sealed
             (V ↓ seal X R) (＇ X) sv
@@ -242,7 +249,8 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
               sameCtx-refl {γ = γ} ,
               CTX.rebase-varᴸ
                 (CTX.sameWorldRebaseAt
-                  (variable-obligation-aligns {W = W} {X = X} {Y = Y} q)
+                  (variable-obligation-aligns
+                    {W = W} {X = X} {Y = Y} na q)
                   (CTX.RebaseAt.storeRepresentations rb)) ,
               target∈ , final)
             (λ _ → final)
@@ -629,7 +637,17 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
     source-seal-final {Y = Y} {pᵢ = pᵢ} {q = q}
         sv vU mono rb sc source∈ target∈
         monoᵢ link scᵢ X∈ prem
-        | X₂ , refl , aligned =
+        | SPT.rv-aligned X₂ refl aligned =
+      target-source-var-chain occupied {q = q}
+        (sv-seal sv) vU mono rb sc source∈ target∈
+        (target-source-var-chain occupied
+          {p₂ = pᵢ} {q = rebase-pivot-obligation link}
+          sv vU monoᵢ link scᵢ X∈
+          (rebase-target-membership-forward rb target∈) prem)
+    source-seal-final {Y = Y} {pᵢ = pᵢ} {q = q}
+        sv vU mono rb sc source∈ target∈
+        monoᵢ link scᵢ X∈ prem
+        | SPT.rv-aliased X₂ refl mode q′ =
       target-source-var-chain occupied {q = q}
         (sv-seal sv) vU mono rb sc source∈ target∈
         (target-source-var-chain occupied
@@ -664,7 +682,16 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
     source-column-seal-final {Y = Y} {pᵤ = pᵤ} {q = q}
         sv vU mono rb sc target∈
         monoᵢ link scᵢ X∈ prem
-        | X₂ , refl , aligned =
+        | SPT.rv-aligned X₂ refl aligned =
+      source-column-untagged-final {q = q} mono rb sc target∈
+        (target-source-var-chain occupied
+          {p₂ = pᵤ} {q = rebase-pivot-obligation link}
+          sv vU monoᵢ link scᵢ X∈
+          (rebase-target-membership-forward rb target∈) prem)
+    source-column-seal-final {Y = Y} {pᵤ = pᵤ} {q = q}
+        sv vU mono rb sc target∈
+        monoᵢ link scᵢ X∈ prem
+        | SPT.rv-aliased X₂ refl mode q′ =
       source-column-untagged-final {q = q} mono rb sc target∈
         (target-source-var-chain occupied
           {p₂ = pᵤ} {q = rebase-pivot-obligation link}
@@ -858,7 +885,13 @@ module _ (occupied : OccupiedNonStarSourceSealResidual) where
         {W = W′} {R = R} {Y = Y} p₀
   source-spine-direct-cast {W = W} {W′ = W′} {Y = Y}
       sv vU mono rb sc source∈ target∈ prem
-      | X₂ , refl , aligned =
+      | SPT.rv-aligned X₂ refl aligned =
+    self-spine-sealed rb target∈ (sv-seal sv)
+      (target-source-var-chain occupied sv vU mono rb sc source∈
+        target∈ prem)
+  source-spine-direct-cast {W = W} {W′ = W′} {Y = Y}
+      sv vU mono rb sc source∈ target∈ prem
+      | SPT.rv-aliased X₂ refl mode q′ =
     self-spine-sealed rb target∈ (sv-seal sv)
       (target-source-var-chain occupied sv vU mono rb sc source∈
         target∈ prem)
