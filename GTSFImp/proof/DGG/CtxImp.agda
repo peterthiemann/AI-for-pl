@@ -201,6 +201,43 @@ alias-same-ext {μ = μ} {ν = ν} {v = v} a = alias-same fwd bwd
   bwd (Fin.suc Z) eq | T₀ , mode , refl =
     cong ⇑ᵛ (alias-bwd a Z mode)
 
+-- The internal inversion layers reason about seal pivots under the
+-- assumption that the world at hand aliases no variable; the source
+-- calculus never constructs aliased worlds, so its top-level theorems
+-- discharge the hypothesis, while alias-aware consumers do not import
+-- these layers.
+
+NoAliasWorld : ∀ {Δᴸ Δᴿ Δ} → World Δᴸ Δᴿ Δ → Set
+NoAliasWorld W = ∀ Z {T} → impEnvʷ W Z ≡ X⊑ᵗ T → ⊥
+
+no-alias-lift : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
+    {v : VarImp (Nat.suc Δ)}
+  → (∀ {T} → v ≡ X⊑ᵗ T → ⊥)
+  → NoAliasWorld W
+  → NoAliasWorld (liftWorldBoth v W)
+no-alias-lift head-ok na Fin.zero eq = head-ok eq
+no-alias-lift head-ok na (Fin.suc Z) eq
+    with lift-alias-inv eq
+no-alias-lift head-ok na (Fin.suc Z) eq
+    | T₀ , mode , refl = na Z mode
+
+no-alias-lift-left : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
+    {v : VarImp (Nat.suc Δ)}
+  → (∀ {T} → v ≡ X⊑ᵗ T → ⊥)
+  → NoAliasWorld W
+  → NoAliasWorld (liftWorldLeft v W)
+no-alias-lift-left head-ok na Fin.zero eq = head-ok eq
+no-alias-lift-left head-ok na (Fin.suc Z) eq
+    with lift-alias-inv eq
+no-alias-lift-left head-ok na (Fin.suc Z) eq
+    | T₀ , mode , refl = na Z mode
+
+no-alias-same : ∀ {Δ} {μ ν : ImpEnv Δ}
+  → AliasSame μ ν
+  → (∀ Z {T} → μ Z ≡ X⊑ᵗ T → ⊥)
+  → ∀ Z {T} → ν Z ≡ X⊑ᵗ T → ⊥
+no-alias-same agree na Z eq = na Z (alias-bwd agree Z eq)
+
 -- World-level environment monotonicity carries two components: the
 -- dynamic marks of the outer world persist into the inner world, and
 -- the two worlds assign the same aliases.  The alias component is what

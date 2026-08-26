@@ -47,6 +47,8 @@ open import proof.TypeInTermSubst using
 open import proof.ImprecisionConsistency using
   (fin-suc-injective; rename-⊑; subst-⊑; toRenameᵗ-injective)
 open import proof.DGG.Parked.ParkedBindImprecisionProof using (right-bind-⊑ᵂ)
+import proof.ImprecisionConsistency as PIC
+open import proof.DGG.WorldInsert using (mode-keep-comm; mode-skip-comm)
 open import proof.DGG.CenterRename using
   (_∘↪_; toRenameᵗ-∘; sucMaybe; preimage?; sucMaybe-nothing;
    preimage?-image; EmbeddingPair; pair; embeddingPair; EmbeddingPushout;
@@ -54,6 +56,7 @@ open import proof.DGG.CenterRename using
    pushout-window; embeddingPushoutWindow;
    pushout-old-off-premise; renameEnv;
    renameEnv-image; renameEnv-off)
+open import Data.Sum using (inj₁; inj₂)
 import proof.Imprecision as PI
 
 open CTX using
@@ -111,7 +114,8 @@ record TargetInsert {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
           ≡ toRenameᵗ π (toRenameᵗ (CTX.ηᴿʷ W) Xᴿ)
 
     impEnv-insert : ∀ Z
-      → CTX.impEnvʷ W′ (toRenameᵗ π Z) ≡ CTX.impEnvʷ W Z
+      → CTX.impEnvʷ W′ (toRenameᵗ π Z)
+          ≡ renameᵛ (toRenameᵗ π) (CTX.impEnvʷ W Z)
 
     impEnv-off-insert : ∀ {Z′}
       → preimage? π Z′ ≡ nothing
@@ -247,10 +251,13 @@ transport⊑ᵂ-from-geometry : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
       ≡ renameᵗ (toRenameᵗ π) (CTX.embedᴿ W C))
   → (∀ Z → CTX.impEnvʷ W Z ≡ X⊑★
       → CTX.impEnvʷ W′ (toRenameᵗ π Z) ≡ X⊑★)
+  → (∀ Z {T} → CTX.impEnvʷ W Z ≡ X⊑ᵗ T
+      → CTX.impEnvʷ W′ (toRenameᵗ π Z)
+        ≡ X⊑ᵗ (renameᵗ (toRenameᵗ π) T))
   → A ⊑ᵂ⟨ W ⟩ B
   → A ⊑ᵂ⟨ W′ ⟩ renameᵗ (toRenameᵗ ρ) B
 transport⊑ᵂ-from-geometry {ρ = ρ} {π = π} {W = W} {W′ = W′}
-    {A = A} {B = B} source-eq target-eq env-star p =
+    {A = A} {B = B} source-eq target-eq env-star env-alias p =
   subst≡
     (λ L → CTX.impEnvʷ W′ ⊢
       L ⊑ CTX.embedᴿ W′ (renameᵗ (toRenameᵗ ρ) B))
@@ -260,7 +267,7 @@ transport⊑ᵂ-from-geometry {ρ = ρ} {π = π} {W = W} {W′ = W′}
         renameᵗ (toRenameᵗ π) (CTX.embedᴸ W A) ⊑ R)
       (sym (target-eq B))
       (rename-⊑ (toRenameᵗ π) (toRenameᵗ-injective π)
-        env-star p))
+        env-star env-alias p))
 
 transport⊑ᵂ-geometry : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
@@ -274,7 +281,12 @@ transport⊑ᵂ-geometry {ρ = ρ} {π = π} {W = W} {W′ = W′}
   transport⊑ᵂ-from-geometry {ρ = ρ} {π = π} {W = W} {W′ = W′}
     {A = A} {B = B} (source-embed-insert ins)
     (target-embed-insert ins)
-    (λ Z eq → trans (impEnv-insert ins Z) eq)
+    (λ Z eq →
+      trans (impEnv-insert ins Z)
+        (cong (renameᵛ (toRenameᵗ π)) eq))
+    (λ Z eq →
+      trans (impEnv-insert ins Z)
+        (cong (renameᵛ (toRenameᵗ π)) eq))
     p
 
 rename-as-subst : ∀ {Δ Δ′}
@@ -304,19 +316,20 @@ transport⊑ᵂ-by-subst : ∀ {Δᴸ Δᴿ Δ Δ′}
   → (σ : Δ ⇒ˢ Δ′)
   → (∀ Z → CTX.impEnvʷ W Z ≡ X⊑★
       → CTX.impEnvʷ W′ ⊢ σ Z ⊑ ★)
+  → PIC.SubstAliasMap (CTX.impEnvʷ W) (CTX.impEnvʷ W′) σ
   → (∀ C → substᵗ σ (CTX.embedᴸ W C) ≡ CTX.embedᴸ W′ C)
   → (∀ C → substᵗ σ (CTX.embedᴿ W C) ≡ CTX.embedᴿ W′ C)
   → A ⊑ᵂ⟨ W ⟩ B
   → A ⊑ᵂ⟨ W′ ⟩ B
 transport⊑ᵂ-by-subst {W = W} {W′ = W′} {A = A} {B = B}
-    σ star-map source-eq target-eq p =
+    σ star-map alias-map source-eq target-eq p =
   subst≡
     (λ L → CTX.impEnvʷ W′ ⊢ L ⊑ CTX.embedᴿ W′ B)
     (source-eq A)
     (subst≡
       (λ R → CTX.impEnvʷ W′ ⊢ substᵗ σ (CTX.embedᴸ W A) ⊑ R)
       (target-eq B)
-      (subst-⊑ star-map p))
+      (subst-⊑ star-map alias-map p))
 
 storeRep-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
@@ -477,10 +490,11 @@ target-insert-off-image-center {ρ = ρ} {π = π} {Y′ = Y′} ins off
 liftBoth-source-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → toRenameᵗ (CTX.ηᴸʷ (CTX.liftWorldBoth v W′)) X
+  → toRenameᵗ (CTX.ηᴸʷ (CTX.liftWorldBoth
+      (renameᵛ (toRenameᵗ (keep π)) v) W′)) X
       ≡ toRenameᵗ (keep π)
           (toRenameᵗ (CTX.ηᴸʷ (CTX.liftWorldBoth v W)) X)
 liftBoth-source-insert ins Fin.zero = refl
@@ -490,10 +504,10 @@ liftBoth-source-insert ins (Fin.suc X) =
 liftBoth-target-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth v W′))
+  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v) W′))
       (toRenameᵗ (keep ρ) X)
       ≡ toRenameᵗ (keep π)
           (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth v W)) X)
@@ -504,10 +518,11 @@ liftBoth-target-insert ins (Fin.suc X) =
 liftBoth-target-center-reflect : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Y′ : TyVar (Nat.suc Δᴿ′)}
+    {v : VarImp (Nat.suc Δ)} {Y′ : TyVar (Nat.suc Δᴿ′)}
     {Z : TyVar (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
-  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth v W′)) Y′
+  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth
+      (renameᵛ (toRenameᵗ (keep π)) v) W′)) Y′
       ≡ toRenameᵗ (keep π) Z
   → Σ[ Y ∈ TyVar (Nat.suc Δᴿ) ]
       Y′ ≡ toRenameᵗ (keep ρ) Y ×
@@ -530,33 +545,43 @@ liftBoth-target-center-reflect {Y′ = Fin.suc Y′} {Z = Fin.suc Z}
 liftBoth-impEnv-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ Z
-  → CTX.impEnvʷ (CTX.liftWorldBoth v W′) (toRenameᵗ (keep π) Z)
-      ≡ CTX.impEnvʷ (CTX.liftWorldBoth v W) Z
+  → CTX.impEnvʷ
+      (CTX.liftWorldBoth
+        (renameᵛ (toRenameᵗ (keep π)) v) W′)
+      (toRenameᵗ (keep π) Z)
+      ≡ renameᵛ (toRenameᵗ (keep π))
+          (CTX.impEnvʷ (CTX.liftWorldBoth v W) Z)
 liftBoth-impEnv-insert ins Fin.zero = refl
-liftBoth-impEnv-insert ins (Fin.suc Z) =
-  impEnv-insert ins Z
+liftBoth-impEnv-insert {π = π} {W = W} ins (Fin.suc Z) =
+  trans (cong ⇑ᵛ (impEnv-insert ins Z))
+    (sym (mode-keep-comm π (CTX.impEnvʷ W Z)))
 
 liftBoth-impEnv-off-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Z′ : TyVar (Nat.suc Δ′)}
+    {v : VarImp (Nat.suc Δ)} {Z′ : TyVar (Nat.suc Δ′)}
   → (ins : TargetInsert ρ π W W′)
   → preimage? (keep π) Z′ ≡ nothing
-  → CTX.impEnvʷ (CTX.liftWorldBoth v W′) Z′ ≡ X⊑★
+  → CTX.impEnvʷ
+      (CTX.liftWorldBoth
+        (renameᵛ (toRenameᵗ (keep π)) v) W′) Z′ ≡ X⊑★
 liftBoth-impEnv-off-insert {Z′ = Fin.zero} ins ()
 liftBoth-impEnv-off-insert {π = π} {Z′ = Fin.suc Z′} ins eq =
-  impEnv-off-insert ins (sucMaybe-nothing (preimage? π Z′) eq)
+  cong ⇑ᵛ
+    (impEnv-off-insert ins
+      (sucMaybe-nothing (preimage? π Z′) eq))
 
 liftBoth-source-resolve : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → CTX.resolveVar (CTX.sourceStoreʷ (CTX.liftWorldBoth v W′)) X
+  → CTX.resolveVar (CTX.sourceStoreʷ (CTX.liftWorldBoth
+      (renameᵛ (toRenameᵗ (keep π)) v) W′)) X
       ≡ CTX.resolveVar (CTX.sourceStoreʷ (CTX.liftWorldBoth v W)) X
 liftBoth-source-resolve ins Fin.zero = refl
 liftBoth-source-resolve ins (Fin.suc X) =
@@ -565,10 +590,11 @@ liftBoth-source-resolve ins (Fin.suc X) =
 liftBoth-target-resolve : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → CTX.resolveVar (CTX.targetStoreʷ (CTX.liftWorldBoth v W′))
+  → CTX.resolveVar (CTX.targetStoreʷ (CTX.liftWorldBoth
+      (renameᵛ (toRenameᵗ (keep π)) v) W′))
       (toRenameᵗ (keep ρ) X)
       ≡ renameᵗ (toRenameᵗ (keep ρ))
           (CTX.resolveVar
@@ -582,11 +608,11 @@ liftBoth-target-resolve {ρ = ρ} {W = W} ins (Fin.suc X) =
 liftBoth-align-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Xᴸ : TyVar (Nat.suc Δᴸ)}
+    {v : VarImp (Nat.suc Δ)} {Xᴸ : TyVar (Nat.suc Δᴸ)}
     {Xᴿ : TyVar (Nat.suc Δᴿ)}
   → (ins : TargetInsert ρ π W W′)
   → CTX.CenterAligned (CTX.liftWorldBoth v W) Xᴸ Xᴿ
-  → CTX.CenterAligned (CTX.liftWorldBoth v W′) Xᴸ
+  → CTX.CenterAligned (CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v) W′) Xᴸ
       (toRenameᵗ (keep ρ) Xᴿ)
 liftBoth-align-insert {Xᴸ = Fin.zero} {Xᴿ = Fin.zero} ins aligned =
   refl
@@ -598,10 +624,11 @@ liftBoth-align-insert {Xᴸ = Fin.suc Xᴸ} {Xᴿ = Fin.suc Xᴿ} ins aligned =
 liftBoth-target-source-reflect : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Xᴸ : TyVar (Nat.suc Δᴸ)}
+    {v : VarImp (Nat.suc Δ)} {Xᴸ : TyVar (Nat.suc Δᴸ)}
     {Y′ : TyVar (Nat.suc Δᴿ′)}
   → (ins : TargetInsert ρ π W W′)
-  → CTX.CenterAligned (CTX.liftWorldBoth v W′) Xᴸ Y′
+  → CTX.CenterAligned (CTX.liftWorldBoth
+      (renameᵛ (toRenameᵗ (keep π)) v) W′) Xᴸ Y′
   → Σ[ Y ∈ TyVar (Nat.suc Δᴿ) ]
       Y′ ≡ toRenameᵗ (keep ρ) Y ×
       CTX.CenterAligned (CTX.liftWorldBoth v W) Xᴸ Y
@@ -622,17 +649,18 @@ liftBoth-target-source-reflect {Xᴸ = Fin.suc Xᴸ} {Y′ = Fin.suc Y′}
 liftBothTargetInsert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → TargetInsert ρ π W W′
   → TargetInsert (keep ρ) (keep π)
-      (CTX.liftWorldBoth v W) (CTX.liftWorldBoth v W′)
+      (CTX.liftWorldBoth v W) (CTX.liftWorldBoth
+          (renameᵛ (toRenameᵗ (keep π)) v) W′)
 liftBothTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′} {v = v} ins =
   record
     { sourceStore-kept = cong store-lift (sourceStore-kept ins)
     ; transport⊑ᵂ = λ {A = A} {B = B} p →
         transport⊑ᵂ-from-geometry {ρ = keep ρ} {π = keep π}
           {W = CTX.liftWorldBoth v W}
-          {W′ = CTX.liftWorldBoth v W′}
+          {W′ = CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v) W′}
           {A = A} {B = B}
           (λ C → trans
             (renameᵗ-cong C (liftBoth-source-insert {v = v} ins))
@@ -641,13 +669,19 @@ liftBothTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′} {v = v} ins =
               (toRenameᵗ (keep π)) C)))
           (λ C → trans
             (renameᵗ-comp (toRenameᵗ (keep ρ))
-              (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth v W′))) C)
+              (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth
+                  (renameᵛ (toRenameᵗ (keep π)) v) W′))) C)
             (trans
               (renameᵗ-cong C (liftBoth-target-insert {v = v} ins))
               (sym (renameᵗ-comp
                 (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldBoth v W)))
                 (toRenameᵗ (keep π)) C))))
-          (λ Z eq → trans (liftBoth-impEnv-insert {v = v} ins Z) eq)
+          (λ Z eq →
+            trans (liftBoth-impEnv-insert {v = v} ins Z)
+              (cong (renameᵛ (toRenameᵗ (keep π))) eq))
+          (λ Z eq →
+            trans (liftBoth-impEnv-insert {v = v} ins Z)
+              (cong (renameᵛ (toRenameᵗ (keep π))) eq))
           p
     ; targetStore-rename = StoreRename-keep (targetStore-rename ins)
     ; source-resolve = liftBoth-source-resolve {v = v} ins
@@ -667,10 +701,11 @@ liftBothTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′} {v = v} ins =
 liftLeft-source-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → toRenameᵗ (CTX.ηᴸʷ (CTX.liftWorldLeft v W′)) X
+  → toRenameᵗ (CTX.ηᴸʷ (CTX.liftWorldLeft
+      (renameᵛ (toRenameᵗ (keep π)) v) W′)) X
       ≡ toRenameᵗ (keep π)
           (toRenameᵗ (CTX.ηᴸʷ (CTX.liftWorldLeft v W)) X)
 liftLeft-source-insert ins Fin.zero = refl
@@ -680,10 +715,10 @@ liftLeft-source-insert ins (Fin.suc X) =
 liftLeft-target-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft v W′))
+  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft (renameᵛ (toRenameᵗ (keep π)) v) W′))
       (toRenameᵗ ρ X)
       ≡ toRenameᵗ (keep π)
       (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft v W)) X)
@@ -692,9 +727,10 @@ liftLeft-target-insert ins X = cong Fin.suc (target-insert ins X)
 liftLeft-target-center-reflect : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Y′ : TyVar Δᴿ′} {Z : TyVar (Nat.suc Δ)}
+    {v : VarImp (Nat.suc Δ)} {Y′ : TyVar Δᴿ′} {Z : TyVar (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
-  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft v W′)) Y′
+  → toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft
+      (renameᵛ (toRenameᵗ (keep π)) v) W′)) Y′
       ≡ toRenameᵗ (keep π) Z
   → Σ[ Y ∈ TyVar Δᴿ ]
       Y′ ≡ toRenameᵗ ρ Y ×
@@ -710,33 +746,43 @@ liftLeft-target-center-reflect {Z = Fin.suc Z} ins eq
 liftLeft-impEnv-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ Z
-  → CTX.impEnvʷ (CTX.liftWorldLeft v W′) (toRenameᵗ (keep π) Z)
-      ≡ CTX.impEnvʷ (CTX.liftWorldLeft v W) Z
+  → CTX.impEnvʷ
+      (CTX.liftWorldLeft
+        (renameᵛ (toRenameᵗ (keep π)) v) W′)
+      (toRenameᵗ (keep π) Z)
+      ≡ renameᵛ (toRenameᵗ (keep π))
+          (CTX.impEnvʷ (CTX.liftWorldLeft v W) Z)
 liftLeft-impEnv-insert ins Fin.zero = refl
-liftLeft-impEnv-insert ins (Fin.suc Z) =
-  impEnv-insert ins Z
+liftLeft-impEnv-insert {π = π} {W = W} ins (Fin.suc Z) =
+  trans (cong ⇑ᵛ (impEnv-insert ins Z))
+    (sym (mode-keep-comm π (CTX.impEnvʷ W Z)))
 
 liftLeft-impEnv-off-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Z′ : TyVar (Nat.suc Δ′)}
+    {v : VarImp (Nat.suc Δ)} {Z′ : TyVar (Nat.suc Δ′)}
   → (ins : TargetInsert ρ π W W′)
   → preimage? (keep π) Z′ ≡ nothing
-  → CTX.impEnvʷ (CTX.liftWorldLeft v W′) Z′ ≡ X⊑★
+  → CTX.impEnvʷ
+      (CTX.liftWorldLeft
+        (renameᵛ (toRenameᵗ (keep π)) v) W′) Z′ ≡ X⊑★
 liftLeft-impEnv-off-insert {Z′ = Fin.zero} ins ()
 liftLeft-impEnv-off-insert {π = π} {Z′ = Fin.suc Z′} ins eq =
-  impEnv-off-insert ins (sucMaybe-nothing (preimage? π Z′) eq)
+  cong ⇑ᵛ
+    (impEnv-off-insert ins
+      (sucMaybe-nothing (preimage? π Z′) eq))
 
 liftLeft-source-resolve : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → (ins : TargetInsert ρ π W W′)
   → ∀ X
-  → CTX.resolveVar (CTX.sourceStoreʷ (CTX.liftWorldLeft v W′)) X
+  → CTX.resolveVar (CTX.sourceStoreʷ (CTX.liftWorldLeft
+      (renameᵛ (toRenameᵗ (keep π)) v) W′)) X
       ≡ CTX.resolveVar (CTX.sourceStoreʷ (CTX.liftWorldLeft v W)) X
 liftLeft-source-resolve ins Fin.zero = refl
 liftLeft-source-resolve ins (Fin.suc X) =
@@ -745,11 +791,11 @@ liftLeft-source-resolve ins (Fin.suc X) =
 liftLeft-align-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Xᴸ : TyVar (Nat.suc Δᴸ)}
+    {v : VarImp (Nat.suc Δ)} {Xᴸ : TyVar (Nat.suc Δᴸ)}
     {Xᴿ : TyVar Δᴿ}
   → (ins : TargetInsert ρ π W W′)
   → CTX.CenterAligned (CTX.liftWorldLeft v W) Xᴸ Xᴿ
-  → CTX.CenterAligned (CTX.liftWorldLeft v W′) Xᴸ
+  → CTX.CenterAligned (CTX.liftWorldLeft (renameᵛ (toRenameᵗ (keep π)) v) W′) Xᴸ
       (toRenameᵗ ρ Xᴿ)
 liftLeft-align-insert {Xᴸ = Fin.zero} ins ()
 liftLeft-align-insert {Xᴸ = Fin.suc Xᴸ} ins aligned =
@@ -758,10 +804,11 @@ liftLeft-align-insert {Xᴸ = Fin.suc Xᴸ} ins aligned =
 liftLeft-target-source-reflect : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {Xᴸ : TyVar (Nat.suc Δᴸ)}
+    {v : VarImp (Nat.suc Δ)} {Xᴸ : TyVar (Nat.suc Δᴸ)}
     {Y′ : TyVar Δᴿ′}
   → (ins : TargetInsert ρ π W W′)
-  → CTX.CenterAligned (CTX.liftWorldLeft v W′) Xᴸ Y′
+  → CTX.CenterAligned (CTX.liftWorldLeft
+      (renameᵛ (toRenameᵗ (keep π)) v) W′) Xᴸ Y′
   → Σ[ Y ∈ TyVar Δᴿ ]
       Y′ ≡ toRenameᵗ ρ Y ×
       CTX.CenterAligned (CTX.liftWorldLeft v W) Xᴸ Y
@@ -775,17 +822,18 @@ liftLeft-target-source-reflect {Xᴸ = Fin.suc Xᴸ} ins aligned
 liftLeftTargetInsert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp}
+    {v : VarImp (Nat.suc Δ)}
   → TargetInsert ρ π W W′
   → TargetInsert ρ (keep π)
-      (CTX.liftWorldLeft v W) (CTX.liftWorldLeft v W′)
+      (CTX.liftWorldLeft v W) (CTX.liftWorldLeft
+          (renameᵛ (toRenameᵗ (keep π)) v) W′)
 liftLeftTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′} {v = v} ins =
   record
     { sourceStore-kept = cong store-lift (sourceStore-kept ins)
     ; transport⊑ᵂ = λ {A = A} {B = B} p →
         transport⊑ᵂ-from-geometry {ρ = ρ} {π = keep π}
           {W = CTX.liftWorldLeft v W}
-          {W′ = CTX.liftWorldLeft v W′}
+          {W′ = CTX.liftWorldLeft (renameᵛ (toRenameᵗ (keep π)) v) W′}
           {A = A} {B = B}
           (λ C → trans
             (renameᵗ-cong C (liftLeft-source-insert {v = v} ins))
@@ -794,13 +842,19 @@ liftLeftTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′} {v = v} ins =
               (toRenameᵗ (keep π)) C)))
           (λ C → trans
             (renameᵗ-comp (toRenameᵗ ρ)
-              (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft v W′))) C)
+              (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft
+                  (renameᵛ (toRenameᵗ (keep π)) v) W′))) C)
             (trans
               (renameᵗ-cong C (liftLeft-target-insert {v = v} ins))
               (sym (renameᵗ-comp
                 (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft v W)))
                 (toRenameᵗ (keep π)) C))))
-          (λ Z eq → trans (liftLeft-impEnv-insert {v = v} ins Z) eq)
+          (λ Z eq →
+            trans (liftLeft-impEnv-insert {v = v} ins Z)
+              (cong (renameᵛ (toRenameᵗ (keep π))) eq))
+          (λ Z eq →
+            trans (liftLeft-impEnv-insert {v = v} ins Z)
+              (cong (renameᵛ (toRenameᵗ (keep π))) eq))
           p
     ; targetStore-rename = targetStore-rename ins
     ; source-resolve = liftLeft-source-resolve {v = v} ins
@@ -820,18 +874,19 @@ liftLeftTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′} {v = v} ins =
 targetLiftCtxBoth : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {γ : CtxImp W}
+    {v : VarImp (Nat.suc Δ)} {γ : CtxImp W}
     {γ′ : CtxImp (CTX.liftWorldBoth v W)}
   → (ins : TargetInsert ρ π W W′)
   → CTX.LiftCtx v γ γ′
-  → CTX.LiftCtx v (mapCtxᵀ ins γ)
+  → CTX.LiftCtx (renameᵛ (toRenameᵗ (keep π)) v)
+      (mapCtxᵀ ins γ)
       (mapCtxᵀ (liftBothTargetInsert {v = v} ins) γ′)
 targetLiftCtxBoth ins CTX.lift-[] = CTX.lift-[]
-targetLiftCtxBoth {ρ = ρ} {W′ = W′} {v = v} ins
+targetLiftCtxBoth {ρ = ρ} {π = π} {W′ = W′} {v = v} ins
     (CTX.lift-∷ {γ = γ} {γ′ = γ′} {A = A} {B = B}
       {p = p} {p′ = p′} liftγ) =
   subst≡
-    (λ e → CTX.LiftCtx v
+    (λ e → CTX.LiftCtx (renameᵛ (toRenameᵗ (keep π)) v)
       (mapCtxᵀ ins (CTX.ctx-imp A B p ∷ γ))
       (e ∷ mapCtxᵀ (liftBothTargetInsert {v = v} ins) γ′))
     entry-eq
@@ -845,19 +900,21 @@ targetLiftCtxBoth {ρ = ρ} {W′ = W′} {v = v} ins
   shift-eq = renameᵗ-keep-shift ρ B
 
   p-trans :
-      ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth v W′ ⟩
+      ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v) W′ ⟩
         renameᵗ (toRenameᵗ (keep ρ)) (⇑ᵗ B)
   p-trans = transport⊑ᵂ insBoth p′
 
   p-shift :
-      ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth v W′ ⟩
+      ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v) W′ ⟩
         ⇑ᵗ (renameᵗ (toRenameᵗ ρ) B)
   p-shift = subst≡
-    (λ T → ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth v W′ ⟩ T)
+    (λ T → ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v) W′ ⟩ T)
     shift-eq p-trans
 
   entry-eq =
-    ctx-imp-target-eq {W = CTX.liftWorldBoth v W′}
+    ctx-imp-target-eq
+      {W = CTX.liftWorldBoth
+        (renameᵛ (toRenameᵗ (keep π)) v) W′}
       {A = ⇑ᵗ A} {B = ⇑ᵗ (renameᵗ (toRenameᵗ ρ) B)}
       {B′ = renameᵗ (toRenameᵗ (keep ρ)) (⇑ᵗ B)}
       {p = p-shift} {q = p-trans}
@@ -866,11 +923,12 @@ targetLiftCtxBoth {ρ = ρ} {W′ = W′} {v = v} ins
 targetLiftCtxLeft : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-    {v : VarImp} {γ : CtxImp W}
+    {v : VarImp (Nat.suc Δ)} {γ : CtxImp W}
     {γ′ : CtxImp (CTX.liftWorldLeft v W)}
   → (ins : TargetInsert ρ π W W′)
   → CTX.LiftCtxᴸ v γ γ′
-  → CTX.LiftCtxᴸ v (mapCtxᵀ ins γ)
+  → CTX.LiftCtxᴸ (renameᵛ (toRenameᵗ (keep π)) v)
+      (mapCtxᵀ ins γ)
       (mapCtxᵀ (liftLeftTargetInsert {v = v} ins) γ′)
 targetLiftCtxLeft ins CTX.liftᴸ-[] = CTX.liftᴸ-[]
 targetLiftCtxLeft ins (CTX.liftᴸ-∷ liftγ) =
@@ -944,7 +1002,12 @@ smartAliasTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′}
               (renameᵗ-cong C (smartAlias-target-insert ins guard))
               (sym (renameᵗ-comp (toRenameᵗ (CTX.ηᴿʷ Wᵐ))
                 (toRenameᵗ π) C))))
-          (λ Z eq → trans (renameEnv-image π (CTX.impEnvʷ Wᵐ) Z) eq)
+          (λ Z eq →
+            trans (renameEnv-image π (CTX.impEnvʷ Wᵐ) Z)
+              (cong (renameᵛ (toRenameᵗ π)) eq))
+          (λ Z eq →
+            trans (renameEnv-image π (CTX.impEnvʷ Wᵐ) Z)
+              (cong (renameᵛ (toRenameᵗ π)) eq))
           p
     ; targetStore-rename =
         subst≡ (λ Σ → StoreRename (toRenameᵗ ρ) Σ
@@ -1039,6 +1102,7 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
     target-frozen′ pending-at-alias′ old-source-frozen′
     no-old-source-at-alias′ alias-mark′ name-mark′
     target-mark-off-footprint′
+    (CTX.alias-same smart-env-alias smart-env-alias-bwd)
   where
   source-store : CTX.sourceStoreʷ (smartAliasInsertWorld ins Wᵐ)
       ≡ store-lift (CTX.sourceStoreʷ W′)
@@ -1083,24 +1147,21 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
     → CTX.impEnvʷ W′ Z′ ≡ X⊑★
     → CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ) Z′ ≡ X⊑★
   old-mark-mono′ Z′ star with preimage? π Z′ in pre
-  old-mark-mono′ Z′ star | nothing =
-    renameEnv-off π (CTX.impEnvʷ Wᵐ) pre
+  old-mark-mono′ Z′ star | nothing = refl
   old-mark-mono′ Z′ star | just Z =
-    subst≡
-      (λ C → CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ) C
-        ≡ X⊑★)
-      (sym image-eq)
-      (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ) Z)
-        (CTX.SmartAliasMergeGuard.old-mark-mono guard Z old-star))
+    cong (renameᵛ (toRenameᵗ π))
+      (CTX.SmartAliasMergeGuard.old-mark-mono guard Z
+        old-star)
     where
     image-eq : Z′ ≡ toRenameᵗ π Z
     image-eq = preimage?-sound π pre
 
     old-star : CTX.impEnvʷ W Z ≡ X⊑★
     old-star =
-      trans (sym (impEnv-insert ins Z))
-        (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
-          image-eq star)
+      renameᵛ-star-inv
+        (trans (sym (impEnv-insert ins Z))
+          (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
+            image-eq star))
 
   alias-mark′ :
     CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ)
@@ -1111,14 +1172,55 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
         (target-insert ins β))
       (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ)
         (toRenameᵗ (CTX.ηᴿʷ W) β))
-        (CTX.SmartAliasMergeGuard.alias-mark-dynamic guard))
+        (cong (renameᵛ (toRenameᵗ π))
+          (CTX.SmartAliasMergeGuard.alias-mark-dynamic guard)))
 
   smartStar : ∀ Z
     → CTX.impEnvʷ (CTX.liftWorldLeft X⊑★ W′) Z ≡ X⊑★
     → CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ)
         ⊢ smartSubst Z ⊑ ★
   smartStar Fin.zero star = X⊑★ alias-mark′
-  smartStar (Fin.suc Z) star = X⊑★ (old-mark-mono′ Z star)
+  smartStar (Fin.suc Z) star =
+    X⊑★ (old-mark-mono′ Z (lift-star-inv star))
+
+  smart-env-alias : ∀ Z′ {T}
+    → CTX.impEnvʷ W′ Z′ ≡ X⊑ᵗ T
+    → CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ) Z′
+      ≡ X⊑ᵗ T
+  smart-env-alias Z′ eq with preimage? π Z′ in pre
+  smart-env-alias Z′ eq | nothing
+      with trans (sym (impEnv-off-insert ins pre)) eq
+  smart-env-alias Z′ eq | nothing | ()
+  smart-env-alias Z′ {T} eq | just Z
+      with renameᵛ-alias-inv
+        (trans (sym (impEnv-insert ins Z))
+          (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑ᵗ T)
+            (preimage?-sound π pre) eq))
+  smart-env-alias Z′ {T} eq | just Z | T₀ , modeW , T-eq =
+    trans
+      (cong (renameᵛ (toRenameᵗ π))
+        (CTX.alias-fwd
+          (CTX.SmartAliasMergeGuard.old-alias-agree guard)
+          Z modeW))
+      (cong X⊑ᵗ (sym T-eq))
+
+  smart-env-alias-bwd : ∀ Z′ {T}
+    → CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ) Z′
+      ≡ X⊑ᵗ T
+    → CTX.impEnvʷ W′ Z′ ≡ X⊑ᵗ T
+  smart-env-alias-bwd Z′ eq with preimage? π Z′ in pre
+  smart-env-alias-bwd Z′ () | nothing
+  smart-env-alias-bwd Z′ {T} eq | just Z
+      with renameᵛ-alias-inv eq
+  smart-env-alias-bwd Z′ {T} eq | just Z
+      | T₀ , modeᵐ , refl =
+    subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑ᵗ (renameᵗ (toRenameᵗ π) T₀))
+      (sym (preimage?-sound π pre))
+      (trans (impEnv-insert ins Z)
+        (cong (renameᵛ (toRenameᵗ π))
+          (CTX.alias-bwd
+            (CTX.SmartAliasMergeGuard.old-alias-agree guard)
+            Z modeᵐ)))
 
   source-point : ∀ X
     → smartSubst (toRenameᵗ (keep (CTX.ηᴸʷ W′)) X)
@@ -1156,11 +1258,30 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
   transport′ : ∀ {A : Ty (Nat.suc Δᴸ)} {B : Ty Δᴿ′}
     → A ⊑ᵂ⟨ CTX.liftWorldLeft X⊑★ W′ ⟩ B
     → A ⊑ᵂ⟨ smartAliasInsertWorld ins Wᵐ ⟩ B
+  smartAlias :
+    PIC.SubstAliasMap
+      (CTX.impEnvʷ (CTX.liftWorldLeft X⊑★ W′))
+      (CTX.impEnvʷ (smartAliasInsertWorld ins Wᵐ))
+      smartSubst
+  smartAlias Fin.zero ()
+  smartAlias (Fin.suc Z′) eq with PI.lift-alias-inv eq
+  smartAlias (Fin.suc Z′) eq | T₁ , modeW′ , refl =
+    inj₂ (Z′ , refl ,
+      trans (smart-env-alias Z′ modeW′)
+        (cong X⊑ᵗ (sym (shift-subst-id T₁))))
+    where
+    shift-subst-id : ∀ (T₁ : Ty Δ′)
+      → substᵗ smartSubst (⇑ᵗ T₁) ≡ T₁
+    shift-subst-id T₁ =
+      trans (substᵗ-rename smartSubst Fin.suc T₁)
+        (trans (substᵗ-cong T₁ (λ X → refl))
+          (substᵗ-id T₁))
+
   transport′ =
     transport⊑ᵂ-by-subst
       {W = CTX.liftWorldLeft X⊑★ W′}
       {W′ = smartAliasInsertWorld ins Wᵐ}
-      smartSubst smartStar source-eq target-eq
+      smartSubst smartStar smartAlias source-eq target-eq
 
   no-old-source-at-alias′ : ∀ Xᴸ
     → toRenameᵗ (CTX.ηᴸʷ W′) Xᴸ
@@ -1180,7 +1301,8 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
         (target-insert ins α))
       (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ)
         (toRenameᵗ (CTX.ηᴿʷ W) α))
-        (CTX.SmartAliasMergeGuard.name-mark-dynamic guard))
+        (cong (renameᵛ (toRenameᵗ π))
+          (CTX.SmartAliasMergeGuard.name-mark-dynamic guard)))
 
   target-mark-off-footprint′ : ∀ Y′
     → Y′ ≢ toRenameᵗ ρ β
@@ -1204,8 +1326,9 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
       (sym smart-image-eq)
       (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ)
           (toRenameᵗ (CTX.ηᴿʷ Wᵐ) Y))
-        (CTX.SmartAliasMergeGuard.target-mark-off-footprint guard
-          Y Y≢β Y≢α old-star))
+        (cong (renameᵛ (toRenameᵗ π))
+          (CTX.SmartAliasMergeGuard.target-mark-off-footprint
+            guard Y Y≢β Y≢α old-star)))
     where
     y′-eq : Y′ ≡ toRenameᵗ ρ Y
     y′-eq = preimage?-sound ρ pre
@@ -1226,11 +1349,12 @@ smartAliasGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
     old-star :
       CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴿʷ W) Y) ≡ X⊑★
     old-star =
-      trans (sym (impEnv-insert ins
-          (toRenameᵗ (CTX.ηᴿʷ W) Y)))
-        (subst≡
-          (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
-          old-center-eq star)
+      renameᵛ-star-inv
+        (trans (sym (impEnv-insert ins
+            (toRenameᵗ (CTX.ηᴿʷ W) Y)))
+          (subst≡
+            (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
+            old-center-eq star))
 
     smart-image-eq :
       toRenameᵗ (CTX.ηᴿʷ W′) Y′
@@ -1315,7 +1439,12 @@ smartFreshTargetInsert {ρ = ρ} {π = π} {W = W} {W′ = W′}
               (renameᵗ-cong C (smartFresh-target-insert ins guard))
               (sym (renameᵗ-comp (toRenameᵗ (CTX.ηᴿʷ Wᵐ))
                 (toRenameᵗ πᵐ) C))))
-          (λ Z eq → trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ) Z) eq)
+          (λ Z eq →
+            trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ) Z)
+              (cong (renameᵛ (toRenameᵗ πᵐ)) eq))
+          (λ Z eq →
+            trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ) Z)
+              (cong (renameᵛ (toRenameᵗ πᵐ)) eq))
           p
     ; targetStore-rename =
         subst≡ (λ Σ → StoreRename (toRenameᵗ ρ) Σ
@@ -1414,19 +1543,104 @@ smartFreshGuardInsert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′ Δᵐ}
   → (ins : TargetInsert ρ π W W′)
   → (guard : CTX.SmartFreshBehindGuard W Wᵐ)
   → CTX.SmartFreshBehindGuard W′ (smartFreshInsertWorld ins guard)
-smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
-    {ρ = ρ} {π = π} {W = W} {W′ = W′} {Wᵐ = Wᵐ}
+smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ = Δ}
+    {Δ′ = Δ′} {ρ = ρ} {π = π} {W = W} {W′ = W′} {Wᵐ = Wᵐ}
     ins guard =
   CTX.smart-fresh-behind-guard old′
     source-store target-store transport′ old-mark-mono′
     target-frozen′ old-source-frozen′ fresh-not-target′ fresh-mark′
-    target-mark-mono′
+    target-mark-mono′ old-alias-frozen′ old-alias-reflect′
   where
   po = embeddingPushout π (CTX.SmartFreshBehindGuard.oldCenters guard)
   πᵐ = EmbeddingPushout.premise po
   old = CTX.SmartFreshBehindGuard.oldCenters guard
   old′ = EmbeddingPushout.old′ po
   commutes = EmbeddingPushout.commutes po
+
+  rep-comm : ∀ (T₀ : Ty Δ)
+    → renameᵗ (toRenameᵗ πᵐ)
+        (renameᵗ (toRenameᵗ old) T₀)
+      ≡ renameᵗ (toRenameᵗ old′)
+          (renameᵗ (toRenameᵗ π) T₀)
+  rep-comm T₀ =
+    trans (renameᵗ-comp (toRenameᵗ old) (toRenameᵗ πᵐ) T₀)
+      (trans (renameᵗ-cong T₀ commutes)
+        (sym (renameᵗ-comp (toRenameᵗ π)
+          (toRenameᵗ old′) T₀)))
+
+  old-alias-frozen′ : ∀ Z′ {T}
+    → CTX.impEnvʷ W′ Z′ ≡ X⊑ᵗ T
+    → CTX.impEnvʷ (smartFreshInsertWorld ins guard)
+        (toRenameᵗ old′ Z′)
+      ≡ X⊑ᵗ (renameᵗ (toRenameᵗ old′) T)
+  old-alias-frozen′ Z′ eq with preimage? π Z′ in pre
+  old-alias-frozen′ Z′ eq | nothing
+      with trans (sym (impEnv-off-insert ins pre)) eq
+  old-alias-frozen′ Z′ eq | nothing | ()
+  old-alias-frozen′ Z′ {T} eq | just Z
+      with renameᵛ-alias-inv
+        (trans (sym (impEnv-insert ins Z))
+          (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑ᵗ T)
+            (preimage?-sound π pre) eq))
+  old-alias-frozen′ Z′ {T} eq | just Z
+      | T₀ , modeW , T-eq =
+    subst≡
+      (λ C → CTX.impEnvʷ (smartFreshInsertWorld ins guard) C
+        ≡ X⊑ᵗ (renameᵗ (toRenameᵗ old′) T))
+      (sym (trans (cong (toRenameᵗ old′)
+          (preimage?-sound π pre))
+        (sym (commutes Z))))
+      (trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
+          (toRenameᵗ old Z))
+        (trans
+          (cong (renameᵛ (toRenameᵗ πᵐ))
+            (CTX.SmartFreshBehindGuard.old-alias-frozen
+              guard Z modeW))
+          (cong X⊑ᵗ
+            (trans (rep-comm T₀)
+              (cong (renameᵗ (toRenameᵗ old′))
+                (sym T-eq))))))
+
+  old-alias-reflect′ : ∀ Z′ {T}
+    → CTX.impEnvʷ (smartFreshInsertWorld ins guard)
+        (toRenameᵗ old′ Z′) ≡ X⊑ᵗ T
+    → Σ[ T₁ ∈ Ty Δ′ ]
+        ((CTX.impEnvʷ W′ Z′ ≡ X⊑ᵗ T₁)
+        × (T ≡ renameᵗ (toRenameᵗ old′) T₁))
+  old-alias-reflect′ Z′ eq with preimage? π Z′ in pre
+  old-alias-reflect′ Z′ eq | nothing
+      with trans
+        (sym (renameEnv-off πᵐ (CTX.impEnvʷ Wᵐ)
+          (pushout-old-off-premise π old pre)))
+        eq
+  old-alias-reflect′ Z′ eq | nothing | ()
+  old-alias-reflect′ Z′ {T} eq | just Z
+      with renameᵛ-alias-inv
+        (trans
+          (sym (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
+            (toRenameᵗ old Z)))
+          (subst≡
+            (λ C → CTX.impEnvʷ (smartFreshInsertWorld ins guard)
+              C ≡ X⊑ᵗ T)
+            (trans (cong (toRenameᵗ old′)
+                (preimage?-sound π pre))
+              (sym (commutes Z)))
+            eq))
+  old-alias-reflect′ Z′ {T} eq | just Z
+      | Tᵐ , modeᵐ , T-eqᵐ
+      with CTX.SmartFreshBehindGuard.old-alias-reflect
+             guard Z modeᵐ
+  old-alias-reflect′ Z′ {T} eq | just Z
+      | Tᵐ , modeᵐ , T-eqᵐ | T₀ , modeW , T₀-eq =
+    renameᵗ (toRenameᵗ π) T₀ ,
+    subst≡ (λ C → CTX.impEnvʷ W′ C
+        ≡ X⊑ᵗ (renameᵗ (toRenameᵗ π) T₀))
+      (sym (preimage?-sound π pre))
+      (trans (impEnv-insert ins Z)
+        (cong (renameᵛ (toRenameᵗ π)) modeW)) ,
+    trans T-eqᵐ
+      (trans (cong (renameᵗ (toRenameᵗ πᵐ)) T₀-eq)
+        (rep-comm T₀))
 
   source-store : CTX.sourceStoreʷ (smartFreshInsertWorld ins guard)
       ≡ store-lift (CTX.sourceStoreʷ W′)
@@ -1489,7 +1703,9 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
         (toRenameᵗ-∘ πᵐ (CTX.ηᴸʷ Wᵐ) Fin.zero))
       (trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
         (toRenameᵗ (CTX.ηᴸʷ Wᵐ) Fin.zero))
-        (CTX.SmartFreshBehindGuard.fresh-mark-dynamic guard))
+        (cong (renameᵛ (toRenameᵗ πᵐ))
+          (CTX.SmartFreshBehindGuard.fresh-mark-dynamic
+            guard)))
 
   old-mark-mono′ : ∀ Z′
     → CTX.impEnvʷ W′ Z′ ≡ X⊑★
@@ -1506,16 +1722,19 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
       (sym smart-image-eq)
       (trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
           (toRenameᵗ old Z))
-        (CTX.SmartFreshBehindGuard.old-mark-mono guard Z old-star))
+        (cong (renameᵛ (toRenameᵗ πᵐ))
+          (CTX.SmartFreshBehindGuard.old-mark-mono guard Z
+            old-star)))
     where
     image-eq : Z′ ≡ toRenameᵗ π Z
     image-eq = preimage?-sound π pre
 
     old-star : CTX.impEnvʷ W Z ≡ X⊑★
     old-star =
-      trans (sym (impEnv-insert ins Z))
-        (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
-          image-eq star)
+      renameᵛ-star-inv
+        (trans (sym (impEnv-insert ins Z))
+          (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
+            image-eq star))
 
     smart-image-eq :
       toRenameᵗ old′ Z′ ≡ toRenameᵗ πᵐ (toRenameᵗ old Z)
@@ -1527,7 +1746,8 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
     → CTX.impEnvʷ (smartFreshInsertWorld ins guard)
         ⊢ smartSubst Z ⊑ ★
   smartStar Fin.zero star = X⊑★ fresh-mark′
-  smartStar (Fin.suc Z) star = X⊑★ (old-mark-mono′ Z star)
+  smartStar (Fin.suc Z) star =
+    X⊑★ (old-mark-mono′ Z (lift-star-inv star))
 
   source-point : ∀ X
     → smartSubst (toRenameᵗ (keep (CTX.ηᴸʷ W′)) X)
@@ -1562,6 +1782,25 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
         (rename-as-subst
           (toRenameᵗ (CTX.ηᴿʷ (smartFreshInsertWorld ins guard))) C))
 
+  smartAlias :
+    PIC.SubstAliasMap
+      (CTX.impEnvʷ (CTX.liftWorldLeft X⊑★ W′))
+      (CTX.impEnvʷ (smartFreshInsertWorld ins guard))
+      smartSubst
+  smartAlias Fin.zero ()
+  smartAlias (Fin.suc Z′) eq with PI.lift-alias-inv eq
+  smartAlias (Fin.suc Z′) eq | T₁ , modeW′ , refl =
+    inj₂ (toRenameᵗ old′ Z′ , refl ,
+      trans (old-alias-frozen′ Z′ modeW′)
+        (cong X⊑ᵗ (sym (shift-subst-rename T₁))))
+    where
+    shift-subst-rename : ∀ (T₁ : Ty Δ′)
+      → substᵗ smartSubst (⇑ᵗ T₁)
+        ≡ renameᵗ (toRenameᵗ old′) T₁
+    shift-subst-rename T₁ =
+      trans (substᵗ-rename smartSubst Fin.suc T₁)
+        (rename-as-subst (toRenameᵗ old′) T₁)
+
   transport′ : ∀ {A : Ty (Nat.suc Δᴸ)} {B : Ty Δᴿ′}
     → A ⊑ᵂ⟨ CTX.liftWorldLeft X⊑★ W′ ⟩ B
     → A ⊑ᵂ⟨ smartFreshInsertWorld ins guard ⟩ B
@@ -1569,7 +1808,7 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
     transport⊑ᵂ-by-subst
       {W = CTX.liftWorldLeft X⊑★ W′}
       {W′ = smartFreshInsertWorld ins guard}
-      smartSubst smartStar source-eq target-eq
+      smartSubst smartStar smartAlias source-eq target-eq
 
   target-mark-mono′ : ∀ Y′
     → CTX.impEnvʷ W′ (toRenameᵗ (CTX.ηᴿʷ W′) Y′) ≡ X⊑★
@@ -1582,8 +1821,7 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
       with preimage? πᵐ
         (toRenameᵗ
           (CTX.ηᴿʷ (smartFreshInsertWorld ins guard)) Y′) in preᵐ
-  target-mark-mono′ Y′ star | nothing | nothing =
-    renameEnv-off πᵐ (CTX.impEnvʷ Wᵐ) preᵐ
+  target-mark-mono′ Y′ star | nothing | nothing = refl
   target-mark-mono′ Y′ star | nothing | just Z =
     ⊥-elim (just≢nothing just-eq)
     where
@@ -1611,7 +1849,9 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
       (sym smart-image-eq)
       (trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
           (toRenameᵗ (CTX.ηᴿʷ Wᵐ) Y))
-        (CTX.SmartFreshBehindGuard.target-mark-mono guard Y old-star))
+        (cong (renameᵛ (toRenameᵗ πᵐ))
+          (CTX.SmartFreshBehindGuard.target-mark-mono guard Y
+            old-star)))
     where
     y′-eq : Y′ ≡ toRenameᵗ ρ Y
     y′-eq = preimage?-sound ρ pre
@@ -1626,11 +1866,12 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ′ = Δ′}
     old-star :
       CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴿʷ W) Y) ≡ X⊑★
     old-star =
-      trans (sym (impEnv-insert ins
-          (toRenameᵗ (CTX.ηᴿʷ W) Y)))
-        (subst≡
-          (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
-          old-center-eq star)
+      renameᵛ-star-inv
+        (trans (sym (impEnv-insert ins
+            (toRenameᵗ (CTX.ηᴿʷ W) Y)))
+          (subst≡
+            (λ C → CTX.impEnvʷ W′ C ≡ X⊑★)
+            old-center-eq star))
 
     smart-image-eq :
       toRenameᵗ (CTX.ηᴿʷ (smartFreshInsertWorld ins guard)) Y′
@@ -1730,7 +1971,7 @@ insertRebase-impEnv : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
   → (ins : TargetInsert ρ π W W⁺)
   → ∀ Z
   → CTX.impEnvʷ (insertRebaseWorld ins Wᵖ) (toRenameᵗ π Z)
-      ≡ CTX.impEnvʷ Wᵖ Z
+      ≡ renameᵛ (toRenameᵗ π) (CTX.impEnvʷ Wᵖ Z)
 insertRebase-impEnv {π = π} {Wᵖ = Wᵖ} ins Z =
   renameEnv-image π (CTX.impEnvʷ Wᵖ) Z
 
@@ -2015,7 +2256,12 @@ insertRebaseTargetInsert {ρ = ρ} {π = π} {Wᵖ = Wᵖ} ins rb = record
         {W′ = insertRebaseWorld ins Wᵖ} {A = A} {B = B}
         (insertRebase-source-embed {Wᵖ = Wᵖ} ins)
         (insertRebase-target-embed {Wᵖ = Wᵖ} ins rb)
-        (λ Z eq → trans (insertRebase-impEnv {Wᵖ = Wᵖ} ins Z) eq)
+        (λ Z eq →
+          trans (insertRebase-impEnv {Wᵖ = Wᵖ} ins Z)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
+        (λ Z eq →
+          trans (insertRebase-impEnv {Wᵖ = Wᵖ} ins Z)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
         p
   ; targetStore-rename = insertRebase-targetStore-rename ins rb
   ; source-resolve = λ X → refl
@@ -2049,7 +2295,12 @@ insertRebaseTargetInsertRev {ρ = ρ} {π = π} {Wᵖ = Wᵖ}
         {W′ = insertRebaseWorld ins Wᵖ} {A = A} {B = B}
         (insertRebase-source-embed {Wᵖ = Wᵖ} ins)
         (insertRebase-target-embed-rev {Wᵖ = Wᵖ} ins rb)
-        (λ Z eq → trans (insertRebase-impEnv {Wᵖ = Wᵖ} ins Z) eq)
+        (λ Z eq →
+          trans (insertRebase-impEnv {Wᵖ = Wᵖ} ins Z)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
+        (λ Z eq →
+          trans (insertRebase-impEnv {Wᵖ = Wᵖ} ins Z)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
         p
   ; targetStore-rename = insertRebase-targetStore-rename-rev ins rb
   ; source-resolve = λ X → refl
@@ -2255,7 +2506,12 @@ pullbackRebaseTargetInsert {ρ = ρ} {π = π} {W = W} {Wᵖ⁺ = Wᵖ⁺}
           (trans (renameᵗ-cong B (pullbackRebase-target insᵖ rb))
             (sym (renameᵗ-comp (toRenameᵗ (CTX.ηᴿʷ W))
               (toRenameᵗ π) B))))
-        (λ Z eq → trans (insertRebase-impEnv {Wᵖ = W} insᵖ Z) eq)
+        (λ Z eq →
+          trans (insertRebase-impEnv {Wᵖ = W} insᵖ Z)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
+        (λ Z eq →
+          trans (insertRebase-impEnv {Wᵖ = W} insᵖ Z)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
         p
   ; targetStore-rename =
       subst≡
@@ -2412,7 +2668,12 @@ pullbackReverseRebaseTargetInsert
                 (pullbackReverseRebase-target insᵖ rb))
               (sym (renameᵗ-comp (toRenameᵗ (CTX.ηᴿʷ W))
                 (toRenameᵗ π) B))))
-          (λ Z eq → trans (insertRebase-impEnv {Wᵖ = W} insᵖ Z) eq)
+          (λ Z eq →
+            trans (insertRebase-impEnv {Wᵖ = W} insᵖ Z)
+              (cong (renameᵛ (toRenameᵗ π)) eq))
+          (λ Z eq →
+            trans (insertRebase-impEnv {Wᵖ = W} insᵖ Z)
+              (cong (renameᵛ (toRenameᵗ π)) eq))
           p
     ; targetStore-rename =
         subst≡
@@ -2583,10 +2844,11 @@ insert-to-starᴸ : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
   → (ins : TargetInsert ρ π W W⁺)
   → CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴸʷ W) Xᴸ) ≡ X⊑★
   → CTX.impEnvʷ W⁺ (toRenameᵗ (CTX.ηᴸʷ W⁺) Xᴸ) ≡ X⊑★
-insert-to-starᴸ {W = W} {W⁺ = W⁺} {Xᴸ = Xᴸ} ins to-star =
+insert-to-starᴸ {π = π} {W = W} {W⁺ = W⁺} {Xᴸ = Xᴸ}
+    ins to-star =
   trans (cong (CTX.impEnvʷ W⁺) (source-insert ins Xᴸ))
     (trans (impEnv-insert ins (toRenameᵗ (CTX.ηᴸʷ W) Xᴸ))
-      to-star)
+      (cong (renameᵛ (toRenameᵗ π)) to-star))
 
 insert-disalignedᴸ : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
@@ -2795,7 +3057,9 @@ impEnvMono-insert-pre : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
 impEnvMono-insert-pre {π = π} {W = W} {W⁺ = W⁺} {Wᵖ⁺ = Wᵖ⁺}
     ins insᵖ mono Z′ star (just Z) pre =
   trans (cong (CTX.impEnvʷ Wᵖ⁺) image-eq)
-    (trans (impEnv-insert insᵖ Z) (mono Z old-star))
+    (trans (impEnv-insert insᵖ Z)
+      (cong (renameᵛ (toRenameᵗ π))
+        (CTX.starMono mono Z old-star)))
   where
   image-eq : Z′ ≡ toRenameᵗ π Z
   image-eq = preimage?-sound π pre
@@ -2806,13 +3070,56 @@ impEnvMono-insert-pre {π = π} {W = W} {W⁺ = W⁺} {Wᵖ⁺ = Wᵖ⁺}
 
   old-star : CTX.impEnvʷ W Z ≡ X⊑★
   old-star =
-    trans (sym (impEnv-insert ins Z)) image-star
+    renameᵛ-star-inv
+      (trans (sym (impEnv-insert ins Z)) image-star)
 impEnvMono-insert-pre ins insᵖ mono Z′ star nothing pre =
   impEnv-off-insert insᵖ pre
 
+impEnvAlias-insert-pre : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
+    {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
+    {W Wᵖ : World Δᴸ Δᴿ Δ}
+    {W⁺ Wᵖ⁺ : World Δᴸ Δᴿ′ Δ′}
+  → (ins : TargetInsert ρ π W W⁺)
+  → (insᵖ : TargetInsert ρ π Wᵖ Wᵖ⁺)
+  → (∀ Z {T} → CTX.impEnvʷ W Z ≡ X⊑ᵗ T
+      → CTX.impEnvʷ Wᵖ Z ≡ X⊑ᵗ T)
+  → (Z′ : TyVar Δ′) {T′ : Ty Δ′}
+  → CTX.impEnvʷ W⁺ Z′ ≡ X⊑ᵗ T′
+  → (m : Maybe (TyVar Δ))
+  → preimage? π Z′ ≡ m
+  → CTX.impEnvʷ Wᵖ⁺ Z′ ≡ X⊑ᵗ T′
+impEnvAlias-insert-pre {π = π} {W = W} {W⁺ = W⁺} {Wᵖ⁺ = Wᵖ⁺}
+    ins insᵖ agree Z′ {T′} eq (just Z) pre
+    with renameᵛ-alias-inv
+      (trans (sym (impEnv-insert ins Z))
+        (trans
+          (sym (cong (CTX.impEnvʷ W⁺) (preimage?-sound π pre)))
+          eq))
+impEnvAlias-insert-pre {π = π} {W = W} {W⁺ = W⁺} {Wᵖ⁺ = Wᵖ⁺}
+    ins insᵖ agree Z′ {T′} eq (just Z) pre
+    | T₀ , modeW , refl =
+  trans (cong (CTX.impEnvʷ Wᵖ⁺) (preimage?-sound π pre))
+    (trans (impEnv-insert insᵖ Z)
+      (cong (renameᵛ (toRenameᵗ π)) (agree Z modeW)))
+impEnvAlias-insert-pre ins insᵖ agree Z′ eq nothing pre
+    with trans (sym (impEnv-off-insert ins pre)) eq
+impEnvAlias-insert-pre ins insᵖ agree Z′ eq nothing pre | ()
+
 impEnvMono-insert : ImpEnvMonoInsertCommuteᵀ
-impEnvMono-insert {π = π} ins insᵖ mono Z′ star =
-  impEnvMono-insert-pre ins insᵖ mono Z′ star (preimage? π Z′) refl
+impEnvMono-insert {π = π} ins insᵖ mono =
+  CTX.imp-env-mono
+    (λ Z′ star →
+      impEnvMono-insert-pre ins insᵖ mono Z′ star
+        (preimage? π Z′) refl)
+    (CTX.alias-same
+      (λ Z′ eq →
+        impEnvAlias-insert-pre ins insᵖ
+          (CTX.alias-fwd (CTX.aliasAgree mono)) Z′ eq
+          (preimage? π Z′) refl)
+      (λ Z′ eq →
+        impEnvAlias-insert-pre insᵖ ins
+          (CTX.alias-bwd (CTX.aliasAgree mono)) Z′ eq
+          (preimage? π Z′) refl))
 
 renamePivotJoin : ∀ {Δ Δ′} {p q r : Maybe (TyVar Δ)}
   → (ρ : TyVar Δ → TyVar Δ′)
@@ -3008,14 +3315,23 @@ right-bind-target-insert {W = W} Xᴿ =
   trans (right-target-map (CTX.ηᴿʷ W) Xᴿ)
     (sym (toRename-wk-eq (toRenameᵗ (CTX.ηᴿʷ W) Xᴿ)))
 
+mode-wk-comm : ∀ {Δ} (w : VarImp Δ)
+  → ⇑ᵛ w ≡ renameᵛ (toRenameᵗ wk↪ᵗ) w
+mode-wk-comm X⊑X = refl
+mode-wk-comm X⊑★ = refl
+mode-wk-comm (X⊑ᵗ T) =
+  cong X⊑ᵗ
+    (renameᵗ-cong T (λ X → sym (toRename-wk-eq X)))
+
 right-bind-impEnv-insert : ∀ {Δᴸ Δᴿ Δ}
     {W : World Δᴸ Δᴿ Δ} {B : Ty Δᴿ}
   → ∀ Z
   → CTX.impEnvʷ (CTX.rightOnlyWorld W B) (toRenameᵗ wk↪ᵗ Z)
-      ≡ CTX.impEnvʷ W Z
-right-bind-impEnv-insert Z
-    rewrite toRename-wk-eq Z | toRename-id-eq Z =
-  refl
+      ≡ renameᵛ (toRenameᵗ wk↪ᵗ) (CTX.impEnvʷ W Z)
+right-bind-impEnv-insert {W = W} Z
+    rewrite toRename-wk-eq Z
+          | toRename-id-eq Z =
+  mode-wk-comm (CTX.impEnvʷ W Z)
 
 right-bind-impEnv-off-insert : ∀ {Δᴸ Δᴿ Δ}
     {W : World Δᴸ Δᴿ Δ} {B : Ty Δᴿ} {Z′ : TyVar (Nat.suc Δ)}
@@ -3125,12 +3441,15 @@ smartFreshRightBindTargetWindowInsert guard =
     }
 
 keepRightBindTargetInsert : ∀ {Δᴸ Δᴿ Δ}
-    {W : World Δᴸ Δᴿ Δ} {B : Ty Δᴿ} {v : VarImp}
+    {W : World Δᴸ Δᴿ Δ} {B : Ty Δᴿ} {v : VarImp (Nat.suc Δ)}
   → TargetInsert (keep wk↪ᵗ) (keep wk↪ᵗ)
       (CTX.liftWorldBoth v W)
-      (CTX.liftWorldBoth v (CTX.rightOnlyWorld W B))
+      (CTX.liftWorldBoth
+        (renameᵛ (toRenameᵗ (keep wk↪ᵗ)) v)
+        (CTX.rightOnlyWorld W B))
 keepRightBindTargetInsert {W = W} {B = B} {v = v} =
-  liftBothTargetInsert {v = v} (rightBindTargetInsert {W = W} {B = B})
+  liftBothTargetInsert {v = v}
+    (rightBindTargetInsert {W = W} {B = B})
 
 right-storeRep : ∀ {Δᴸ Δᴿ Δ}
     {W : World Δᴸ Δᴿ Δ} {B : Ty Δᴿ} {Xᴸ Xᴿ}
@@ -3170,6 +3489,21 @@ rightRebaseAt {W = W} {W′ = W′} {B = B} {Xᴸ = Xᴸ} {Xᴿ = Xᴿ}
   frozenR′ Fin.zero = refl
   frozenR′ (Fin.suc Y) = cong Fin.suc (frozenR Y)
 
+right-to-star : ∀ {Δᴸ Δᴿ Δ}
+    {W : World Δᴸ Δᴿ Δ} {B : Ty Δᴿ} {Xᴸ : TyVar Δᴸ}
+  → CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴸʷ W) Xᴸ) ≡ X⊑★
+  → CTX.impEnvʷ (CTX.rightOnlyWorld W B)
+      (toRenameᵗ (CTX.ηᴸʷ (CTX.rightOnlyWorld W B)) Xᴸ)
+    ≡ X⊑★
+right-to-star {W = W} {B = B} {Xᴸ = Xᴸ} to-star =
+  trans
+    (cong (CTX.impEnvʷ (CTX.rightOnlyWorld W B))
+      (right-bind-source-insert {W = W} {B = B} Xᴸ))
+    (trans
+      (right-bind-impEnv-insert {W = W} {B = B}
+        (toRenameᵗ (CTX.ηᴸʷ W) Xᴸ))
+      (cong (renameᵛ (toRenameᵗ wk↪ᵗ)) to-star))
+
 right-disaligned : ∀ {Δᴸ Δᴿ Δ}
     (W : World Δᴸ Δᴿ Δ) {B : Ty Δᴿ} {Xᴸ : TyVar Δᴸ}
   → (∀ Xᴿ → toRenameᵗ (CTX.ηᴿʷ W) Xᴿ
@@ -3192,7 +3526,8 @@ rightRebaseAtᴸ (CTX.rebase-varᴸ rb) =
   CTX.rebase-varᴸ (rightRebaseAt rb)
 rightRebaseAtᴸ {W = W} {B = B}
     (CTX.rebase-onlyᴸ to-star disaligned represented) =
-  CTX.rebase-onlyᴸ to-star (right-disaligned W {B = B} disaligned)
+  CTX.rebase-onlyᴸ (right-to-star {W = W} {B = B} to-star)
+    (right-disaligned W {B = B} disaligned)
     (right-bind-⊑ᵂ {W = W} {B′ = B} represented)
 
 rightTagRebaseAtᴸ : ∀ {Δᴸ Δᴿ Δ}
@@ -3206,7 +3541,7 @@ rightTagRebaseAtᴸ (CTX.tag-rebase-varᴸ rb) =
   CTX.tag-rebase-varᴸ (rightRebaseAt rb)
 rightTagRebaseAtᴸ {W = W} {B = B}
     (CTX.tag-rebase-onlyᴸ to-star disaligned represented) =
-  CTX.tag-rebase-onlyᴸ to-star
+  CTX.tag-rebase-onlyᴸ (right-to-star {W = W} {B = B} to-star)
     (right-disaligned W {B = B} disaligned)
     (right-bind-⊑ᵂ {W = W} {B′ = B} represented)
 

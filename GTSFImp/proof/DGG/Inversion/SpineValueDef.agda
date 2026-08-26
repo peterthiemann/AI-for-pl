@@ -9,7 +9,7 @@ module proof.DGG.Inversion.SpineValueDef where
 --   * Depends only on core cast-term imprecision typing projections and
 --     world-decay context transport.
 
-open import Data.Empty using (⊥-elim)
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Nat using (suc)
 import Data.Fin as Fin
 open import Data.Maybe using (just)
@@ -173,33 +173,42 @@ right-tag-variable-view vN M⊑N! =
   var-value-view vN (tag-inner-typing (CTI2T.target-typing² M⊑N!))
 
 variable-imprecision-aligns : ∀ {Δ} {μ : ImpEnv Δ} {X Y : TyVar Δ}
+  → (∀ {T} → μ X ≡ X⊑ᵗ T → ⊥)
   → μ ⊢ ＇ X ⊑ ＇ Y
   → X ≡ Y
-variable-imprecision-aligns X⊑X = refl
+variable-imprecision-aligns not-al X⊑X = refl
+variable-imprecision-aligns not-al (alias eq p) =
+  ⊥-elim (not-al eq)
 
 variable-obligation-aligns : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {X : TyVar Δᴸ} {Y : TyVar Δᴿ}
+  → CTI2.NoAliasWorld W
   → ＇ X ⊑ᵂ⟨ W ⟩ ＇ Y
   → toRenameᵗ (ηᴸʷ W) X ≡ toRenameᵗ (ηᴿʷ W) Y
-variable-obligation-aligns q = variable-imprecision-aligns q
+variable-obligation-aligns {W = W} {X = X} na q =
+  variable-imprecision-aligns
+    (na (toRenameᵗ (ηᴸʷ W) X)) q
 
 seal-rebase-target : ∀ {Δᴸ Δᴿ Δ} {Wᵖ W : World Δᴸ Δᴿ Δ}
     {X : TyVar Δᴸ} {Y : TyVar Δᴿ}
+  → CTI2.NoAliasWorld W
   → CTI2.RebaseAtᴸ Wᵖ W (just X)
   → ＇ X ⊑ᵂ⟨ W ⟩ ＇ Y
   → CTI2.RebaseAt Wᵖ W X Y
-seal-rebase-target {W = W} {X = X} {Y = Y}
+seal-rebase-target {W = W} {X = X} {Y = Y} na
     (CTI2.rebase-varᴸ {Xᴿ = Xᴿ} rb) q
     with toRenameᵗ-injective (ηᴿʷ W)
       (trans (sym (CTI2.RebaseAt.pivotAligned rb))
-        (variable-obligation-aligns {W = W} {X = X} {Y = Y} q))
-seal-rebase-target (CTI2.rebase-varᴸ rb) q | refl = rb
+        (variable-obligation-aligns {W = W} {X = X} {Y = Y}
+          na q))
+seal-rebase-target na (CTI2.rebase-varᴸ rb) q | refl = rb
 seal-rebase-target
-    {W = W} {X = X} {Y = Y}
+    {W = W} {X = X} {Y = Y} na
     (CTI2.rebase-onlyᴸ to-star disaligned represented) q =
   ⊥-elim
     (disaligned Y
-      (sym (variable-obligation-aligns {W = W} {X = X} {Y = Y} q)))
+      (sym (variable-obligation-aligns {W = W} {X = X} {Y = Y}
+        na q)))
 
 seal-tag-boundary-view² : ∀ {Δᴸ Δᴿ Δ}
     {Wᵖ W : World Δᴸ Δᴿ Δ} {γ : CtxImp W}
@@ -207,6 +216,7 @@ seal-tag-boundary-view² : ∀ {Δᴸ Δᴿ Δ}
     {X : TyVar Δᴸ} {Y : TyVar Δᴿ} {ν : Env∼ Δᴿ}
     {H∼★ : ν ⊢ (＇ Y) ∼★} {Hns : NonStar (＇ Y)}
     {cH : ν ⊢ (＇ Y) ∼ (＇ Y)} {p : ＇ X ⊑ᵂ⟨ W ⟩ ★}
+  → CTI2.NoAliasWorld W
   → CTI2.RebaseAtᴸ Wᵖ W (just X)
   → Value N
   → W ∣ γ ⊢² M ↓ Conversion.seal X R
@@ -217,11 +227,11 @@ seal-tag-boundary-view² : ∀ {Δᴸ Δᴿ Δ}
         × (targetStoreʷ W ∋ Y ⦂ S)
         × (N ≡ U ↓ Conversion.seal Y S)
         × CTI2.RebaseAt Wᵖ W X Y)
-seal-tag-boundary-view² rb vN M↓X⊑N! q
+seal-tag-boundary-view² na rb vN M↓X⊑N! q
     with right-tag-variable-view vN M↓X⊑N!
-seal-tag-boundary-view² rb vN M↓X⊑N! q
+seal-tag-boundary-view² na rb vN M↓X⊑N! q
     | varv-seal {W = U} {R = S} vU Y∈ refl =
-  U , S , vU , Y∈ , refl , seal-rebase-target rb q
+  U , S , vU , Y∈ , refl , seal-rebase-target na rb q
 
 ------------------------------------------------------------------------
 -- Shared context transport

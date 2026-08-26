@@ -19,7 +19,9 @@ open import Relation.Binary.PropositionalEquality
 
 open import Types
 open import TyStore using (TyStore; store-lift; store-bind)
-open import Imprecision using (VarImp; X⊑X; X⊑★; extendᵐ)
+open import Imprecision using
+  (VarImp; X⊑X; X⊑★; X⊑ᵗ; extendᵐ; ⇑ᵛ; renameᵛ;
+   lift-star-inv; lift-alias-inv)
 import TermCtx as T
 open import Consistency using
   (_↪ᵗ_; empty; keep; skip; toRenameᵗ; id↪ᵗ)
@@ -31,6 +33,64 @@ open import proof.ImprecisionConsistency using
 open import proof.DGG.CenterRename using (_∘↪_; toRenameᵗ-∘)
 import proof.DGG.CtxImp as CTX
 open CTX using (World; CtxImp; _⊑ᵂ⟨_⟩_)
+
+------------------------------------------------------------------------
+-- Mode renaming laws
+------------------------------------------------------------------------
+
+renameᵗ-idʳ : ∀ {Δ} (A : Ty Δ)
+  → renameᵗ (λ X → X) A ≡ A
+renameᵗ-idʳ (＇ X) = refl
+renameᵗ-idʳ (‵ ι) = refl
+renameᵗ-idʳ ★ = refl
+renameᵗ-idʳ (A ⇒ B)
+  rewrite renameᵗ-idʳ A | renameᵗ-idʳ B = refl
+renameᵗ-idʳ (`∀ A) =
+  cong (λ T → `∀ T)
+    (trans (renameᵗ-cong A ext-id-eq) (renameᵗ-idʳ A))
+  where
+  ext-id-eq : ∀ {Δ†} (X : TyVar (Nat.suc Δ†))
+    → extᵗ (λ Y → Y) X ≡ X
+  ext-id-eq Fin.zero = refl
+  ext-id-eq (Fin.suc X) = refl
+
+renameᵛ-id : ∀ {Δ} (w : VarImp Δ)
+  → renameᵛ (toRenameᵗ id↪ᵗ) w ≡ w
+renameᵛ-id X⊑X = refl
+renameᵛ-id X⊑★ = refl
+renameᵛ-id (X⊑ᵗ T) =
+  cong X⊑ᵗ
+    (trans (renameᵗ-cong T toRename-id-eq) (renameᵗ-idʳ T))
+
+mode-keep-comm : ∀ {Δ Δ′} (π : Δ ↪ᵗ Δ′) (w : VarImp Δ)
+  → renameᵛ (toRenameᵗ (keep π)) (⇑ᵛ w)
+    ≡ ⇑ᵛ (renameᵛ (toRenameᵗ π) w)
+mode-keep-comm π X⊑X = refl
+mode-keep-comm π X⊑★ = refl
+mode-keep-comm π (X⊑ᵗ T) =
+  cong X⊑ᵗ
+    (trans (renameᵗ-comp Fin.suc (toRenameᵗ (keep π)) T)
+      (sym (renameᵗ-comp (toRenameᵗ π) Fin.suc T)))
+
+mode-skip-comm : ∀ {Δ Δ′} (π : Δ ↪ᵗ Δ′) (w : VarImp Δ)
+  → ⇑ᵛ (renameᵛ (toRenameᵗ π) w)
+    ≡ renameᵛ (toRenameᵗ (skip π)) w
+mode-skip-comm π X⊑X = refl
+mode-skip-comm π X⊑★ = refl
+mode-skip-comm π (X⊑ᵗ T) =
+  cong X⊑ᵗ
+    (renameᵗ-comp (toRenameᵗ π) Fin.suc T)
+
+renameᵛ-∘ : ∀ {Δ Δ′ Δ″}
+    (π′ : Δ′ ↪ᵗ Δ″) (π : Δ ↪ᵗ Δ′) (w : VarImp Δ)
+  → renameᵛ (toRenameᵗ π′) (renameᵛ (toRenameᵗ π) w)
+    ≡ renameᵛ (toRenameᵗ (π′ ∘↪ π)) w
+renameᵛ-∘ π′ π X⊑X = refl
+renameᵛ-∘ π′ π X⊑★ = refl
+renameᵛ-∘ π′ π (X⊑ᵗ T) =
+  cong X⊑ᵗ
+    (trans (renameᵗ-comp (toRenameᵗ π) (toRenameᵗ π′) T)
+      (sym (renameᵗ-cong T (toRenameᵗ-∘ π′ π))))
 
 ------------------------------------------------------------------------
 -- Insertion
@@ -52,7 +112,8 @@ record WorldInsert {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
           ≡ toRenameᵗ π (toRenameᵗ (CTX.ηᴿʷ W) Xᴿ)
 
     impEnv-insert : ∀ Z
-      → CTX.impEnvʷ W′ (toRenameᵗ π Z) ≡ CTX.impEnvʷ W Z
+      → CTX.impEnvʷ W′ (toRenameᵗ π Z)
+          ≡ renameᵛ (toRenameᵗ π) (CTX.impEnvʷ W Z)
 
     sourceStore-rename :
       StoreRename (toRenameᵗ ρᴸ) (CTX.sourceStoreʷ W)
@@ -102,7 +163,13 @@ insert⊑ᶜ : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
       renameᵗ (toRenameᵗ π) A ⊑ renameᵗ (toRenameᵗ π) B
 insert⊑ᶜ {π = π} ins p =
   rename-⊑ (toRenameᵗ π) (toRenameᵗ-injective π)
-    (λ Z eq → trans (impEnv-insert ins Z) eq) p
+    (λ Z eq →
+      trans (impEnv-insert ins Z)
+        (cong (renameᵛ (toRenameᵗ π)) eq))
+    (λ Z eq →
+      trans (impEnv-insert ins Z)
+        (cong (renameᵛ (toRenameᵗ π)) eq))
+    p
 
 insert⊑ : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     {ρᴸ : Δᴸ ↪ᵗ Δᴸ′} {ρᴿ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
@@ -186,7 +253,9 @@ id-insert W = record
   ; target-insert = λ Xᴿ →
       trans (cong (toRenameᵗ (CTX.ηᴿʷ W)) (toRename-id-eq Xᴿ))
         (sym (toRename-id-eq _))
-  ; impEnv-insert = λ Z → cong (CTX.impEnvʷ W) (toRename-id-eq Z)
+  ; impEnv-insert = λ Z →
+      trans (cong (CTX.impEnvʷ W) (toRename-id-eq Z))
+        (sym (renameᵛ-id (CTX.impEnvʷ W Z)))
   ; sourceStore-rename = λ {X} {A} X∈ →
       subst≡ (λ Y → CTX.sourceStoreʷ W TyStore.∋ Y ⦂ _)
         (sym (toRename-id-eq X))
@@ -225,7 +294,10 @@ compose-insert {ρᴸ = ρᴸ} {ρᴸ′ = ρᴸ′} {ρᴿ = ρᴿ} {ρᴿ′ =
   ; impEnv-insert = λ Z →
       trans (cong (CTX.impEnvʷ W″) (toRenameᵗ-∘ π′ π Z))
         (trans (impEnv-insert ins′ (toRenameᵗ π Z))
-          (impEnv-insert ins Z))
+          (trans
+            (cong (renameᵛ (toRenameᵗ π′))
+              (impEnv-insert ins Z))
+            (renameᵛ-∘ π′ π (CTX.impEnvʷ W Z))))
   ; sourceStore-rename = λ {X} {A} X∈ →
       subst≡ (λ Y → CTX.sourceStoreʷ W″ TyStore.∋ Y ⦂ _)
         (sym (toRenameᵗ-∘ ρᴸ′ ρᴸ X))
@@ -255,10 +327,12 @@ compose-insert {ρᴸ = ρᴸ} {ρᴸ′ = ρᴸ′} {ρᴿ = ρᴿ} {ρᴿ′ =
 liftBoth-insert : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     {ρᴸ : Δᴸ ↪ᵗ Δᴸ′} {ρᴿ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ′ Δᴿ′ Δ′}
-    (v : VarImp) (A : Ty Δᴸ′) (B : Ty Δᴿ′)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ′) (B : Ty Δᴿ′)
   → WorldInsert ρᴸ ρᴿ π W W′
   → WorldInsert (keep ρᴸ) (keep ρᴿ) (keep π)
-      (CTX.liftWorldBoth v W) (CTX.bothBindWorld v W′ A B)
+      (CTX.liftWorldBoth v W)
+      (CTX.bothBindWorld
+        (renameᵛ (toRenameᵗ (keep π)) v) W′ A B)
 liftBoth-insert {ρᴸ = ρᴸ} {ρᴿ = ρᴿ} {π = π} {W = W} {W′ = W′}
     v A B ins = record
   { source-insert = source-lift
@@ -283,10 +357,14 @@ liftBoth-insert {ρᴸ = ρᴸ} {ρᴿ = ρᴿ} {π = π} {W = W} {W′ = W′}
   target-lift (Fin.suc Xᴿ) = cong Fin.suc (target-insert ins Xᴿ)
 
   impEnv-lift : ∀ Z
-    → extendᵐ v (CTX.impEnvʷ W′) (toRenameᵗ (keep π) Z)
-        ≡ extendᵐ v (CTX.impEnvʷ W) Z
+    → extendᵐ (renameᵛ (toRenameᵗ (keep π)) v)
+        (CTX.impEnvʷ W′) (toRenameᵗ (keep π) Z)
+        ≡ renameᵛ (toRenameᵗ (keep π))
+            (extendᵐ v (CTX.impEnvʷ W) Z)
   impEnv-lift Fin.zero = refl
-  impEnv-lift (Fin.suc Z) = impEnv-insert ins Z
+  impEnv-lift (Fin.suc Z) =
+    trans (cong ⇑ᵛ (impEnv-insert ins Z))
+      (sym (mode-keep-comm π (CTX.impEnvʷ W Z)))
 
   bind-lift-source : ∀ {X C}
     → store-lift (CTX.sourceStoreʷ W′) TyStore.∋ X ⦂ C
@@ -304,10 +382,12 @@ liftBoth-insert {ρᴸ = ρᴸ} {ρᴿ = ρᴿ} {π = π} {W = W} {W′ = W′}
 liftLeft-insert : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     {ρᴸ : Δᴸ ↪ᵗ Δᴸ′} {ρᴿ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ′ Δᴿ′ Δ′}
-    (v : VarImp) (A : Ty Δᴸ′)
+    (v : VarImp (Nat.suc Δ)) (A : Ty Δᴸ′)
   → WorldInsert ρᴸ ρᴿ π W W′
   → WorldInsert (keep ρᴸ) ρᴿ (keep π)
-      (CTX.liftWorldLeft v W) (CTX.leftOnlyWorld v W′ A)
+      (CTX.liftWorldLeft v W)
+      (CTX.leftOnlyWorld
+        (renameᵛ (toRenameᵗ (keep π)) v) W′ A)
 liftLeft-insert {ρᴸ = ρᴸ} {ρᴿ = ρᴿ} {π = π} {W = W} {W′ = W′}
     v A ins = record
   { source-insert = source-lift
@@ -325,10 +405,14 @@ liftLeft-insert {ρᴸ = ρᴸ} {ρᴿ = ρᴿ} {π = π} {W = W} {W′ = W′}
   source-lift (Fin.suc Xᴸ) = cong Fin.suc (source-insert ins Xᴸ)
 
   impEnv-lift : ∀ Z
-    → extendᵐ v (CTX.impEnvʷ W′) (toRenameᵗ (keep π) Z)
-        ≡ extendᵐ v (CTX.impEnvʷ W) Z
+    → extendᵐ (renameᵛ (toRenameᵗ (keep π)) v)
+        (CTX.impEnvʷ W′) (toRenameᵗ (keep π) Z)
+        ≡ renameᵛ (toRenameᵗ (keep π))
+            (extendᵐ v (CTX.impEnvʷ W) Z)
   impEnv-lift Fin.zero = refl
-  impEnv-lift (Fin.suc Z) = impEnv-insert ins Z
+  impEnv-lift (Fin.suc Z) =
+    trans (cong ⇑ᵛ (impEnv-insert ins Z))
+      (sym (mode-keep-comm π (CTX.impEnvʷ W Z)))
 
   bind-lift-source : ∀ {X C}
     → store-lift (CTX.sourceStoreʷ W′) TyStore.∋ X ⦂ C
@@ -354,13 +438,16 @@ shift-bound {ρ = ρ} {Σ′ = Σ′} A h {X} {B} X∈ =
 shiftBoth-insert : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     {ρᴸ : Δᴸ ↪ᵗ Δᴸ′} {ρᴿ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ′ Δᴿ′ Δ′}
-    (v : VarImp) (A : Ty Δᴸ′) (B : Ty Δᴿ′)
+    (v : VarImp (Nat.suc Δ′)) (A : Ty Δᴸ′) (B : Ty Δᴿ′)
   → WorldInsert ρᴸ ρᴿ π W W′
-  → WorldInsert (skip ρᴸ) (skip ρᴿ) (skip π) W (CTX.bothBindWorld v W′ A B)
-shiftBoth-insert v A B ins = record
+  → WorldInsert (skip ρᴸ) (skip ρᴿ) (skip π) W
+      (CTX.bothBindWorld v W′ A B)
+shiftBoth-insert {π = π} {W = W} v A B ins = record
   { source-insert = λ Xᴸ → cong Fin.suc (source-insert ins Xᴸ)
   ; target-insert = λ Xᴿ → cong Fin.suc (target-insert ins Xᴿ)
-  ; impEnv-insert = λ Z → impEnv-insert ins Z
+  ; impEnv-insert = λ Z →
+      trans (cong ⇑ᵛ (impEnv-insert ins Z))
+        (mode-skip-comm π (CTX.impEnvʷ W Z))
   ; sourceStore-rename = shift-bound A (sourceStore-rename ins)
   ; targetStore-rename = shift-bound B (targetStore-rename ins)
   }
@@ -368,13 +455,16 @@ shiftBoth-insert v A B ins = record
 shiftLeft-insert : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     {ρᴸ : Δᴸ ↪ᵗ Δᴸ′} {ρᴿ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ′ Δᴿ′ Δ′}
-    (v : VarImp) (A : Ty Δᴸ′)
+    (v : VarImp (Nat.suc Δ′)) (A : Ty Δᴸ′)
   → WorldInsert ρᴸ ρᴿ π W W′
-  → WorldInsert (skip ρᴸ) ρᴿ (skip π) W (CTX.leftOnlyWorld v W′ A)
-shiftLeft-insert v A ins = record
+  → WorldInsert (skip ρᴸ) ρᴿ (skip π) W
+      (CTX.leftOnlyWorld v W′ A)
+shiftLeft-insert {π = π} {W = W} v A ins = record
   { source-insert = λ Xᴸ → cong Fin.suc (source-insert ins Xᴸ)
   ; target-insert = λ Xᴿ → cong Fin.suc (target-insert ins Xᴿ)
-  ; impEnv-insert = λ Z → impEnv-insert ins Z
+  ; impEnv-insert = λ Z →
+      trans (cong ⇑ᵛ (impEnv-insert ins Z))
+        (mode-skip-comm π (CTX.impEnvʷ W Z))
   ; sourceStore-rename = shift-bound A (sourceStore-rename ins)
   ; targetStore-rename = targetStore-rename ins
   }
@@ -385,10 +475,12 @@ shiftRight-insert : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     (B : Ty Δᴿ′)
   → WorldInsert ρᴸ ρᴿ π W W′
   → WorldInsert ρᴸ (skip ρᴿ) (skip π) W (CTX.rightOnlyWorld W′ B)
-shiftRight-insert B ins = record
+shiftRight-insert {π = π} {W = W} B ins = record
   { source-insert = λ Xᴸ → cong Fin.suc (source-insert ins Xᴸ)
   ; target-insert = λ Xᴿ → cong Fin.suc (target-insert ins Xᴿ)
-  ; impEnv-insert = λ Z → impEnv-insert ins Z
+  ; impEnv-insert = λ Z →
+      trans (cong ⇑ᵛ (impEnv-insert ins Z))
+        (mode-skip-comm π (CTX.impEnvʷ W Z))
   ; sourceStore-rename = sourceStore-rename ins
   ; targetStore-rename = shift-bound B (targetStore-rename ins)
   }

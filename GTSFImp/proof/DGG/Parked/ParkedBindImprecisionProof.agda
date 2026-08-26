@@ -16,7 +16,7 @@ open import Consistency using (_↪ᵗ_; toRenameᵗ; keep; skip)
 open import Imprecision using (X⊑X; X⊑★; _⊢_⊑_)
 import proof.DGG.CtxImp as CTI2
 open import proof.ImprecisionConsistency using
-  (fin-suc-injective; rename-⊑)
+  (fin-suc-injective; rename-⊑; shift-⊑)
 open import proof.TypeInTermSubst using (toRename-keep-eq)
 
 open CTI2 using
@@ -57,7 +57,7 @@ both-bind-⊑ᵂ {W = W} {A = A} {B = B} {C = C} {D = D} p =
       (λ R → impEnvʷ (CTI2.bothBindWorld X⊑X W A B) ⊢
         ⇑ᵗ (embedᴸ W C) ⊑ R)
       (sym (embed-keep-shift (CTI2.ηᴿʷ W) D))
-      (rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq) p))
+      (shift-⊑ p))
 
 
 right-bind-⊑ᵂ : ∀ {Δᴸ Δᴿ Δ}
@@ -74,7 +74,7 @@ right-bind-⊑ᵂ {W = W} {B′ = B′} {A = A} {B = B} p =
       (λ R → impEnvʷ (CTI2.rightOnlyWorld W B′) ⊢
         ⇑ᵗ (embedᴸ W A) ⊑ R)
       (sym (embed-keep-shift (CTI2.ηᴿʷ W) B))
-      (rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq) p))
+      (shift-⊑ p))
 
 
 left-bind-⊑ᵂ : ∀ {Δᴸ Δᴿ Δ}
@@ -91,4 +91,4 @@ left-bind-⊑ᵂ {W = W} {A′ = A′} {A = A} {B = B} p =
       (λ R → impEnvʷ (CTI2.leftOnlyWorld X⊑★ W A′) ⊢
         ⇑ᵗ (embedᴸ W A) ⊑ R)
       (sym (renameᵗ-skip-eq (CTI2.ηᴿʷ W) B))
-      (rename-⊑ Fin.suc fin-suc-injective (λ X eq → eq) p))
+      (shift-⊑ p))
