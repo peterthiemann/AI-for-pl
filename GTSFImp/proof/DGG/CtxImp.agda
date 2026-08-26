@@ -33,7 +33,8 @@ open import Conversion using
    _⊢↑[_]_; ⊢↑-unsealˣ; ⊢↑-⇒ˣ; ⊢↑-∀ˣ; ⊢↑-∀-idˣ; ⊢↑-idˣ;
    _⊢↓[_]_; ⊢↓-sealˣ; ⊢↓-⇒ˣ; ⊢↓-∀ˣ; ⊢↓-∀-idˣ; ⊢↓-idˣ)
 open import Imprecision
-open import proof.Imprecision using (lift-alias-inv)
+-- (lift-alias-inv and lift-star-inv come from the core module)
+
 open import Primitives using (Const; Prim; constTy; primArgTy; primResultTy)
 open import CastTerms
   using
@@ -227,6 +228,17 @@ constᵛ-rename cX⊑★ ρ = refl
 
 NoAliasWorld : ∀ {Δᴸ Δᴿ Δ} → World Δᴸ Δᴿ Δ → Set
 NoAliasWorld W = ∀ Z {T} → impEnvʷ W Z ≡ X⊑ᵗ T → ⊥
+
+no-alias-extendᵐ : ∀ {Δ} {μ : ImpEnv Δ}
+    {v : VarImp (Nat.suc Δ)}
+  → (∀ {T} → v ≡ X⊑ᵗ T → ⊥)
+  → (∀ Z {T} → μ Z ≡ X⊑ᵗ T → ⊥)
+  → ∀ Z {T} → extendᵐ v μ Z ≡ X⊑ᵗ T → ⊥
+no-alias-extendᵐ head-ok na Fin.zero eq = head-ok eq
+no-alias-extendᵐ head-ok na (Fin.suc Z) eq
+    with lift-alias-inv eq
+no-alias-extendᵐ head-ok na (Fin.suc Z) eq
+    | T₀ , mode , _ = na Z mode
 
 no-alias-lift : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     {v : VarImp (Nat.suc Δ)}

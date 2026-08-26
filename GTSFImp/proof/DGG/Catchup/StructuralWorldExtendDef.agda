@@ -112,29 +112,6 @@ data StructuralWorldExtendᴿ {Δᴸ} :
 -- steps insert through a target insertion, whose environment law
 -- renames the modes of the old centers and dynamizes the new ones.
 
-no-alias-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
-    {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
-    {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
-  → TE.TargetInsert ρ π W W′
-  → CTI2.NoAliasWorld W
-  → CTI2.NoAliasWorld W′
-no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
-    with CR.preimage? π Z′ in pre
-no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
-    | just Z
-    with I.renameᵛ-alias-inv
-      (trans
-        (sym (TE.impEnv-insert ins Z))
-        (subst≡
-          (λ C → CTI2.impEnvʷ W′ C ≡ I.X⊑ᵗ T)
-          (CR.preimage?-sound π pre) eq))
-no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
-    | just Z | T₀ , mode , eq₂ = na Z mode
-no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
-    | nothing
-    with trans (sym (TE.impEnv-off-insert ins pre)) eq
-no-alias-insert ins na Z′ eq | nothing | ()
-
 no-alias-extendᴿ : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     {χs : StoreChanges Δᴿ Δᴿ′}
     {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
@@ -145,7 +122,7 @@ no-alias-extendᴿ structural-[] na = na
 no-alias-extendᴿ (structural-keep plan) na =
   no-alias-extendᴿ plan na
 no-alias-extendᴿ (structural-bind ins follows plan) na =
-  no-alias-extendᴿ plan (no-alias-insert ins na)
+  no-alias-extendᴿ plan (TE.no-alias-insert ins na)
 
 data FrozenEmbedding : ℕ → ∀ {Δ Δ′} → Δ ↪ᵗ Δ′ → Set where
   frozen-embedding-zero : ∀ {Δ Δ′} {π : Δ ↪ᵗ Δ′}

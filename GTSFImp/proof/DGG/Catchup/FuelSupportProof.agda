@@ -66,6 +66,8 @@ composeWorldExtendᴿ {χs = χs} {ψs = ψs} {W₀ = W₀} {W₂ = W₂}
         subst≡ (λ C′ → A ⊑ᵂ⟨ W₂ ⟩ C′)
           (applyTys-++ χs ψs C)
           (ECR.transport⊑ᵂ ext₂ (ECR.transport⊑ᵂ ext₁ p))
+    ; no-alias-extend = λ na →
+        ECR.no-alias-extend ext₂ (ECR.no-alias-extend ext₁ na)
     }
 
 ctx-imp-transportᴿ : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}

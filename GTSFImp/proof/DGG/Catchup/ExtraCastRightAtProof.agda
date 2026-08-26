@@ -57,6 +57,7 @@ open import proof.DGG.Catchup.TargetCastStepInversionProof using
    target-id-step-inversion)
 import proof.DGG.CastTermImprecision as CTI2
 import proof.Imprecision as PIM
+import proof.DGG.Catchup.StructuralWorldExtendDef as SWE
 import proof.DGG.CtxImp as CTX
 import proof.DGG.ExtraCastRight2 as ECR
 open import proof.DGG.Inversion.RightInjInversion2Def using
@@ -427,6 +428,7 @@ structural-ground-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     ⦃ Gᵍ : Ground G ⦄ ⦃ G∼★ : ν ⊢ G ∼★ ⦄
     ⦃ Bns : NonStar B ⦄
     {p : A ⊑ᵂ⟨ W ⟩ B} {q : A ⊑ᵂ⟨ W ⟩ ★}
+  → CTX.NoAliasWorld W
   → (c : ν ⊢ B ∼ G)
   → StructuralExtraCastRightAt (castSize (_! c))
   → ground-other-decreaseᵀ
@@ -439,7 +441,7 @@ structural-ground-extra-cast-right-at {W = W} {γ = γ}
     {M = M} {M′ = M′} {A = A} {B = B} {G = G}
     {ν = ν} ⦃ Gᵍ = Gᵍ ⦄
     ⦃ G∼★ = G∼★ ⦄ ⦃ Bns = Bns ⦄ {p = p} {q = q}
-    c smaller-extra ground-other-decrease B≢G rel vM vM′ =
+    na c smaller-extra ground-other-decrease B≢G rel vM vM′ =
   structural-catchup-prepend-keep
     (pure-step (ground ⦃ Gns = ground-nonstar Gᵍ ⦄ vM′ B≢G))
     reduct-rel
@@ -465,7 +467,7 @@ structural-ground-extra-cast-right-at {W = W} {γ = γ}
 
   child : StructuralCatchupRightResult W γ M (M′ ⟨ c ⟩) qG
   child =
-    smaller-extra c (ground-other-decrease c)
+    smaller-extra na c (ground-other-decrease c)
       (CTI2.⊑cast² c rel qG) vM vM′
 
   plan = StructuralCatchupRightResult.structural-ext child
@@ -502,6 +504,7 @@ structural-paired-ground-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     {p : C ⊑ᵂ⟨ W ⟩ B}
     {qG : A ⊑ᵂ⟨ W ⟩ G}
     {q★ : A ⊑ᵂ⟨ W ⟩ ★}
+  → CTX.NoAliasWorld W
   → (cᴸ : νᴸ ⊢ C ∼ A)
   → (cᴿ : νᴿ ⊢ B ∼ G)
   → StructuralExtraCastRightAt (castSize (_! cᴿ))
@@ -518,7 +521,8 @@ structural-paired-ground-extra-cast-right-at {W = W} {γ = γ}
     {M = M} {M′ = M′} {C = C} {A = A} {B = B} {G = G}
     {νᴿ = νᴿ} ⦃ Gᵍ = Gᵍ ⦄ ⦃ G∼★ = G∼★ ⦄
     ⦃ Bns = Bns ⦄ {p = p} {qG = qG} {q★ = q★}
-    cᴸ cᴿ smaller-extra ground-other-decrease B≢G vM vM′ inertᴸ rel =
+    na cᴸ cᴿ smaller-extra ground-other-decrease B≢G vM vM′
+    inertᴸ rel =
   structural-catchup-prepend-keep-stutter
     (pure-step (ground ⦃ Gns = ground-nonstar Gᵍ ⦄ vM′ B≢G))
     after-ground
@@ -529,7 +533,7 @@ structural-paired-ground-extra-cast-right-at {W = W} {γ = γ}
   child : StructuralCatchupRightResult W γ
       (M ⟨ cᴸ ⟩) (M′ ⟨ cᴿ ⟩) qG
   child =
-    smaller-extra cᴿ (ground-other-decrease cᴿ)
+    smaller-extra na cᴿ (ground-other-decrease cᴿ)
       (CTI2.cast⊑cast² cᴸ cᴿ rel qG) (vM 《 inertᴸ 》) vM′
 
   plan = StructuralCatchupRightResult.structural-ext child
@@ -604,7 +608,7 @@ structural-source-injection-ground-extra-cast-right-at
 
   child : StructuralCatchupRightResult W γ M (M′ ⟨ cᴿ ⟩) qHG
   child =
-    smaller-extra cᴿ (ground-other-decrease cᴿ)
+    smaller-extra na cᴿ (ground-other-decrease cᴿ)
       (CTI2.⊑cast² cᴿ rel qHG) vM vM′
 
   plan = StructuralCatchupRightResult.structural-ext child
@@ -720,6 +724,7 @@ structural-project-expand-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     ⦃ ★∼G : ν ⊢★∼ G ⦄ ⦃ Bns : NonStar B ⦄
     {p★ : A ⊑ᵂ⟨ W ⟩ ★} {qB : A ⊑ᵂ⟨ W ⟩ B}
   → RightInjInversion²
+  → CTX.NoAliasWorld W
   → (c : ν ⊢ G ∼ B)
   → StructuralExtraCastRightAt (castSize (？ c))
   → project-expand-decreaseᵀ
@@ -740,7 +745,8 @@ structural-project-expand-extra-cast-right-at {W = W} {γ = γ}
     {μ = μ} {ν = ν}
     ⦃ Gᵍ = Gᵍ ⦄ ⦃ G∼★ = G∼★ ⦄ ⦃ ★∼G = ★∼G ⦄
     ⦃ Bns = Bns ⦄ {p★ = p★} {qB = qB}
-    inversion c smaller-extra project-expand-decrease G≢B vM vN rel-tag =
+    inversion na c smaller-extra project-expand-decrease G≢B
+    vM vN rel-tag =
   structural-catchup-prepend-keep
     (pure-step (expand ⦃ Gns = ground-nonstar Gᵍ ⦄
       (vN 《 inj ⦃ Gns = ground-nonstar Gᵍ ⦄ 》) G≢B))
@@ -788,7 +794,7 @@ structural-project-expand-extra-cast-right-at {W = W} {γ = γ}
       (StructuralCatchupRightResult.N′ child ⟨ cχ ⟩)
       (ECR.transport⊑ᵂ ext qB)
   residual =
-    smaller-extra cχ cχ<
+    smaller-extra (SWE.no-alias-extendᴿ plan na) cχ cχ<
       (CTI2.⊑cast² cχ
         (StructuralCatchupRightResult.final-relation child)
         (ECR.transport⊑ᵂ ext qB))
@@ -809,6 +815,7 @@ structural-paired-project-expand-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     {qG : C ⊑ᵂ⟨ W ⟩ G}
     {qB : A ⊑ᵂ⟨ W ⟩ B}
   → RightInjInversion²
+  → CTX.NoAliasWorld W
   → (cᴸ : νᴸ ⊢ C ∼ A)
   → (cᴿ : νᴿ ⊢ G ∼ B)
   → StructuralExtraCastRightAt (castSize (？ cᴿ))
@@ -831,8 +838,8 @@ structural-paired-project-expand-extra-cast-right-at {W = W} {γ = γ}
     {μ = μ} {νᴿ = νᴿ}
     ⦃ Gᵍ = Gᵍ ⦄ ⦃ G∼★ = G∼★ ⦄ ⦃ ★∼G = ★∼G ⦄
     ⦃ Bns = Bns ⦄ {p★ = p★} {qG = qG} {qB = qB}
-    inversion cᴸ cᴿ smaller-extra project-expand-decrease G≢B
-    vM vN inertᴸ rel-tag =
+    inversion na cᴸ cᴿ smaller-extra project-expand-decrease
+    G≢B vM vN inertᴸ rel-tag =
   structural-catchup-prepend-keep-stutter
     (pure-step (expand ⦃ Gns = ground-nonstar Gᵍ ⦄
       (vN 《 inj ⦃ Gns = ground-nonstar Gᵍ ⦄ 》) G≢B))
@@ -858,7 +865,7 @@ structural-paired-project-expand-extra-cast-right-at {W = W} {γ = γ}
   residual : StructuralCatchupRightResult W γ (M ⟨ cᴸ ⟩)
       (N ⟨ cᴿ ⟩) qB
   residual =
-    smaller-extra cᴿ cᴿ<
+    smaller-extra na cᴿ cᴿ<
       (CTI2.cast⊑cast² cᴸ cᴿ core qB)
       (vM 《 inertᴸ 》)
       vN

@@ -40,7 +40,7 @@ open CTX using
    targetStoreʷ;
    _⊑ᵂ⟨_⟩_;
    CtxImp;
-   ctx-imp)
+   ctx-imp; NoAliasWorld)
 open CTI2 using (_∣_⊢²_⊑_∶_)
 import proof.Imprecision as PI
 
@@ -61,6 +61,7 @@ record WorldExtendᴿ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
     transport⊑ᵂ : ∀ {A : Ty Δᴸ} {C : Ty Δᴿ}
       → A ⊑ᵂ⟨ W ⟩ C
       → A ⊑ᵂ⟨ W′ ⟩ (χs ▶ᵗ C)
+    no-alias-extend : NoAliasWorld W → NoAliasWorld W′
 
 open WorldExtendᴿ public
 
@@ -70,6 +71,7 @@ sameWorldExtendᴿ = record
   { sourceStore-kept = refl
   ; targetStore-follows = refl
   ; transport⊑ᵂ = λ p → p
+  ; no-alias-extend = λ na → na
   }
 
 sameWorldKeepExtendᴿ : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
@@ -78,6 +80,7 @@ sameWorldKeepExtendᴿ = record
   { sourceStore-kept = refl
   ; targetStore-follows = refl
   ; transport⊑ᵂ = λ p → p
+  ; no-alias-extend = λ na → na
   }
 
 mapCtxᴿ : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}

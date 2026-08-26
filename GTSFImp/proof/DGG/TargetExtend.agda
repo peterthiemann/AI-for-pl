@@ -411,6 +411,31 @@ preimage-id↪ {Nat.suc Δ} (Fin.suc Z)
     rewrite preimage-id↪ Z =
   refl
 
+-- Alias-freedom crosses a target insertion.
+
+no-alias-insert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′}
+    {ρ : Δᴿ ↪ᵗ Δᴿ′} {π : Δ ↪ᵗ Δ′}
+    {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ Δᴿ′ Δ′}
+  → TargetInsert ρ π W W′
+  → CTX.NoAliasWorld W
+  → CTX.NoAliasWorld W′
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    with preimage? π Z′ in pre
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    | just Z
+    with renameᵛ-alias-inv
+      (trans
+        (sym (impEnv-insert ins Z))
+        (subst≡
+          (λ C → CTX.impEnvʷ W′ C ≡ X⊑ᵗ T)
+          (preimage?-sound π pre) eq))
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    | just Z | T₀ , mode , eq₂ = na Z mode
+no-alias-insert {π = π} {W = W} {W′ = W′} ins na Z′ {T} eq
+    | nothing
+    with trans (sym (impEnv-off-insert ins pre)) eq
+no-alias-insert ins na Z′ eq | nothing | ()
+
 embeddingPair-disjoint : ∀ Δ₁ Δ₂
     {Z₁ : TyVar Δ₁} {Z₂ : TyVar Δ₂}
   → toRenameᵗ (EmbeddingPair.right (embeddingPair Δ₁ Δ₂)) Z₂

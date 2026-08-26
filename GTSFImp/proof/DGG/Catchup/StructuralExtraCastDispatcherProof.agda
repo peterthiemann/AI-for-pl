@@ -28,6 +28,7 @@ open import proof.DGG.Catchup.FuelSupportProof using
 open import proof.DGG.Catchup.StructuralCatchupRightDef using
   (StructuralCatchupRightResult; StructuralExtraCastRightAt;
    StructuralInstCatchupRightAt)
+import proof.DGG.CtxImp as CTX
 open import proof.DGG.Catchup.ExtraCastRightAtProof using
   (structural-inert-extra-cast-right-at;
    structural-id-extra-cast-right-at;
@@ -48,6 +49,7 @@ record StructuralExtraCastResiduals (fuel : ℕ) : Set₁ where
         {M : Term Δᴸ} {N : Term Δᴿ}
         {A : Ty Δᴸ} {B : Ty Δᴿ} {ν : Env∼ Δᴿ}
         {q : A ⊑ᵂ⟨ W ⟩ Types.★}
+      → CTX.NoAliasWorld W
       → (c : ν ⊢ B ∼ Types.★)
       → castSize c < fuel
       → (rel : W ∣ γ ⊢² M ⊑ N ⟨ c ⟩ ∶ q)
@@ -60,6 +62,7 @@ record StructuralExtraCastResiduals (fuel : ℕ) : Set₁ where
         {M : Term Δᴸ} {N : Term Δᴿ}
         {A : Ty Δᴸ} {B : Ty Δᴿ} {ν : Env∼ Δᴿ}
         {q : A ⊑ᵂ⟨ W ⟩ B}
+      → CTX.NoAliasWorld W
       → (c : ν ⊢ Types.★ ∼ B)
       → castSize c < fuel
       → (rel : W ∣ γ ⊢² M ⊑ N ⟨ c ⟩ ∶ q)
@@ -74,6 +77,7 @@ record StructuralExtraCastResiduals (fuel : ℕ) : Set₁ where
         {ν : Env∼ Δᴿ}
         {q : A ⊑ᵂ⟨ W ⟩ B}
       → StructuralInstCatchupRightAt fuel
+      → CTX.NoAliasWorld W
       → (c : ν ⊢ Types.`∀ B₀ ∼ B)
       → castSize c < fuel
       → (rel : W ∣ γ ⊢² M ⊑ N ⟨ c ⟩ ∶ q)
@@ -88,38 +92,38 @@ structural-extra-cast-right-at : ∀ {fuel}
   → StructuralInstCatchupRightAt fuel
   → StructuralExtraCastRightAt fuel
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    (C.id a) c<fuel rel vM vN =
+    na (C.id a) c<fuel rel vM vN =
   structural-id-extra-cast-right-at a c<fuel rel vM vN
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    (c C.↦ d) c<fuel rel vM vN =
+    na (c C.↦ d) c<fuel rel vM vN =
   structural-inert-extra-cast-right-at
     (c C.↦ d) c<fuel rel vM vN CT.fun
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    (C.∀ᶜ c) c<fuel rel vM vN =
+    na (C.∀ᶜ c) c<fuel rel vM vN =
   structural-inert-extra-cast-right-at
     (C.∀ᶜ c) c<fuel rel vM vN CT.all
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    (C.gen_ ⦃ Bnv ⦄ ⦃ z∈B ⦄ c A≠★) c<fuel rel vM vN =
+    na (C.gen_ ⦃ Bnv ⦄ ⦃ z∈B ⦄ c A≠★) c<fuel rel vM vN =
   structural-inert-extra-cast-right-at
     (C.gen_ ⦃ Bnv ⦄ ⦃ z∈B ⦄ c A≠★)
     c<fuel rel vM vN
     (CT.genᵥ A≠★ (gen-safe c A≠★ Bnv z∈B))
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    c@(_! inner) c<fuel rel vM vN
+    na c@(_! inner) c<fuel rel vM vN
     =
   StructuralExtraCastResiduals.target-injection
-    residuals c c<fuel rel vM vN
+    residuals na c c<fuel rel vM vN
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    c@(？ inner) c<fuel rel vM vN =
+    na c@(？ inner) c<fuel rel vM vN =
   StructuralExtraCastResiduals.target-projection
-    residuals c c<fuel rel vM vN
+    residuals na c c<fuel rel vM vN
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    c@(inst_ inner B≠★) c<fuel rel vM vN =
+    na c@(inst_ inner B≠★) c<fuel rel vM vN =
   StructuralExtraCastResiduals.instantiation
-    residuals inst-worker c c<fuel rel vM vN
+    residuals inst-worker na c c<fuel rel vM vN
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    C.bot-elim c<fuel rel vM vN =
+    na C.bot-elim c<fuel rel vM vN =
   structural-bot-elim-extra-cast-right-at rel vM vN
 structural-extra-cast-right-at residuals smaller-extra inst-worker
-    C.bot-intro c<fuel rel vM vN =
-  structural-bot-intro-extra-cast-right-at rel vM vN
+    na C.bot-intro c<fuel rel vM vN =
+  structural-bot-intro-extra-cast-right-at na rel vM vN

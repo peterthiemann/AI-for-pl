@@ -40,6 +40,7 @@ import proof.DGG.ExtraCastRight2 as ECR
 import proof.DGG.TargetExtend as TE
 open import proof.DGG.Parked.ParkedBindImprecisionProof using
   (both-bind-⊑ᵂ; left-bind-⊑ᵂ; right-bind-⊑ᵂ)
+import proof.DGG.Parked.ParkedWorldDef as PWD
 open import proof.DGG.Parked.ParkedWorldDef using
   ( MapCtxᴾᵀ
   ; ParkedEvolve
@@ -307,6 +308,7 @@ right-only-parked→world-extendᴿ-proofᵀ evol = record
   { sourceStore-kept = right-source-kept evol
   ; targetStore-follows = right-target-follows evol
   ; transport⊑ᵂ = λ p → transport⊑ᴾ-proofᵀ evol p
+  ; no-alias-extend = PWD.no-alias-evolve evol
   }
 
 

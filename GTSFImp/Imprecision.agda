@@ -101,6 +101,11 @@ renameᵛ-alias-inv : ∀ {Δ Δ′} {ρ : Δ ⇒ʳ Δ′} {w : VarImp Δ}
   → Σ[ T₀ ∈ Ty Δ ] ((w ≡ X⊑ᵗ T₀) × (T ≡ renameᵗ ρ T₀))
 renameᵛ-alias-inv {w = X⊑ᵗ T₀} refl = T₀ , refl , refl
 
+lift-alias-inv : ∀ {Δ} {v : VarImp Δ} {T : Ty (suc Δ)}
+  → ⇑ᵛ v ≡ X⊑ᵗ T
+  → Σ[ T₀ ∈ Ty Δ ] ((v ≡ X⊑ᵗ T₀) × (T ≡ ⇑ᵗ T₀))
+lift-alias-inv {v = X⊑ᵗ T₀} refl = T₀ , refl , refl
+
 ext-mode-paired-inv : ∀ {Δ} (μ : ImpEnv Δ) {v : VarImp (suc Δ)}
     (Z : TyVar Δ)
   → extendᵐ v μ (suc Z) ≡ X⊑X

@@ -152,6 +152,29 @@ data ParkedEvolve : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     → ParkedEvolve χsᴸ (bind B ∷ χsᴿ) W W′
 
 
+-- Alias-freedom travels along an evolution: the paired and dynamic
+-- bind steps push non-alias modes, and the structural bind inserts.
+
+no-alias-evolve : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
+    {χsᴸ : StoreChanges Δᴸ Δᴸ′}
+    {χsᴿ : StoreChanges Δᴿ Δᴿ′}
+    {W : World Δᴸ Δᴿ Δ} {W′ : World Δᴸ′ Δᴿ′ Δ′}
+  → ParkedEvolve χsᴸ χsᴿ W W′
+  → CTI2.NoAliasWorld W
+  → CTI2.NoAliasWorld W′
+no-alias-evolve evolve-refl na = na
+no-alias-evolve (evolve-keepᴸ evol) na = no-alias-evolve evol na
+no-alias-evolve (evolve-keepᴿ evol) na = no-alias-evolve evol na
+no-alias-evolve (evolve-both-bind evol) na =
+  no-alias-evolve evol (CTI2.no-alias-extendᵐ (λ ()) na)
+no-alias-evolve (evolve-left-bind evol) na =
+  no-alias-evolve evol (CTI2.no-alias-extendᵐ (λ ()) na)
+no-alias-evolve (evolve-right-bind evol) na =
+  no-alias-evolve evol (CTI2.no-alias-extendᵐ (λ ()) na)
+no-alias-evolve
+    (evolve-structural-right-bind ins follows evol) na =
+  no-alias-evolve evol (TE.no-alias-insert ins na)
+
 centerVarᴾ : ∀ {Δᴸ Δᴸ′ Δᴿ Δᴿ′ Δ Δ′}
     {χsᴸ : StoreChanges Δᴸ Δᴸ′}
     {χsᴿ : StoreChanges Δᴿ Δᴿ′}

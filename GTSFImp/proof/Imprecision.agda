@@ -576,7 +576,7 @@ AliasesAvoid μ X = ∀ Y {T} → μ Y ≡ I.X⊑ᵗ T → X ∉ᵗ T
 lift-alias-inv : ∀ {Δ} {v : I.VarImp Δ} {T : Ty (Nat.suc Δ)}
   → I.⇑ᵛ v ≡ I.X⊑ᵗ T
   → ∃[ T₀ ] (v ≡ I.X⊑ᵗ T₀ × T ≡ ⇑ᵗ T₀)
-lift-alias-inv {v = I.X⊑ᵗ T₀} refl = T₀ , refl , refl
+lift-alias-inv = I.lift-alias-inv
 
 -- A freshly bound variable is avoided by every inherited alias, because
 -- `extendᵐ` weakens the representatives it shifts.

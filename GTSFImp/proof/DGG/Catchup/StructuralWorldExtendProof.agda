@@ -21,6 +21,7 @@ import proof.DGG.ExtraCastRight2 as ECR
 import proof.DGG.TargetExtend as TE
 open import proof.DGG.Catchup.FuelSupportProof using
   (composeWorldExtendᴿ; mapCtxᴿ-compose)
+import proof.DGG.Catchup.StructuralWorldExtendDef as SWE
 open import proof.DGG.Catchup.StructuralWorldExtendDef
 
 
@@ -38,6 +39,7 @@ target-insert-bind-world-extendᴿ {W′ = W′} ins follows = record
   ; transport⊑ᵂ = λ {A = A} {C = C} p →
       subst≡ (λ C′ → A CTI2.⊑ᵂ⟨ W′ ⟩ C′)
         (renameᵗ-wk-eq C) (TE.transport⊑ᵂ ins p)
+  ; no-alias-extend = TE.no-alias-insert ins
   }
 
 
@@ -51,6 +53,7 @@ prepend-keep-world-extendᴿ ext = record
   { sourceStore-kept = ECR.sourceStore-kept ext
   ; targetStore-follows = ECR.targetStore-follows ext
   ; transport⊑ᵂ = ECR.transport⊑ᵂ ext
+  ; no-alias-extend = ECR.no-alias-extend ext
   }
 
 

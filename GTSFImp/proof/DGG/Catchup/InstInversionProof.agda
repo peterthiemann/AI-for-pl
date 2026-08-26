@@ -171,6 +171,8 @@ composeWorldExtendᴿ {χs = χs} {ψs = ψs} {W₀ = W₀} {W₂ = W₂}
         subst≡ (λ C′ → A CTX.⊑ᵂ⟨ W₂ ⟩ C′)
           (applyTys-++ χs ψs C)
           (ECR.transport⊑ᵂ ext₂ (ECR.transport⊑ᵂ ext₁ p))
+    ; no-alias-extend = λ na →
+        ECR.no-alias-extend ext₂ (ECR.no-alias-extend ext₁ na)
     }
 
 
@@ -412,6 +414,7 @@ inst-post-at-finish : ∀ {fuel Δᴸ Δᴿ Δ Δᴿ₂ Δ₂}
     {A : Ty Δᴸ} {B : Ty (suc Δᴿ)} {B′ : Ty Δᴿ}
     {ν : Env∼ Δᴿ} {p : A CTX.⊑ᵂ⟨ W ⟩ `∀ B}
     {χs₂ : StoreChanges Δᴿ Δᴿ₂}
+  → CTX.NoAliasWorld W
   → FuelStepSurface fuel
   → ResidualCastBuilderᵀ
   → (rel : W CTI2.∣ γ ⊢² M ⊑ M′ ∶ p)
@@ -435,11 +438,11 @@ inst-post-at-finish : ∀ {fuel Δᴸ Δᴿ Δ Δᴿ₂ Δ₂}
           × (W′ CTI2.∣ ECR.mapCtxᴿ ext γ ⊢² M ⊑ N′ ∶
               ECR.transport⊑ᵂ ext q))
 inst-post-at-finish {γ = γ} {B′ = B′} {χs₂ = χs₂}
-    fuel-step residual-cast-builder rel vM vM′ c′
+    na fuel-step residual-cast-builder rel vM vM′ c′
     B′≢★ c<fuel q ext₂ pkg
     with InstPostCatalogPackageAt.at-spine-descent pkg
 inst-post-at-finish {γ = γ} {B′ = B′} {χs₂ = χs₂}
-    fuel-step residual-cast-builder rel vM vM′ c′
+    na fuel-step residual-cast-builder rel vM vM′ c′
     B′≢★ c<fuel q ext₂ pkg
   | record { Δᴿ′ = Δᴿᵈ ; χs = δs ; Δ′ = Δᵈ ; W′ = Wᵈ
       ; ext = extᵈ ; final = final ; final-value = vFinal
@@ -448,6 +451,8 @@ inst-post-at-finish {γ = γ} {B′ = B′} {χs₂ = χs₂}
       (subst≡ (λ n → suc n < _)
         (sym (castSize-applyConsistencies δs residual-cast))
         (InstPostCatalogPackageAt.at-residual-fuel pkg))
+      (ECR.no-alias-extend extᵈ
+        (ECR.no-alias-extend ext₂ na))
       (applyConsistencies δs residual-cast)
       (n<1+n (castSize (applyConsistencies δs residual-cast)))
       (CTI2.⊑cast² (applyConsistencies δs residual-cast) relFinal
@@ -457,7 +462,7 @@ inst-post-at-finish {γ = γ} {B′ = B′} {χs₂ = χs₂}
   where
   residual-cast = InstPostCatalogPackageAt.at-residual-cast pkg
 inst-post-at-finish {γ = γ} {B′ = B′} {χs₂ = χs₂}
-    fuel-step residual-cast-builder rel vM vM′ c′
+    na fuel-step residual-cast-builder rel vM vM′ c′
     B′≢★ c<fuel q ext₂ pkg
   | record { Δᴿ′ = Δᴿᵈ ; χs = δs ; Δ′ = Δᵈ ; W′ = Wᵈ
       ; ext = extᵈ ; final = final ; final-value = vFinal
@@ -548,14 +553,15 @@ inst-post-at→root-package : ∀ {fuel Δᴸ Δᴿ Δ Δᴿ₂ Δ₂}
   → (c<fuel : castSize ((inst c′) B′≢★) < fuel)
   → (q : A CTX.⊑ᵂ⟨ W ⟩ B′)
   → (ext₂ : ECR.WorldExtendᴿ χs₂ W W₂)
+  → CTX.NoAliasWorld W
   → InstPostCatalogPackageAt fuel rel vM vM′ c′ B′≢★
       c<fuel q χs₂ W₂ ext₂
   → InstPostCatalogPackage fuel rel vM vM′ c′ B′≢★ c<fuel q
 inst-post-at→root-package fuel-step residual-cast-builder rel vM vM′
-    c′ B′≢★ c<fuel q ext₂ pkg =
+    c′ B′≢★ c<fuel q ext₂ na pkg =
   inst-post-at→package rel vM vM′ c′ B′≢★ c<fuel q ext₂
-    (inst-post-at-finish fuel-step residual-cast-builder rel vM vM′
-      c′ B′≢★ c<fuel q ext₂ pkg)
+    (inst-post-at-finish na fuel-step residual-cast-builder
+      rel vM vM′ c′ B′≢★ c<fuel q ext₂ pkg)
     pkg
 
 
@@ -598,7 +604,24 @@ left-right-star-map : ∀ {Δ} {μ : I.ImpEnv Δ}
   → I.extendᵐ I.X⊑★ μ X ≡ I.X⊑★
   → I.extendᵐ I.X⊑★ (I.instᵐ μ) (extᵗ Fin.suc X) ≡ I.X⊑★
 left-right-star-map Fin.zero eq = refl
-left-right-star-map (Fin.suc X) eq = eq
+left-right-star-map (Fin.suc X) eq =
+  cong I.⇑ᵛ (cong I.⇑ᵛ (I.lift-star-inv eq))
+
+left-right-alias-map : ∀ {Δ} {μ : I.ImpEnv Δ}
+  → PIC.RenameAliasMap (extᵗ Fin.suc)
+      (I.extendᵐ I.X⊑★ μ)
+      (I.extendᵐ I.X⊑★ (I.instᵐ μ))
+left-right-alias-map Fin.zero ()
+left-right-alias-map (Fin.suc X) eq
+    with I.lift-alias-inv eq
+left-right-alias-map {μ = μ} (Fin.suc X) eq
+    | T₀ , mode , refl =
+  trans (cong I.⇑ᵛ (cong I.⇑ᵛ mode))
+    (cong I.X⊑ᵗ
+      (trans (renameᵗ-comp Fin.suc Fin.suc T₀)
+        (trans (renameᵗ-cong T₀ (λ Y → refl))
+          (sym (renameᵗ-comp Fin.suc
+            (extᵗ Fin.suc) T₀)))))
 
 
 
@@ -625,7 +648,7 @@ right-bind-under-left-lift-⊑ᵂ {W = W} {B′ = B′} {A = A} {B = B} p =
       (target-under-left-right (CTX.ηᴿʷ W) B)
       (rename-⊑ (extᵗ Fin.suc)
         (ext-injective fin-suc-injective)
-        left-right-star-map p))
+        left-right-star-map left-right-alias-map p))
 
 
 right-bind-under-left-lift : RightBindUnderLeftLiftᵀ
@@ -635,6 +658,11 @@ right-bind-under-left-lift {W = W} {B = B′} = record
   ; transport⊑ᵂ = λ {A = A} {C = C} p →
       right-bind-under-left-lift-⊑ᵂ
         {W = W} {B′ = B′} {A = A} {B = C} p
+  ; no-alias-extend = λ na →
+      CTX.no-alias-extendᵐ (λ ())
+        (CTX.no-alias-extendᵐ (λ ())
+          (λ Z eq →
+            na (Fin.suc Z) (cong I.⇑ᵛ eq)))
   }
 
 
@@ -668,6 +696,7 @@ target-insert-bind-world-extendᴿ {W′ = W′} {B = B} ins target-follows =
         subst≡ (λ C′ → A CTX.⊑ᵂ⟨ W′ ⟩ C′)
           (renameᵗ-wk-eq C)
           (TE.transport⊑ᵂ ins p)
+    ; no-alias-extend = TE.no-alias-insert ins
     }
 
 
