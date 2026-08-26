@@ -9,10 +9,11 @@ module NarrowWiden where
 
 open import Data.Fin using (zero)
 open import Relation.Binary.PropositionalEquality using (_≡_)
+open import Relation.Nullary using (False)
 
 open import Types
 import Imprecision as I
-open I using (ImpEnv; VarImp; extᵐ; instᵐ; X⊑★)
+open I using (ImpEnv; VarImp; extᵐ; instᵐ; X⊑★; X⊑ᵗ)
 
 private
   variable
@@ -65,6 +66,12 @@ mutual
 
     w-bot★ : Widening μ (`∀ (＇ zero)) ★
 
+    w-alias : ∀ {X B T}
+      → μ X ≡ X⊑ᵗ T
+      → {notSelf : False (isVar? X B)}
+      → Widening μ T B
+      → Widening μ (＇ X) B
+
   data Narrowing {Δ : TyCtx} (μ : ImpEnv Δ) : Ty Δ → Ty Δ → Set where
     n-id★ : Narrowing μ ★ ★
 
@@ -108,3 +115,9 @@ mutual
     n-bot-intro : Narrowing μ (`∀ ★) (`∀ (＇ zero))
 
     n-★bot : Narrowing μ ★ (`∀ (＇ zero))
+
+    n-alias : ∀ {X B T}
+      → μ X ≡ X⊑ᵗ T
+      → {notSelf : False (isVar? X B)}
+      → Narrowing μ B T
+      → Narrowing μ B (＇ X)

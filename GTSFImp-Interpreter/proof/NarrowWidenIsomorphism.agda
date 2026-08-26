@@ -35,6 +35,8 @@ mutual
     w-∀★ nonstar (imprecision→widening p)
   imprecision→widening I.bot-elim = w-bot-elim
   imprecision→widening I.bot⊑★ = w-bot★
+  imprecision→widening (I.alias eq {notSelf} p) =
+    w-alias eq {notSelf = notSelf} (imprecision→widening p)
 
   imprecision→narrowing : ∀ {Δ μ} {A B : Ty Δ}
     → I._⊢_⊑_ μ A B
@@ -56,6 +58,8 @@ mutual
     n-★∀ nonstar (imprecision→narrowing p)
   imprecision→narrowing I.bot-elim = n-bot-intro
   imprecision→narrowing I.bot⊑★ = n-★bot
+  imprecision→narrowing (I.alias eq {notSelf} p) =
+    n-alias eq {notSelf = notSelf} (imprecision→narrowing p)
 
 mutual
   widening→imprecision : ∀ {Δ μ} {A B : Ty Δ}
@@ -78,6 +82,8 @@ mutual
     I.∀⊑★ nonstar (widening→imprecision p)
   widening→imprecision w-bot-elim = I.bot-elim
   widening→imprecision w-bot★ = I.bot⊑★
+  widening→imprecision (w-alias eq {notSelf} p) =
+    I.alias eq {notSelf = notSelf} (widening→imprecision p)
 
   narrowing→imprecision : ∀ {Δ μ} {A B : Ty Δ}
     → Narrowing μ B A
@@ -99,6 +105,8 @@ mutual
     I.∀⊑★ nonstar (narrowing→imprecision p)
   narrowing→imprecision n-bot-intro = I.bot-elim
   narrowing→imprecision n-★bot = I.bot⊑★
+  narrowing→imprecision (n-alias eq {notSelf} p) =
+    I.alias eq {notSelf = notSelf} (narrowing→imprecision p)
 
 mutual
   widening-after-imprecision : ∀ {Δ μ} {A B : Ty Δ}
@@ -124,6 +132,8 @@ mutual
     rewrite widening-after-imprecision p = refl
   widening-after-imprecision I.bot-elim = refl
   widening-after-imprecision I.bot⊑★ = refl
+  widening-after-imprecision (I.alias eq p)
+    rewrite widening-after-imprecision p = refl
 
   narrowing-after-imprecision : ∀ {Δ μ} {A B : Ty Δ}
     → (p : I._⊢_⊑_ μ A B)
@@ -148,6 +158,8 @@ mutual
     rewrite narrowing-after-imprecision p = refl
   narrowing-after-imprecision I.bot-elim = refl
   narrowing-after-imprecision I.bot⊑★ = refl
+  narrowing-after-imprecision (I.alias eq p)
+    rewrite narrowing-after-imprecision p = refl
 
 mutual
   imprecision-after-widening : ∀ {Δ μ} {A B : Ty Δ}
@@ -173,6 +185,8 @@ mutual
     rewrite imprecision-after-widening p = refl
   imprecision-after-widening w-bot-elim = refl
   imprecision-after-widening w-bot★ = refl
+  imprecision-after-widening (w-alias eq p)
+    rewrite imprecision-after-widening p = refl
 
   imprecision-after-narrowing : ∀ {Δ μ} {A B : Ty Δ}
     → (n : Narrowing μ B A)
@@ -197,6 +211,8 @@ mutual
     rewrite imprecision-after-narrowing p = refl
   imprecision-after-narrowing n-bot-intro = refl
   imprecision-after-narrowing n-★bot = refl
+  imprecision-after-narrowing (n-alias eq p)
+    rewrite imprecision-after-narrowing p = refl
 
 imprecision-widening-iso : ∀ {Δ μ} {A B : Ty Δ}
   → DerivationIso (I._⊢_⊑_ μ A B) (Widening μ A B)
