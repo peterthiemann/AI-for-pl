@@ -70,7 +70,38 @@ check-isomorphism, check-lr) is fully green.  How the sweep landed:
   refute alias via `noAlias` — they get real alias lifting
   (an `alias-holds-lift` mirroring `dynamic-holds-lift`) in step 5.
 
-**NEXT (step 5)**: the alias bind expansion and the `∀⊑∀` head.
+**Step 5 is IN PROGRESS** — planning it surfaced **Finding H**
+(recorded in `GTSFImp-Interpreter/REPLACEMENT-CLOSURE-DESIGN.md`):
+once `Future` gains the alias-bind step, the two-sided reveal
+statements are falsified through their own Kripke re-entry, and the
+robust fix is derivation-restricted avoidance.  Landed so far, all
+green and committed:
+
+* real alias closure under futures (`alias-holds-lift`/`-future`,
+  `liftCenterMode-alias`; the three future-lifting closure lemmas
+  now have real alias cases);
+* `proof/LR-narrow/AliasAvoid.agda`: `AliasAvoidᵖ` (avoidance read
+  off exactly the derivation's alias leaves — stable under lifting,
+  which creates no leaves), with transports along `⊑-unique`,
+  renamings, and from `NoAliases` environments, plus
+  `target-occurs-sourceᵖ`;
+* `replace-⊑` in its final Finding-H form: premise `AliasAvoidᵖ Z p`
+  (binder transports definitional), call sites discharged through
+  the still-standing `noAlias` invariant.
+
+**REMAINING (Finding H order)**: (1) thread `AliasAvoidᵖ` through
+the sized reveal statements and give the reveal machinery real
+alias cases (identity-collapse under avoidance); (2) drop
+`World.noAlias`, add `aliasBindCore`/`aliasBindWorld` and
+`future-alias`, sweep the ~200 `Future` matchers; (3) the `∀⊑∀`
+clause becomes a wrap-closed family (consumers project `[]`; the
+four obligations become cons projections); (4) the `∀⊑∀` producers
+(`Cast`, the `RevealStructural` assemblies) build families by
+σ-induction — the flagged largest proof; (5) delete
+`RevealObligations`.  Alternative worth weighing before (1): with
+Finding H's added cost, resolution (b) of the design doc
+(substituting reveal β, which removes the alias at the source) may
+have become competitive.
 
 ## Recurring mechanical recipes (used dozens of times already)
 
