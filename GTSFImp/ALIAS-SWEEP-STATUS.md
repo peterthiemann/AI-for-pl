@@ -53,8 +53,24 @@ check-isomorphism, check-lr) is fully green.  How the sweep landed:
   and Cast's ground-tag uniqueness lemmas take `NoAliases μ` (from
   upstream `ImprecisionConsistency`).
 
-**NEXT**: the step-4/5 work (alias atom kind, alias bind expansion,
-discharging the four `∀⊑∀` obligations).
+**Step 4 is DONE** (LR clause and alias atom, tree green):
+
+* `LR-narrow/Atoms.agda` has `AliasSemanticAtom` (precise-only
+  allocation, representative embedding pinned by the mode via
+  `aliasRep-eq`, no stored derivation), the `alias-entry` kind at
+  `X⊑ᵗ T`, `AliasHolds`/`AliasAtomHolds` (payload related at the
+  alias *premise*), `alias-holds-map`, `alias-atom-no-target`, and
+  weakenings through all three bind cores.
+* `EntryLift` has `lift-alias`, extended through the entry lifts.
+* `ValueImprecisionᵏ` at `I.alias` is `TypedEndpoints ×
+  AliasAtomHolds (Vᵏ (suc k)) (semanticEntry W X) eq p` — same
+  index, structurally smaller premise (see the termination note).
+* Closure: `value-imprecision-downward` maps the alias payload;
+  the three future-lifting lemmas (`-paired`/`-precise`/`-imprecise`)
+  refute alias via `noAlias` — they get real alias lifting
+  (an `alias-holds-lift` mirroring `dynamic-holds-lift`) in step 5.
+
+**NEXT (step 5)**: the alias bind expansion and the `∀⊑∀` head.
 
 ## Recurring mechanical recipes (used dozens of times already)
 
@@ -140,24 +156,26 @@ discharging the four `∀⊑∀` obligations).
   causes very slow rebuild storms (this is why per-file checks near the
   end of the session took >20 min).
 
-## After both sweeps are green
+## Step 5 — the remaining work
 
-The remaining step-4/5 work: the LR alias clause/atom kind and the
-alias bind expansion discharging `blocked-precise-reveal`,
-`blocked-precise-conceal`, `blocked-dyn-reveal-universal`,
-`blocked-dyn-conceal-universal` in
-`GTSFImp-Interpreter/proof/LR-narrow/RevealStatements.agda`,
-per `GTSFImp-Interpreter/REPLACEMENT-CLOSURE-DESIGN.md`.  Concretely:
+Discharge `blocked-precise-reveal`, `blocked-precise-conceal`,
+`blocked-dyn-reveal-universal`, `blocked-dyn-conceal-universal` in
+`GTSFImp-Interpreter/proof/LR-narrow/RevealStatements.agda`, per
+`GTSFImp-Interpreter/REPLACEMENT-CLOSURE-DESIGN.md` ("Consumer
+rewrites").  Concretely:
 
-* add an alias entry kind to `LR-narrow/Atoms.agda` (an atom at mode
-  `X⊑ᵗ (embP R)` for a precise-only bind whose representative is a
-  paired name), replace the `World.noAlias` field with whatever
-  invariant the alias atoms support (alias avoidance for paired
-  centers no longer holds for free), and strengthen the endpoint-only
-  `ValueImprecisionᵏ` alias clause into an alias-atom clause;
-* add the alias variant of the precise bind expansion (no `⊑ ★`
-  derivation needed) and close the `∀⊑∀` head through the producer's
-  body relation.
+* an `aliasBindWorld` (alias variant of the precise bind expansion:
+  needs no `⊑ ★` derivation; sets the fresh mode to
+  `X⊑ᵗ (⇑ᵗ (embP R))` and the entry to a fresh alias atom);
+* removing the `World.noAlias` field — every refutation that leans
+  on it must become a real case: the reveal machinery
+  (`reveal-at`/`conceal-at`, `dyn-reveal-go`/`dyn-conceal-go`,
+  `related-value-casts`' alias clause, `right-dynamic-ground-tag-…`),
+  the replacement lemmas' `world-aliases-avoid` uses, and the three
+  Closure future-lifting lemmas (write `alias-holds-lift` mirroring
+  `dynamic-holds-lift`, plus `alias-holds-future`);
+* the `∀⊑∀` producers close their head through the producer's body
+  relation; then `RevealObligations` becomes empty and is deleted.
 
 The interpreter-facing surface (`CastTermImprecision(+2Typing)`,
 `CtxImp`, `WorldInsert`) is alias-general with no `na` hypotheses;
