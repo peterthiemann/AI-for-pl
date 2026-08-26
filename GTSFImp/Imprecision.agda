@@ -9,6 +9,7 @@ open import Data.Nat using (zero; suc)
 open import Data.Fin using (zero; suc)
 open import Relation.Binary.PropositionalEquality using (_≡_; refl; cong)
 
+open import Data.Product using (Σ-syntax; _×_; _,_)
 open import Relation.Nullary.Decidable using (False)
 open import Types
 
@@ -75,6 +76,30 @@ lift-star-inv : ∀ {Δ} {w : VarImp Δ}
   → ⇑ᵛ w ≡ X⊑★
   → w ≡ X⊑★
 lift-star-inv {w = X⊑★} eq = refl
+
+-- Renaming a mode renames the representative of an alias and leaves
+-- the paired and dynamic modes alone; `⇑ᵛ` is the shift instance.
+
+renameᵛ : ∀ {Δ Δ′} → (Δ ⇒ʳ Δ′) → VarImp Δ → VarImp Δ′
+renameᵛ ρ X⊑X = X⊑X
+renameᵛ ρ X⊑★ = X⊑★
+renameᵛ ρ (X⊑ᵗ T) = X⊑ᵗ (renameᵗ ρ T)
+
+renameᵛ-paired-inv : ∀ {Δ Δ′} {ρ : Δ ⇒ʳ Δ′} {w : VarImp Δ}
+  → renameᵛ ρ w ≡ X⊑X
+  → w ≡ X⊑X
+renameᵛ-paired-inv {w = X⊑X} eq = refl
+
+renameᵛ-star-inv : ∀ {Δ Δ′} {ρ : Δ ⇒ʳ Δ′} {w : VarImp Δ}
+  → renameᵛ ρ w ≡ X⊑★
+  → w ≡ X⊑★
+renameᵛ-star-inv {w = X⊑★} eq = refl
+
+renameᵛ-alias-inv : ∀ {Δ Δ′} {ρ : Δ ⇒ʳ Δ′} {w : VarImp Δ}
+    {T : Ty Δ′}
+  → renameᵛ ρ w ≡ X⊑ᵗ T
+  → Σ[ T₀ ∈ Ty Δ ] ((w ≡ X⊑ᵗ T₀) × (T ≡ renameᵗ ρ T₀))
+renameᵛ-alias-inv {w = X⊑ᵗ T₀} refl = T₀ , refl , refl
 
 ext-mode-paired-inv : ∀ {Δ} (μ : ImpEnv Δ) {v : VarImp (suc Δ)}
     (Z : TyVar Δ)

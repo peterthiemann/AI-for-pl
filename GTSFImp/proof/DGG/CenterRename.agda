@@ -10,8 +10,9 @@ module proof.DGG.CenterRename where
 
 open import Data.Empty using (⊥-elim)
 open import Data.List using ([]; _∷_)
+open import Data.Sum using (inj₁; inj₂)
 open import Data.Maybe using (Maybe; just; nothing)
-open import Data.Product using (Σ-syntax; _,_)
+open import Data.Product using (Σ-syntax; _,_; _×_)
 import Data.Fin as Fin
 import Data.Nat as Nat
 open import Relation.Binary.PropositionalEquality
@@ -26,7 +27,10 @@ open import Imprecision
 open import CastTerms using (Term; ⟨_,_,_⟩; _⊢_⦂_)
 import proof.DGG.CastTermImprecision as CTI2
 import proof.DGG.CtxImp as CTX
+import proof.DGG.WorldDecay as WD
+import proof.DGG.TermImpDecay as TID
 open CTI2 using (_∣_⊢²_⊑_∶_)
+import proof.ImprecisionConsistency as PIC
 open import proof.ImprecisionConsistency using
   (rename-⊑; subst-⊑; toRenameᵗ-injective)
 import proof.Imprecision as PI
@@ -314,32 +318,27 @@ pushout-old-off-premise π old {Z′ = Z′} off
     (preimage?-sound
       (EmbeddingPushout.premise (embeddingPushout π old)) pre))
 
+-- The renamed environment reads through the preimage: an image
+-- variable carries the renamed mode of its source, and a variable
+-- outside the image is dynamic.  An alias representative moves along
+-- the embedding.
+
 renameEnv : ∀ {Δ Δ′} → Δ ↪ᵗ Δ′ → ImpEnv Δ → ImpEnv Δ′
-renameEnv empty μ = λ Z → X⊑★
-renameEnv (keep π) μ =
-  extendᵐ (μ Fin.zero) (renameEnv π (λ X → μ (Fin.suc X)))
-renameEnv (skip π) μ = extendᵐ X⊑★ (renameEnv π μ)
+renameEnv π μ Z′ with preimage? π Z′
+renameEnv π μ Z′ | just Z = renameᵛ (toRenameᵗ π) (μ Z)
+renameEnv π μ Z′ | nothing = X⊑★
 
 renameEnv-image : ∀ {Δ Δ′} (π : Δ ↪ᵗ Δ′) (μ : ImpEnv Δ)
-  → ∀ Z → renameEnv π μ (toRenameᵗ π Z) ≡ μ Z
-renameEnv-image empty μ ()
-renameEnv-image (keep π) μ Fin.zero = refl
-renameEnv-image (keep π) μ (Fin.suc Z) =
-  renameEnv-image π (λ X → μ (Fin.suc X)) Z
-renameEnv-image (skip π) μ Z = renameEnv-image π μ Z
+  → ∀ Z → renameEnv π μ (toRenameᵗ π Z)
+      ≡ renameᵛ (toRenameᵗ π) (μ Z)
+renameEnv-image π μ Z rewrite preimage?-image π Z = refl
 
 renameEnv-off : ∀ {Δ Δ′} (π : Δ ↪ᵗ Δ′) (μ : ImpEnv Δ)
     {Z′ : TyVar Δ′}
   → preimage? π Z′ ≡ nothing
   → renameEnv π μ Z′ ≡ X⊑★
-renameEnv-off empty μ eq = refl
-renameEnv-off (keep π) μ {Z′ = Fin.zero} ()
-renameEnv-off (keep π) μ {Z′ = Fin.suc Z} eq =
-  renameEnv-off π (λ X → μ (Fin.suc X))
-    (sucMaybe-nothing (preimage? π Z) eq)
-renameEnv-off (skip π) μ {Z′ = Fin.zero} eq = refl
-renameEnv-off (skip π) μ {Z′ = Fin.suc Z} eq =
-  renameEnv-off π μ eq
+renameEnv-off π μ {Z′ = Z′} eq with preimage? π Z′
+renameEnv-off π μ {Z′ = Z′} refl | nothing = refl
 
 ------------------------------------------------------------------------
 -- Worlds, obligations, and contexts
@@ -387,7 +386,12 @@ rename-⊑ᵂ {W = W} {A = A} {B = B} π p =
         renameᵗ (toRenameᵗ π) (CTX.embedᴸ W A) ⊑ R)
       (sym (embedᴿ-rename π W B))
       (rename-⊑ (toRenameᵗ π) (toRenameᵗ-injective π)
-        (λ X eq → trans (renameEnv-image π (CTX.impEnvʷ W) X) eq)
+        (λ X eq →
+          trans (renameEnv-image π (CTX.impEnvʷ W) X)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
+        (λ X eq →
+          trans (renameEnv-image π (CTX.impEnvʷ W) X)
+            (cong (renameᵛ (toRenameᵗ π)) eq))
         p))
 
 preimageSubst : ∀ {Δ Δ′}
@@ -420,10 +424,26 @@ preimageSubst-star : ∀ {Δ Δ′}
   → μ ⊢ preimageSubst π Z′ ⊑ ★
 preimageSubst-star {μ = μ} π Z′ star with preimage? π Z′ in pre
 preimageSubst-star {μ = μ} π Z′ star | just Z =
-  X⊑★ (trans (sym (renameEnv-image π μ Z))
-    (subst≡ (λ C → renameEnv π μ C ≡ X⊑★)
-      (preimage?-sound π pre) star))
+  X⊑★ (renameᵛ-star-inv star)
 preimageSubst-star π Z′ star | nothing = ★⊑★
+
+-- Opening a renamed derivation through the preimage substitution
+-- retains every alias: the substituted representative is the source
+-- one, by the preimage law.
+
+preimageSubst-alias : ∀ {Δ Δ′}
+    {μ : ImpEnv Δ}
+  → (π : Δ ↪ᵗ Δ′)
+  → PIC.SubstAliasMap (renameEnv π μ) μ (preimageSubst π)
+preimageSubst-alias {μ = μ} π Z′ eq
+    with preimage? π Z′ in pre
+preimageSubst-alias {μ = μ} π Z′ eq | just Z
+    with renameᵛ-alias-inv eq
+preimageSubst-alias {μ = μ} π Z′ eq | just Z
+    | T₀ , mode , refl =
+  inj₂ (Z , refl ,
+    trans mode
+      (cong X⊑ᵗ (sym (preimageSubst-rename π T₀))))
 
 unrename-⊑ : ∀ {Δ Δ′}
     {μ : ImpEnv Δ} {A B : Ty Δ}
@@ -437,7 +457,8 @@ unrename-⊑ {μ = μ} {A = A} {B = B} π p =
       (λ R → μ ⊢ substᵗ (preimageSubst π)
         (renameᵗ (toRenameᵗ π) A) ⊑ R)
       (preimageSubst-rename π B)
-      (subst-⊑ (preimageSubst-star π) p))
+      (subst-⊑ (preimageSubst-star π)
+        (preimageSubst-alias π) p))
 
 unrename-⊑ᵂ : ∀ {Δᴸ Δᴿ Δ Δ′}
     {W : CTX.World Δᴸ Δᴿ Δ}
@@ -491,29 +512,125 @@ renameSameCtx π (CTX.same-∷ sc) =
 -- Binder commutation
 ------------------------------------------------------------------------
 
-renameWorld-liftBoth : ∀ {Δᴸ Δᴿ Δ Δ′}
-    {W : CTX.World Δᴸ Δᴿ Δ}
-  → (π : Δ ↪ᵗ Δ′)
-  → (v : VarImp)
-  → renameWorld (keep π) (CTX.liftWorldBoth v W)
-      ≡ CTX.liftWorldBoth v (renameWorld π W)
-renameWorld-liftBoth π v = refl
+-- The old definitional lift/rename world commutation is gone: modes
+-- now carry their context, so lifting weakens them and renaming maps
+-- them, and the two compositions agree only pointwise.  The transports
+-- below carry derivations across the pointwise equality instead.
 
-renameWorld-liftLeft : ∀ {Δᴸ Δᴿ Δ Δ′}
-    {W : CTX.World Δᴸ Δᴿ Δ}
-  → (π : Δ ↪ᵗ Δ′)
-  → (v : VarImp)
-  → renameWorld (keep π) (CTX.liftWorldLeft v W)
-      ≡ CTX.liftWorldLeft v (renameWorld π W)
-renameWorld-liftLeft π v = refl
+-- Renaming a mode commutes with the shift, mapping an alias
+-- representative first along the base embedding and then under the
+-- binder, or the other way around.
+
+private
+  mode-lift-comm : ∀ {Δ Δ′} (π : Δ ↪ᵗ Δ′) (w : VarImp Δ)
+    → renameᵛ (toRenameᵗ (keep π)) (⇑ᵛ w)
+      ≡ ⇑ᵛ (renameᵛ (toRenameᵗ π) w)
+  mode-lift-comm π X⊑X = refl
+  mode-lift-comm π X⊑★ = refl
+  mode-lift-comm π (X⊑ᵗ T) =
+    cong X⊑ᵗ
+      (trans (renameᵗ-comp Fin.suc (toRenameᵗ (keep π)) T)
+        (sym (renameᵗ-comp (toRenameᵗ π) Fin.suc T)))
+
+  liftRenameEnv-eq : ∀ {Δ Δ′} (π : Δ ↪ᵗ Δ′)
+      (v : VarImp (Nat.suc Δ)) (μ : ImpEnv Δ)
+    → ∀ Z′
+    → renameEnv (keep π) (extendᵐ v μ) Z′
+      ≡ extendᵐ (renameᵛ (toRenameᵗ (keep π)) v)
+          (renameEnv π μ) Z′
+  liftRenameEnv-eq π v μ Fin.zero = refl
+  liftRenameEnv-eq π v μ (Fin.suc Z′)
+      with preimage? π Z′
+  liftRenameEnv-eq π v μ (Fin.suc Z′) | just Z =
+    mode-lift-comm π (μ Z)
+  liftRenameEnv-eq π v μ (Fin.suc Z′) | nothing = refl
+
+-- Crossing a binder, the rename of the lifted world decays (by a
+-- pointwise environment equality) onto the lift of the renamed world,
+-- with the pushed mode renamed.
+
+liftRenameDecay : ∀ {Δᴸ Δᴿ Δ Δ′}
+    (π : Δ ↪ᵗ Δ′) (v : VarImp (Nat.suc Δ))
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → WD.EnvDecay
+      (renameWorld (keep π) (CTX.liftWorldBoth v W))
+      (CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v)
+        (renameWorld π W))
+liftRenameDecay π v W =
+  WD.env-decay refl refl refl refl
+    (λ Z eq →
+      trans (sym (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z)) eq)
+    (CTX.alias-same
+      (λ Z eq →
+        trans (sym (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z)) eq)
+      (λ Z eq →
+        trans (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z) eq))
+
+liftRenameDecayᴸ : ∀ {Δᴸ Δᴿ Δ Δ′}
+    (π : Δ ↪ᵗ Δ′) (v : VarImp (Nat.suc Δ))
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → WD.EnvDecay
+      (renameWorld (keep π) (CTX.liftWorldLeft v W))
+      (CTX.liftWorldLeft (renameᵛ (toRenameᵗ (keep π)) v)
+        (renameWorld π W))
+liftRenameDecayᴸ π v W =
+  WD.env-decay refl refl refl refl
+    (λ Z eq →
+      trans (sym (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z)) eq)
+    (CTX.alias-same
+      (λ Z eq →
+        trans (sym (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z)) eq)
+      (λ Z eq →
+        trans (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z) eq))
+
+-- The reverse pointwise decays, for transports that first move from
+-- the lifted renamed world back onto the renamed lifted world.
+
+liftRenameDecay-inv : ∀ {Δᴸ Δᴿ Δ Δ′}
+    (π : Δ ↪ᵗ Δ′) (v : VarImp (Nat.suc Δ))
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → WD.EnvDecay
+      (CTX.liftWorldBoth (renameᵛ (toRenameᵗ (keep π)) v)
+        (renameWorld π W))
+      (renameWorld (keep π) (CTX.liftWorldBoth v W))
+liftRenameDecay-inv π v W =
+  WD.env-decay refl refl refl refl
+    (λ Z eq →
+      trans (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z) eq)
+    (CTX.alias-same
+      (λ Z eq →
+        trans (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z) eq)
+      (λ Z eq →
+        trans (sym (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z))
+          eq))
+
+liftRenameDecayᴸ-inv : ∀ {Δᴸ Δᴿ Δ Δ′}
+    (π : Δ ↪ᵗ Δ′) (v : VarImp (Nat.suc Δ))
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → WD.EnvDecay
+      (CTX.liftWorldLeft (renameᵛ (toRenameᵗ (keep π)) v)
+        (renameWorld π W))
+      (renameWorld (keep π) (CTX.liftWorldLeft v W))
+liftRenameDecayᴸ-inv π v W =
+  WD.env-decay refl refl refl refl
+    (λ Z eq →
+      trans (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z) eq)
+    (CTX.alias-same
+      (λ Z eq →
+        trans (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z) eq)
+      (λ Z eq →
+        trans (sym (liftRenameEnv-eq π v (CTX.impEnvʷ W) Z))
+          eq))
 
 renameLiftCtx : ∀ {Δᴸ Δᴿ Δ Δ′} {v}
     {W : CTX.World Δᴸ Δᴿ Δ} {γ : CTX.CtxImp W}
     {γ′ : CTX.CtxImp (CTX.liftWorldBoth v W)}
   → (π : Δ ↪ᵗ Δ′)
   → CTX.LiftCtx v γ γ′
-  → CTX.LiftCtx v (renameCtx {W = W} π γ)
-      (renameCtx {W = CTX.liftWorldBoth v W} (keep π) γ′)
+  → CTX.LiftCtx (renameᵛ (toRenameᵗ (keep π)) v)
+      (renameCtx {W = W} π γ)
+      (WD.decayCtx (liftRenameDecay π v W)
+        (renameCtx {W = CTX.liftWorldBoth v W} (keep π) γ′))
 renameLiftCtx π CTX.lift-[] = CTX.lift-[]
 renameLiftCtx π (CTX.lift-∷ liftγ) =
   CTX.lift-∷ (renameLiftCtx π liftγ)
@@ -523,8 +640,10 @@ renameLiftCtxᴸ : ∀ {Δᴸ Δᴿ Δ Δ′} {v}
     {γ′ : CTX.CtxImp (CTX.liftWorldLeft v W)}
   → (π : Δ ↪ᵗ Δ′)
   → CTX.LiftCtxᴸ v γ γ′
-  → CTX.LiftCtxᴸ v (renameCtx {W = W} π γ)
-      (renameCtx {W = CTX.liftWorldLeft v W} (keep π) γ′)
+  → CTX.LiftCtxᴸ (renameᵛ (toRenameᵗ (keep π)) v)
+      (renameCtx {W = W} π γ)
+      (WD.decayCtx (liftRenameDecayᴸ π v W)
+        (renameCtx {W = CTX.liftWorldLeft v W} (keep π) γ′))
 renameLiftCtxᴸ π CTX.liftᴸ-[] = CTX.liftᴸ-[]
 renameLiftCtxᴸ π (CTX.liftᴸ-∷ liftγ) =
   CTX.liftᴸ-∷ (renameLiftCtxᴸ π liftγ)
@@ -601,7 +720,8 @@ rename-mark-image : ∀ {Δᴸ Δᴿ Δ Δ′}
     {Xᴸ : TyVar Δᴸ}
   → CTX.impEnvʷ (renameWorld π W)
       (toRenameᵗ (CTX.ηᴸʷ (renameWorld π W)) Xᴸ)
-      ≡ CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴸʷ W) Xᴸ)
+      ≡ renameᵛ (toRenameᵗ π)
+          (CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴸʷ W) Xᴸ))
 rename-mark-image π W {Xᴸ} =
   trans (cong (renameEnv π (CTX.impEnvʷ W))
       (toRenameᵗ-∘ π (CTX.ηᴸʷ W) Xᴸ))
@@ -613,7 +733,8 @@ rename-target-mark-image : ∀ {Δᴸ Δᴿ Δ Δ′}
     {Xᴿ : TyVar Δᴿ}
   → CTX.impEnvʷ (renameWorld π W)
       (toRenameᵗ (CTX.ηᴿʷ (renameWorld π W)) Xᴿ)
-      ≡ CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴿʷ W) Xᴿ)
+      ≡ renameᵛ (toRenameᵗ π)
+          (CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴿʷ W) Xᴿ))
 rename-target-mark-image π W {Xᴿ} =
   trans (cong (renameEnv π (CTX.impEnvʷ W))
       (toRenameᵗ-∘ π (CTX.ηᴿʷ W) Xᴿ))
@@ -643,7 +764,8 @@ renameRebaseAtᴸ π (CTX.rebase-varᴸ rb) =
 renameRebaseAtᴸ {W = W} π
     (CTX.rebase-onlyᴸ to-star disaligned represented) =
   CTX.rebase-onlyᴸ
-    (trans (rename-mark-image π W) to-star)
+    (trans (rename-mark-image π W)
+      (cong (renameᵛ (toRenameᵗ π)) to-star))
     (rename-disaligned π W disaligned)
     (rename-⊑ᵂ {W = W} π represented)
 
@@ -658,7 +780,8 @@ renameTagRebaseAtᴸ π (CTX.tag-rebase-varᴸ rb) =
 renameTagRebaseAtᴸ {W = W} π
     (CTX.tag-rebase-onlyᴸ to-star disaligned represented) =
   CTX.tag-rebase-onlyᴸ
-    (trans (rename-mark-image π W) to-star)
+    (trans (rename-mark-image π W)
+      (cong (renameᵛ (toRenameᵗ π)) to-star))
     (rename-disaligned π W disaligned)
     (rename-⊑ᵂ {W = W} π represented)
 
@@ -750,20 +873,48 @@ renameEnvMono : ∀ {Δ Δ′} {μ ν : ImpEnv Δ}
   → (∀ Z → μ Z ≡ X⊑★ → ν Z ≡ X⊑★)
   → ∀ Z′ → renameEnv π μ Z′ ≡ X⊑★
       → renameEnv π ν Z′ ≡ X⊑★
-renameEnvMono empty mono Z eq = refl
-renameEnvMono (keep π) mono Fin.zero eq = mono Fin.zero eq
-renameEnvMono (keep π) mono (Fin.suc Z) eq =
-  renameEnvMono π (λ X → mono (Fin.suc X)) Z eq
-renameEnvMono (skip π) mono Fin.zero eq = refl
-renameEnvMono (skip π) mono (Fin.suc Z) eq =
-  renameEnvMono π mono Z eq
+renameEnvMono {μ = μ} {ν = ν} π mono Z′ eq
+    with preimage? π Z′
+renameEnvMono {μ = μ} {ν = ν} π mono Z′ eq | just Z =
+  cong (renameᵛ (toRenameᵗ π))
+    (mono Z (renameᵛ-star-inv eq))
+renameEnvMono π mono Z′ eq | nothing = refl
+
+renameEnvAlias : ∀ {Δ Δ′} {μ ν : ImpEnv Δ}
+  → (π : Δ ↪ᵗ Δ′)
+  → CTX.AliasSame μ ν
+  → CTX.AliasSame (renameEnv π μ) (renameEnv π ν)
+renameEnvAlias {μ = μ} {ν = ν} π agree =
+  CTX.alias-same fwd bwd
+  where
+  fwd : ∀ Z′ {T}
+    → renameEnv π μ Z′ ≡ X⊑ᵗ T
+    → renameEnv π ν Z′ ≡ X⊑ᵗ T
+  fwd Z′ eq with preimage? π Z′
+  fwd Z′ eq | just Z with renameᵛ-alias-inv eq
+  fwd Z′ eq | just Z | T₀ , mode , refl =
+    cong (renameᵛ (toRenameᵗ π))
+      (CTX.alias-fwd agree Z mode)
+  fwd Z′ () | nothing
+  bwd : ∀ Z′ {T}
+    → renameEnv π ν Z′ ≡ X⊑ᵗ T
+    → renameEnv π μ Z′ ≡ X⊑ᵗ T
+  bwd Z′ eq with preimage? π Z′
+  bwd Z′ eq | just Z with renameᵛ-alias-inv eq
+  bwd Z′ eq | just Z | T₀ , mode , refl =
+    cong (renameᵛ (toRenameᵗ π))
+      (CTX.alias-bwd agree Z mode)
+  bwd Z′ () | nothing
 
 renameImpEnvMono : ∀ {Δᴸ Δᴿ Δ Δ′}
     {W W′ : CTX.World Δᴸ Δᴿ Δ}
   → (π : Δ ↪ᵗ Δ′)
   → CTX.ImpEnvMono W W′
   → CTX.ImpEnvMono (renameWorld π W) (renameWorld π W′)
-renameImpEnvMono π mono = renameEnvMono π mono
+renameImpEnvMono π mono =
+  CTX.imp-env-mono
+    (renameEnvMono π (CTX.starMono mono))
+    (renameEnvAlias π (CTX.aliasAgree mono))
 
 renameSmartAliasMergeGuard : ∀ {Δᴸ Δᴿ Δ Δ′}
     {W : CTX.World Δᴸ Δᴿ Δ}
@@ -793,13 +944,19 @@ renameSmartAliasMergeGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
       (toRenameᵗ-∘ π (CTX.ηᴿʷ W) β))
       (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ)
         (toRenameᵗ (CTX.ηᴿʷ W) β))
-        (CTX.SmartAliasMergeGuard.alias-mark-dynamic guard)))
+        (cong (renameᵛ (toRenameᵗ π))
+          (CTX.SmartAliasMergeGuard.alias-mark-dynamic
+            guard))))
     (trans (cong (renameEnv π (CTX.impEnvʷ Wᵐ))
       (toRenameᵗ-∘ π (CTX.ηᴿʷ W) α))
       (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ)
         (toRenameᵗ (CTX.ηᴿʷ W) α))
-        (CTX.SmartAliasMergeGuard.name-mark-dynamic guard)))
+        (cong (renameᵛ (toRenameᵗ π))
+          (CTX.SmartAliasMergeGuard.name-mark-dynamic
+            guard))))
     target-mark-off-footprint′
+    (renameEnvAlias π
+      (CTX.SmartAliasMergeGuard.old-alias-agree guard))
   where
   no-old-source-at-alias′ : ∀ Xᴸ
     → toRenameᵗ (CTX.ηᴸʷ (renameWorld π W)) Xᴸ
@@ -816,30 +973,20 @@ renameSmartAliasMergeGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
   transport′ p =
     rename-⊑ᵂ {W = Wᵐ} π
       (CTX.SmartAliasMergeGuard.transport⊑ᵂ guard
-        (unrename-⊑ᵂ {W = CTX.liftWorldLeft X⊑★ W} (keep π) p))
+        (unrename-⊑ᵂ {W = CTX.liftWorldLeft X⊑★ W} (keep π)
+          (WD.decay⊑ᵂ (liftRenameDecayᴸ-inv π X⊑★ W) p)))
 
   old-mark-mono′ : ∀ Z′
     → CTX.impEnvʷ (renameWorld π W) Z′ ≡ X⊑★
     → CTX.impEnvʷ (renameWorld π Wᵐ) Z′ ≡ X⊑★
   old-mark-mono′ Z′ star with preimage? π Z′ in pre
-  old-mark-mono′ Z′ star | nothing =
-    renameEnv-off π (CTX.impEnvʷ Wᵐ) pre
+  old-mark-mono′ Z′ star | nothing = refl
   old-mark-mono′ Z′ star | just Z =
-    subst≡
-      (λ C → CTX.impEnvʷ (renameWorld π Wᵐ) C ≡ X⊑★)
-      (sym image-eq)
-      (trans (renameEnv-image π (CTX.impEnvʷ Wᵐ) Z)
-        (CTX.SmartAliasMergeGuard.old-mark-mono guard Z old-star))
+    cong (renameᵛ (toRenameᵗ π))
+      (CTX.SmartAliasMergeGuard.old-mark-mono guard Z old-star)
     where
-    image-eq : Z′ ≡ toRenameᵗ π Z
-    image-eq = preimage?-sound π pre
-
     old-star : CTX.impEnvʷ W Z ≡ X⊑★
-    old-star =
-      trans (sym (renameEnv-image π (CTX.impEnvʷ W) Z))
-        (subst≡
-          (λ C → CTX.impEnvʷ (renameWorld π W) C ≡ X⊑★)
-          image-eq star)
+    old-star = renameᵛ-star-inv star
 
   target-mark-off-footprint′ : ∀ Xᴿ
     → Xᴿ ≢ β
@@ -850,9 +997,12 @@ renameSmartAliasMergeGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
         (toRenameᵗ (CTX.ηᴿʷ (renameWorld π Wᵐ)) Xᴿ) ≡ X⊑★
   target-mark-off-footprint′ Xᴿ Xᴿ≢β Xᴿ≢α star =
     trans (rename-target-mark-image π Wᵐ)
-      (CTX.SmartAliasMergeGuard.target-mark-off-footprint guard
-        Xᴿ Xᴿ≢β Xᴿ≢α
-        (trans (sym (rename-target-mark-image π W)) star))
+      (cong (renameᵛ (toRenameᵗ π))
+        (CTX.SmartAliasMergeGuard.target-mark-off-footprint
+          guard Xᴿ Xᴿ≢β Xᴿ≢α
+          (renameᵛ-star-inv
+            (trans (sym (rename-target-mark-image π W))
+              star))))
 
 renameSmartFreshBehindGuard : ∀ {Δᴸ Δᴿ Δ Δᵐ Δ′}
     {W : CTX.World Δᴸ Δᴿ Δ}
@@ -865,13 +1015,14 @@ renameSmartFreshBehindGuard : ∀ {Δᴸ Δᴿ Δ Δᵐ Δ′}
           (embeddingPushout π
             (CTX.SmartFreshBehindGuard.oldCenters guard)))
         Wᵐ)
-renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
-    {W = W} {Wᵐ = Wᵐ} π guard =
+renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ} {Δ = Δ}
+    {Δ′ = Δ′} {W = W} {Wᵐ = Wᵐ} π guard =
   CTX.smart-fresh-behind-guard old′
     (CTX.SmartFreshBehindGuard.sourceStore-lifted guard)
     (CTX.SmartFreshBehindGuard.targetStore-same guard)
     transport′ old-mark-mono′ target-frozen′ old-source-frozen′
     fresh-not-target′ fresh-mark′ target-mark-frozen′
+    old-alias-frozen′ old-alias-reflect′
   where
   old = CTX.SmartFreshBehindGuard.oldCenters guard
   po = embeddingPushout π old
@@ -885,7 +1036,8 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
   transport′ p =
     rename-⊑ᵂ {W = Wᵐ} πᵐ
       (CTX.SmartFreshBehindGuard.transport⊑ᵂ guard
-        (unrename-⊑ᵂ {W = CTX.liftWorldLeft X⊑★ W} (keep π) p))
+        (unrename-⊑ᵂ {W = CTX.liftWorldLeft X⊑★ W} (keep π)
+          (WD.decay⊑ᵂ (liftRenameDecayᴸ-inv π X⊑★ W) p)))
 
   old-mark-mono′ : ∀ Z′
     → CTX.impEnvʷ (renameWorld π W) Z′ ≡ X⊑★
@@ -901,17 +1053,15 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
       (sym smart-image-eq)
       (trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
           (toRenameᵗ old Z))
-        (CTX.SmartFreshBehindGuard.old-mark-mono guard Z old-star))
+        (cong (renameᵛ (toRenameᵗ πᵐ))
+          (CTX.SmartFreshBehindGuard.old-mark-mono guard Z
+            old-star)))
     where
     image-eq : Z′ ≡ toRenameᵗ π Z
     image-eq = preimage?-sound π pre
 
     old-star : CTX.impEnvʷ W Z ≡ X⊑★
-    old-star =
-      trans (sym (renameEnv-image π (CTX.impEnvʷ W) Z))
-        (subst≡
-          (λ C → CTX.impEnvʷ (renameWorld π W) C ≡ X⊑★)
-          image-eq star)
+    old-star = renameᵛ-star-inv star
 
     smart-image-eq :
       toRenameᵗ old′ Z′ ≡ toRenameᵗ πᵐ (toRenameᵗ old Z)
@@ -962,7 +1112,8 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
       ≡ X⊑★
   fresh-mark′ =
     trans (rename-mark-image πᵐ Wᵐ {Fin.zero})
-      (CTX.SmartFreshBehindGuard.fresh-mark-dynamic guard)
+      (cong (renameᵛ (toRenameᵗ πᵐ))
+        (CTX.SmartFreshBehindGuard.fresh-mark-dynamic guard))
 
   target-mark-frozen′ : ∀ Xᴿ
     → CTX.impEnvʷ (renameWorld π W)
@@ -971,8 +1122,86 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
         (toRenameᵗ (CTX.ηᴿʷ (renameWorld πᵐ Wᵐ)) Xᴿ) ≡ X⊑★
   target-mark-frozen′ Xᴿ star =
     trans (rename-target-mark-image πᵐ Wᵐ)
-      (CTX.SmartFreshBehindGuard.target-mark-mono guard Xᴿ
-        (trans (sym (rename-target-mark-image π W)) star))
+      (cong (renameᵛ (toRenameᵗ πᵐ))
+        (CTX.SmartFreshBehindGuard.target-mark-mono guard Xᴿ
+          (renameᵛ-star-inv
+            (trans (sym (rename-target-mark-image π W))
+              star))))
+
+  rep-comm : ∀ (T₀ : Ty Δ)
+    → renameᵗ (toRenameᵗ πᵐ)
+        (renameᵗ (toRenameᵗ old) T₀)
+      ≡ renameᵗ (toRenameᵗ old′)
+          (renameᵗ (toRenameᵗ π) T₀)
+  rep-comm T₀ =
+    trans (renameᵗ-comp (toRenameᵗ old) (toRenameᵗ πᵐ) T₀)
+      (trans (renameᵗ-cong T₀ commutes)
+        (sym (renameᵗ-comp (toRenameᵗ π)
+          (toRenameᵗ old′) T₀)))
+
+  old-alias-frozen′ : ∀ Z′ {T}
+    → CTX.impEnvʷ (renameWorld π W) Z′ ≡ X⊑ᵗ T
+    → CTX.impEnvʷ (renameWorld πᵐ Wᵐ) (toRenameᵗ old′ Z′)
+      ≡ X⊑ᵗ (renameᵗ (toRenameᵗ old′) T)
+  old-alias-frozen′ Z′ eq with preimage? π Z′ in pre
+  old-alias-frozen′ Z′ () | nothing
+  old-alias-frozen′ Z′ eq | just Z
+      with renameᵛ-alias-inv eq
+  old-alias-frozen′ Z′ eq | just Z | T₀ , mode , refl =
+    subst≡
+      (λ C → CTX.impEnvʷ (renameWorld πᵐ Wᵐ) C
+        ≡ X⊑ᵗ (renameᵗ (toRenameᵗ old′)
+            (renameᵗ (toRenameᵗ π) T₀)))
+      (sym smart-image-eq)
+      (trans (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
+          (toRenameᵗ old Z))
+        (trans
+          (cong (renameᵛ (toRenameᵗ πᵐ))
+            (CTX.SmartFreshBehindGuard.old-alias-frozen
+              guard Z mode))
+          (cong X⊑ᵗ (rep-comm T₀))))
+    where
+    smart-image-eq :
+      toRenameᵗ old′ Z′ ≡ toRenameᵗ πᵐ (toRenameᵗ old Z)
+    smart-image-eq =
+      trans (cong (toRenameᵗ old′) (preimage?-sound π pre))
+        (sym (commutes Z))
+
+  old-alias-reflect′ : ∀ Z′ {T}
+    → CTX.impEnvʷ (renameWorld πᵐ Wᵐ) (toRenameᵗ old′ Z′)
+      ≡ X⊑ᵗ T
+    → Σ[ T₀′ ∈ Ty Δ′ ]
+        ((CTX.impEnvʷ (renameWorld π W) Z′ ≡ X⊑ᵗ T₀′)
+        × (T ≡ renameᵗ (toRenameᵗ old′) T₀′))
+  old-alias-reflect′ Z′ eq with preimage? π Z′ in pre
+  old-alias-reflect′ Z′ eq | nothing
+      with trans
+        (sym (renameEnv-off πᵐ (CTX.impEnvʷ Wᵐ)
+          (pushout-old-off-premise π old pre)))
+        eq
+  old-alias-reflect′ Z′ eq | nothing | ()
+  old-alias-reflect′ Z′ {T} eq | just Z
+      with renameᵛ-alias-inv
+        (trans
+          (sym (renameEnv-image πᵐ (CTX.impEnvʷ Wᵐ)
+            (toRenameᵗ old Z)))
+          (subst≡
+            (λ C → CTX.impEnvʷ (renameWorld πᵐ Wᵐ) C ≡ X⊑ᵗ T)
+            (trans (cong (toRenameᵗ old′)
+                (preimage?-sound π pre))
+              (sym (commutes Z)))
+            eq))
+  old-alias-reflect′ Z′ {T} eq | just Z
+      | T₁ , modeᵐ , T-eq
+      with CTX.SmartFreshBehindGuard.old-alias-reflect
+             guard Z modeᵐ
+  old-alias-reflect′ Z′ {T} eq | just Z
+      | T₁ , modeᵐ , T-eq | T₀ , mode , T₁-eq =
+    renameᵗ (toRenameᵗ π) T₀ ,
+    cong (renameᵛ (toRenameᵗ π)) mode ,
+    trans T-eq
+      (trans (cong (renameᵗ (toRenameᵗ πᵐ)) T₁-eq)
+        (rep-comm T₀))
 
 ------------------------------------------------------------------------
 -- Derivation transport
@@ -1012,17 +1241,21 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ}
 ⊢²-rename-center {W = W} π
     (CTI2.Λ⊑Λ² {p = p} liftγ vV vV′ V⊑V′ q) p′ =
   CTI2.Λ⊑Λ² (renameLiftCtx π liftγ) vV vV′
-    (⊢²-rename-center {W = CTX.liftWorldBoth X⊑X W}
-      (keep π) V⊑V′
-      (rename-⊑ᵂ {W = CTX.liftWorldBoth X⊑X W} (keep π) p)) p′
+    (TID.⊢²-decay (liftRenameDecay π X⊑X W)
+      (⊢²-rename-center {W = CTX.liftWorldBoth X⊑X W}
+        (keep π) V⊑V′
+        (rename-⊑ᵂ {W = CTX.liftWorldBoth X⊑X W} (keep π) p)))
+    p′
 ⊢²-rename-center {W = W} {γ = γ} π
     (CTI2.Λ⊑² {p = p} Anv zero∈A liftγ vV N⊢ V⊑N q) p′ =
   CTI2.Λ⊑² Anv zero∈A (renameLiftCtxᴸ π liftγ) vV
     (subst≡ (λ Γ → ⟨ _ , _ , Γ ⟩ ⊢ _ ⦂ _)
       (sym (renameCtx-tgt π γ)) N⊢)
-    (⊢²-rename-center {W = CTX.liftWorldLeft X⊑★ W}
-      (keep π) V⊑N
-      (rename-⊑ᵂ {W = CTX.liftWorldLeft X⊑★ W} (keep π) p)) p′
+    (TID.⊢²-decay (liftRenameDecayᴸ π X⊑★ W)
+      (⊢²-rename-center {W = CTX.liftWorldLeft X⊑★ W}
+        (keep π) V⊑N
+        (rename-⊑ᵂ {W = CTX.liftWorldLeft X⊑★ W} (keep π) p)))
+    p′
 ⊢²-rename-center {W = W} {γ = γ} π
     (CTI2.Λ⊑²-smart-comma {Wᵐ = Wᵐ} {γᵐ = γᵐ} {p = p}
       Anv zero∈A (CTX.smart-merge-alias guard) liftγ vV N⊢
