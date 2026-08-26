@@ -251,6 +251,20 @@ liftCenterMode-paired (future-precise W≼W′ related) X eq =
 liftCenterMode-paired (future-imprecise W≼W′) X eq =
   cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
 
+liftCenterMode-alias : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (W≼W′ : Future W W′) (X : TyVar Δᶜ) {T : Ty Δᶜ}
+  → impEnv (core W) X ≡ I.X⊑ᵗ T
+  → impEnv (core W′) (liftCenterVariable W≼W′ X)
+      ≡ I.X⊑ᵗ (liftCenterTy W≼W′ T)
+liftCenterMode-alias future-refl X eq = eq
+liftCenterMode-alias (future-paired W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
+liftCenterMode-alias (future-precise W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
+liftCenterMode-alias (future-imprecise W≼W′) X eq =
+  cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
+
 liftPreciseTerm : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
   → Future W W′

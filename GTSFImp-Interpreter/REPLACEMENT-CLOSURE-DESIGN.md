@@ -836,3 +836,108 @@ keep the tree green.
    projections.
 4. `∀⊑∀` producers (intro, cast, assemblies), then the paired
    projections, then delete the obligation record.
+
+## Finding H — aliases falsify the two-sided reveal statements
+(2026-08-26, alias branch)
+
+Step 5 planning uncovered a gap the staged plan does not cover.
+Once `Future` gains the alias-bind step (which it must — see the
+allocation audit below), the two-sided sized statements
+(`RevealAtSized`/`ConcealAtSized`) become **false as stated**, and
+the failure is reachable through their own Kripke re-entry.
+
+### Why the alias bind must be a `Future` step
+
+`PairedReturns` lets the prover choose any world whose stores match
+the trace's cumulative changes, but the choice is still along
+`Future`.  The obligations' computations perform, on the precise
+side, the wrapper β (`bind Rᴾ`) followed by the inner application's
+β (`bind ＇0`), against a single imprecise β (`bind Rᴵ`).  Whichever
+two allocations are paired, the third is precise-only with a
+non-`★` representative — `future-precise` requires `embP Aᴾ ⊑ ★`,
+which fails for both `＇0` (paired mode) and `Rᴾ` (arbitrary).  Only
+an alias-mode bind classifies it.  Note the operational alias is
+always `bind ＇0`: its representative is exactly the variable of the
+immediately preceding bind (`β-reveal-∀`'s reduct applies the inner
+value at `＇0`).
+
+### The falsifying configuration
+
+`replace-⊑` (hence the two-sided reveal) rewrites the slot center
+`c` in every type of the derivation, but the alias *mode* `X⊑ᵗ T`
+lives in the environment, which replacement does not touch.  An
+`alias` leaf whose recorded representative `T` mentions `c` cannot
+be rebuilt after replacement: the premise must be at `T` exactly,
+and `T` is not replaced.  Alias avoidance (`AliasesAvoid μ c`) is
+the exact precondition — and it is **not transportable** along alias
+futures: a later alias may record `T = ＇c` (the operational alias
+does exactly this when its predecessor bind pairs the slot).
+
+The reachability: `reveal-function-head` re-enters `concealAt`/
+`revealAt` at `slot-future s W≼W′` for a **consumer-chosen** `W′`
+(the Kripke position of the produced `FunctionsRelated`), so no
+top-level side condition on the initial world can exclude alias
+worlds from the statements' domain.
+
+### Resolution: derivation-restricted avoidance
+
+The saving observation: the derivations at every re-entry are
+**lifts of subderivations of the original** (`liftCenterImprecision`
+creates no new `alias` leaves; `replace-⊑` preserves leaves;
+`⊑-unique` makes leaf-sets a function of the judgment).  So the
+right precondition is not world-level but derivation-level:
+
+    AliasAvoidᵖ : TyVar Δ → μ ⊢ A ⊑ B → Set
+    -- at an alias leaf (eq : μ X ≡ X⊑ᵗ T): c ∉ᵗ T, recursively;
+    -- structural cases: products, with c shifted under the binders
+    -- of ∀⊑∀ / ∀⊑ / ∀⊑★; other leaves: ⊤.
+
+with transport lemmas along lifting (`rename-⊑` commutes with the
+leaf structure), replacement, subderivations, and `⊑-unique`
+(reindexing between derivations of one judgment preserves it).  The
+two-sided sized statements and `replace-⊑` take `AliasAvoidᵖ
+(center s) p` (`replace-⊑`'s current `AliasesAvoid μ c` premise
+weakens to the leaf-restricted form); the one-sided and dynamic
+statements need `AliasAvoidᵖ` only where they recurse into the
+two-sided ones.  Producers discharge it at compile-time-derivation
+roots (alias-free: `NoAliases` environments give it vacuously) and
+the reveal recursion transports it.
+
+### Consequences for the staged plan
+
+The step-5 dependency order is forced from the bottom:
+
+1. `AliasAvoidᵖ` and its transport lemmas; thread it through
+   `replace-⊑` and the sized statements (the `RevealStructural`
+   sweep).  Replace the `World.noAlias` refutations in the reveal
+   machinery with the real alias cases, which under `AliasAvoidᵖ`
+   collapse cleanly: avoidance plus `target-occurs-source` gives
+   `c ∉ B` at every alias leaf, so both replacements are identities
+   (`replaceTy-absent`) and identity-reveal steps close the case.
+2. Drop `World.noAlias`; add `aliasBindCore`/`aliasBindWorld` (a
+   precise-only bind at mode `X⊑ᵗ (⇑ᵗ (embP Aᴾ))` with a fresh
+   alias atom) and the `future-alias` step; sweep the ~200 `Future`
+   matchers (each mirrors `future-precise`).
+3. The `∀⊑∀` clause change: store the wrap-closed Kripke family
+   (`UniWraps`-quantified, exactly as the `∀⊑` clause) — consumers
+   project `[]`; the four blocked obligations become cons
+   projections (`λ W≼W′ σ → fam W≼W′ (w ∷ σ)` plus endpoint fixups).
+4. The `∀⊑∀` producers build families by σ-induction with their
+   concrete imprecise steps: the universal cast (`Cast.agda`) and
+   the two-sided assemblies (`RevealStructural.agda`); the entry
+   for a wrapped pair pairs the wrapper β's `bind Rᴾ` with the
+   imprecise β's `bind Rᴵ` as the paired bind, classifies the inner
+   application's `bind ＇0` as the alias bind (`future-alias`), and
+   instantiates the prefix entry at `(＇0, Rᴵ)` with the
+   representative imprecision given by the `alias` rule.  This is
+   the redex bookkeeping the plan already flags as the largest
+   single proof.
+5. Delete `RevealObligations` and the `ob` parameters.
+
+Steps 1–2 are large but now fully specified; steps 3–4 carry the
+residual proof risk.  What is landed so far on the alias branch:
+the alias atom and LR clause (step 4 of the outer staging), and the
+real alias closure under futures (`alias-holds-lift`/`-future`,
+`liftCenterMode-alias`, and the three future-lifting lemmas'
+alias cases in `proof/LR-narrow/Closure.agda`) — the last
+`noAlias` uses outside the reveal machinery.

@@ -1102,6 +1102,55 @@ dynamic-holds-future {Z = Z} W≼W′ f reindex eq holds =
   dynamic-holds-lift W≼W′ f reindex (entry-future W≼W′ Z) eq
     (liftCenterMode-star W≼W′ Z eq) holds
 
+-- The alias slot relation is Kripke: the sealed shape lifts with the
+-- atom, and the payload lifts at the lifted alias premise, which is
+-- the derivation index of the lifted relation — no reindexing.
+
+alias-holds-lift : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ mode mode′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {ℛ : PayloadRelation (core W)} {ℛ′ : PayloadRelation (core W′)}
+    {Z : TyVar Δᶜ} {T B : Ty Δᶜ} {Vᴵ Vᴾ}
+    (W≼W′ : Future W W′)
+  → PayloadFutureMap W≼W′ ℛ ℛ′
+  → {e : SemanticEntry (core W) Z mode}
+    {e′ : SemanticEntry (core W′) (liftCenterVariable W≼W′ Z) mode′}
+  → EntryLift W≼W′ e e′
+  → (eq : mode ≡ I.X⊑ᵗ T)
+  → (eq′ : mode′ ≡ I.X⊑ᵗ (liftCenterTy W≼W′ T))
+  → (p : impEnv (core W) I.⊢ T ⊑ B)
+  → AliasAtomHolds ℛ e eq p Vᴵ Vᴾ
+  → AliasAtomHolds ℛ′ e′ eq′ (liftCenterImprecision W≼W′ p)
+      (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
+alias-holds-lift W≼W′ f (lift-paired _ _ _ _) eq eq′ p ()
+alias-holds-lift W≼W′ f (lift-dynamic eqᴾ repᴾ) () eq′ p holds
+alias-holds-lift W≼W′ f lift-target () eq′ p holds
+alias-holds-lift {W′ = W′} W≼W′ f
+    (lift-alias {a = a} {a′ = a′} eqᴾ repᴾ) refl refl p
+    (alias-holds Uᴾ refl related) =
+  alias-holds (liftPreciseTerm W≼W′ Uᴾ)
+    (trans (liftPreciseTerm-sealed W≼W′ Uᴾ _ _)
+      (sym (cong₂
+        (λ Y T′ → liftPreciseTerm W≼W′ Uᴾ ↓ Conversion.seal Y T′)
+        eqᴾ repᴾ)))
+    (f related)
+
+alias-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {ℛ : PayloadRelation (core W)} {ℛ′ : PayloadRelation (core W′)}
+    {Z : TyVar Δᶜ} {T B : Ty Δᶜ} {Vᴵ Vᴾ}
+    (W≼W′ : Future W W′)
+  → PayloadFutureMap W≼W′ ℛ ℛ′
+  → (eq : impEnv (core W) Z ≡ I.X⊑ᵗ T)
+  → (p : impEnv (core W) I.⊢ T ⊑ B)
+  → AliasAtomHolds ℛ (semanticEntry W Z) eq p Vᴵ Vᴾ
+  → AliasAtomHolds ℛ′ (semanticEntry W′ (liftCenterVariable W≼W′ Z))
+      (liftCenterMode-alias W≼W′ Z eq)
+      (liftCenterImprecision W≼W′ p)
+      (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
+alias-holds-future {Z = Z} W≼W′ f eq p holds =
+  alias-holds-lift W≼W′ f (entry-future W≼W′ Z) eq
+    (liftCenterMode-alias W≼W′ Z eq) p holds
+
 dynamic-atom-tag-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1493,9 +1542,16 @@ value-imprecision-paired W r {p = I.bot-elim} {k = suc k}
     endpoints = typed-endpoints-future (paired-future W r) endpoints
 value-imprecision-paired W r {p = I.bot⊑★} {k = suc k}
     endpoints = typed-endpoints-future (paired-future W r) endpoints
-value-imprecision-paired W r {p = I.alias eq p} {k}
-    related =
-  ⊥-elim (noAlias W _ eq)
+value-imprecision-paired W r {p = I.alias eq p} {k = zero}
+    endpoints =
+  typed-endpoints-future (paired-future W r) endpoints
+value-imprecision-paired W r {p = I.alias {X = X} eq p}
+    {k = suc k} (endpoints , related) =
+  typed-endpoints-future (paired-future W r) endpoints ,
+  alias-holds-future (paired-future W r)
+    (λ {p = p′} rel →
+      value-imprecision-paired W r {p = p′} {k = suc k} rel)
+    eq p related
 
 -- Termination note: the `X⊑★` dynamic case recurses at the same step
 -- index into the slot's representation imprecision; well-founded by
@@ -1678,9 +1734,16 @@ value-imprecision-precise W r {p = I.bot-elim} {k = suc k}
     endpoints = typed-endpoints-future (precise-future W r) endpoints
 value-imprecision-precise W r {p = I.bot⊑★} {k = suc k}
     endpoints = typed-endpoints-future (precise-future W r) endpoints
-value-imprecision-precise W r {p = I.alias eq p} {k}
-    related =
-  ⊥-elim (noAlias W _ eq)
+value-imprecision-precise W r {p = I.alias eq p} {k = zero}
+    endpoints =
+  typed-endpoints-future (precise-future W r) endpoints
+value-imprecision-precise W r {p = I.alias {X = X} eq p}
+    {k = suc k} (endpoints , related) =
+  typed-endpoints-future (precise-future W r) endpoints ,
+  alias-holds-future (precise-future W r)
+    (λ {p = p′} rel →
+      value-imprecision-precise W r {p = p′} {k = suc k} rel)
+    eq p related
 
 -- Termination note: the `X⊑★` dynamic case recurses at the same step
 -- index into the slot's representation imprecision; well-founded by
@@ -1864,8 +1927,16 @@ value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.bot⊑★}
     {k = suc k} endpoints =
   typed-endpoints-future (imprecise-future W Rᴵ) endpoints
 value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.alias eq p}
-    {k} related =
-  ⊥-elim (noAlias W _ eq)
+    {k = zero} endpoints =
+  typed-endpoints-future (imprecise-future W Rᴵ) endpoints
+value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.alias {X = X} eq p}
+    {k = suc k} (endpoints , related) =
+  typed-endpoints-future (imprecise-future W Rᴵ) endpoints ,
+  alias-holds-future (imprecise-future W Rᴵ)
+    (λ {p = p′} rel →
+      value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = p′} {k = suc k}
+        rel)
+    eq p related
 
 value-imprecision-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
