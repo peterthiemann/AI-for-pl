@@ -112,14 +112,6 @@ impreciseBindWorld W Aᴵ =
   no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
   no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
 
--- An alias-free world trivially avoids every variable; this
--- discharges the alias-avoidance premises of the reveal machinery.
-
-world-aliases-avoid : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
-    (Z : TyVar Δᶜ)
-  → ∀ Y {T : Ty Δᶜ} → impEnv (core W) Y ≡ I.X⊑ᵗ T → Z ∉ᵗ T
-world-aliases-avoid W Z Y eq = ⊥-elim (noAlias W Y eq)
-
 data Future {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
     → World Δᴾ′ Δᴵ′ Δᶜ′

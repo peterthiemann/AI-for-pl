@@ -103,8 +103,7 @@ open import proof.LR-narrow.UniversalReveal using
 open import proof.LR-narrow.ReplaceImprecision using
   (replace-⊑; replace-left-⊑; replace-zero-open; open-shifted-body;
    replaceTy-nonvar; replaceTy-occurs; shift-no-zero)
-open import proof.Imprecision using
-  (ext-aliases-avoid-suc; inst-aliases-avoid-suc)
+open import proof.LR-narrow.AliasAvoid using (no-aliases-avoidᵖ)
 open import proof.LR-narrow.ImprecisionSize using
   (sizeᵖ; lift-center-size; size-subst-left; size-subst-right;
    lift-center-dynamic-body-size)
@@ -123,7 +122,8 @@ open RA using
 ------------------------------------------------------------------------
 
 open import proof.ImprecisionConsistency using
-  (rename-⊑; rename-star-map-ext; fin-suc-injective; ext-injective)
+  (rename-⊑; rename-star-map-ext; fin-suc-injective; ext-injective;
+   ext-no-aliases; inst-no-aliases)
 
 ------------------------------------------------------------------------
 -- No bottom-typed values
@@ -1067,8 +1067,8 @@ reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
       ⊑ replaceTy (center s₁) (embedImprecise (core Wb) (slotRᴵ s₁))
           (embedImprecise (core Wb) B₀ᴵ′)
   t₁ = replace-⊑ (center s₁) (mode-eq s₁)
-    (world-aliases-avoid Wb (center s₁))
     (rep-related (atom s₁)) t₀
+    (no-aliases-avoidᵖ (noAlias Wb) t₀)
 
   target₁-P : embedPrecise (core Wb)
       (replaceTy (slotXᴾ s₁) (slotRᴾ s₁) B₀ᴾ′)
@@ -2316,8 +2316,8 @@ reveal-right-universal-inner W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
       ⊑ replaceTy (center s₁) (embedImprecise (core Wb) (slotRᴵ s₁))
           (embedImprecise (core Wb) Bᴵ′)
   t₁ = replace-⊑ (center s₁) (mode-eq s₁)
-    (world-aliases-avoid Wb (center s₁))
     (rep-related (atom s₁)) t₀
+    (no-aliases-avoidᵖ (noAlias Wb) t₀)
 
   target₁-P : embedPrecise (core Wb)
       (replaceTy (slotXᴾ s₁) (slotRᴾ s₁) B₀ᴾ′)
@@ -4766,11 +4766,14 @@ conceal-right-universal-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
       (trans (sym (shift-replace c₀ RembI Bc))
         (sym (cong ⇑ᵗ commute-I)))
       (replace-⊑ (Fin.suc c₀) (cong I.⇑ᵛ (mode-eq s))
-        (inst-aliases-avoid-suc (world-aliases-avoid W c₀))
         (shift-⊑ I.X⊑★ (rep-related (atom s)))
         (subst≡
           (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
-          (sym eqᴾ) p₀)))
+          (sym eqᴾ) p₀)
+        (no-aliases-avoidᵖ (inst-no-aliases (noAlias W))
+          (subst≡
+            (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
+            (sym eqᴾ) p₀))))
 
 -- The conceal dispatch when the paired center avoids the imprecise
 -- center type.
@@ -5016,11 +5019,14 @@ right-universal-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
       (trans (sym (shift-replace c₀ RembI Bc))
         (sym (cong ⇑ᵗ commute-I)))
       (replace-⊑ (Fin.suc c₀) (cong I.⇑ᵛ (mode-eq s))
-        (inst-aliases-avoid-suc (world-aliases-avoid W c₀))
         (shift-⊑ I.X⊑★ (rep-related (atom s)))
         (subst≡
           (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
-          (sym eqᴾ) p₀)))
+          (sym eqᴾ) p₀)
+        (no-aliases-avoidᵖ (inst-no-aliases (noAlias W))
+          (subst≡
+            (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
+            (sym eqᴾ) p₀))))
 
 ------------------------------------------------------------------------
 -- Concealing to a bottom type is impossible
@@ -5221,8 +5227,8 @@ reveal-conceal-step k n below = reveal-at , conceal-at
             (⇑ᵗ (embedImprecise (core W) (slotRᴵ s)))
             (renameᵗ (extᵗ ρᴵ) B₀ᴵ)
     raw = replace-⊑ (Fin.suc (center s)) (cong I.⇑ᵛ (mode-eq s))
-      (ext-aliases-avoid-suc (world-aliases-avoid W (center s)))
       rep′ base
+      (no-aliases-avoidᵖ (ext-no-aliases (noAlias W)) base)
 
     alt-body : I.extᵐ (impEnv (core W)) I.⊢
         renameᵗ (extᵗ ρᴾ)
@@ -5526,8 +5532,8 @@ reveal-conceal-step k n below = reveal-at , conceal-at
             (⇑ᵗ (embedImprecise (core W) (slotRᴵ s)))
             (renameᵗ (extᵗ ρᴵ) B₀ᴵ)
     raw = replace-⊑ (Fin.suc (center s)) (cong I.⇑ᵛ (mode-eq s))
-      (ext-aliases-avoid-suc (world-aliases-avoid W (center s)))
       rep′ base
+      (no-aliases-avoidᵖ (ext-no-aliases (noAlias W)) base)
 
     alt-body : I.extᵐ (impEnv (core W)) I.⊢
         renameᵗ (extᵗ ρᴾ)
