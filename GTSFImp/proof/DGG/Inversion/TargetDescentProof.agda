@@ -63,20 +63,25 @@ impEnvMono-∘ : ∀ {Δᴸ Δᴿ Δ}
   → CTX.ImpEnvMono W₁ W₂
   → CTX.ImpEnvMono W₂ W₃
   → CTX.ImpEnvMono W₁ W₃
-impEnvMono-∘ mono₁ mono₂ Z eq = mono₂ Z (mono₁ Z eq)
+impEnvMono-∘ mono₁ mono₂ =
+  CTX.imp-env-mono
+    (λ Z eq → CTX.starMono mono₂ Z (CTX.starMono mono₁ Z eq))
+    (CTX.alias-same-trans (CTX.aliasAgree mono₁)
+      (CTX.aliasAgree mono₂))
 
 inner-source-pivot-eqᴿ : ∀ {Δᴸ Δᴿ Δ}
     {W W′ : World Δᴸ Δᴿ Δ}
     {Xᴸ X₂ : TyVar Δᴸ} {Y : TyVar Δᴿ}
+  → CTX.NoAliasWorld W′
   → RebaseAt W′ W Xᴸ Y
   → (＇ X₂) ⊑ᵂ⟨ W′ ⟩ (＇ Y)
   → X₂ ≡ Xᴸ
 inner-source-pivot-eqᴿ {W = W} {W′ = W′}
-    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} rb p
+    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} na′ rb p
     with Fin._≟_ X₂ Xᴸ
-inner-source-pivot-eqᴿ rb p | yes refl = refl
+inner-source-pivot-eqᴿ na′ rb p | yes refl = refl
 inner-source-pivot-eqᴿ {W = W} {W′ = W′}
-    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} rb p | no X₂≢Xᴸ =
+    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} na′ rb p | no X₂≢Xᴸ =
   ⊥-elim (X₂≢Xᴸ
     (toRenameᵗ-injective (ηᴸʷ W) same-center))
   where
@@ -84,7 +89,8 @@ inner-source-pivot-eqᴿ {W = W} {W′ = W′}
     toRenameᵗ (ηᴸʷ W) X₂ ≡ toRenameᵗ (ηᴸʷ W) Xᴸ
   same-center =
     trans (CTX.RebaseAt.ηᴸ-off-pivot rb X₂≢Xᴸ)
-      (trans (variable-obligation-aligns {W = W′} {X = X₂} {Y = Y} p)
+      (trans (variable-obligation-aligns
+        {W = W′} {X = X₂} {Y = Y} na′ p)
         (trans (sym (CTX.RebaseAt.ηᴿ-frozen rb Y))
           (sym (CTX.RebaseAt.pivotAligned rb))))
 
@@ -129,6 +135,7 @@ target-seal★-descent : ∀ {Δᴸ Δᴿ Δ}
     {ν : Env∼ Δᴸ} {c : ν ⊢ (＇ X₂) ∼ ★}
     {p₂ : (＇ X₂) ⊑ᵂ⟨ W′ ⟩ (＇ Y)}
     {q : (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+  → CTX.NoAliasWorld W
   → SpineValue V
   → Inert c
   → Value U
@@ -150,16 +157,19 @@ target-seal★-descent : ∀ {Δᴸ Δᴿ Δ}
       {U = U} Xᴸ Y q ★
 target-seal★-descent {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} {c = c} {p₂ = p₂}
-    sv inert vU mono rb sc X∈ Y∈ makePartner D
-    with inner-source-pivot-eqᴿ rb p₂
+    na sv inert vU mono rb sc X∈ Y∈ makePartner D
+    with inner-source-pivot-eqᴿ
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) rb p₂
 target-seal★-descent {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {Y = Y} {c = c}
-    sv inert vU mono rb sc X∈ Y∈ makePartner D
+    na sv inert vU mono rb sc X∈ Y∈ makePartner D
     | refl
-    with STC.seal-transfer sv vU (rebase-source-membership rb X∈) D
+    with STC.seal-transfer
+      (CTX.no-alias-same (CTX.aliasAgree mono) na)
+      sv vU (rebase-source-membership rb X∈) D
 target-seal★-descent {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {Y = Y} {c = c}
-    sv inert vU mono rb sc X∈ Y∈ makePartner D
+    na sv inert vU mono rb sc X∈ Y∈ makePartner D
     | refl
     | STC.seal-transfer-stripped {W₂ = W₂} {γ₂ = γ₂}
         {q₂ = q₂} link mono₂ sc₂ D₂ =
@@ -172,7 +182,7 @@ target-seal★-descent {W = W} {W′ = W′}
       (makePartner link mono₂ sc₂ q₂ D₂))
 target-seal★-descent {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {Y = Y} {c = c}
-    sv inert vU mono rb sc X∈ Y∈ makePartner D
+    na sv inert vU mono rb sc X∈ Y∈ makePartner D
     | refl
     | STC.seal-transfer-paired {Wᵖ = Wᵖ} {γᵖ = γᵖ}
         {P = P} monoᵖ rbᵖ scᵖ source⊢ target⊢
@@ -180,7 +190,7 @@ target-seal★-descent {W = W} {W′ = W′}
     with inert
 target-seal★-descent {W = W} {W′ = W′}
     {Xᴸ = Xᴸ} {Y = Y}
-    sv inert vU mono rb sc X∈ Y∈ makePartner D
+    na sv inert vU mono rb sc X∈ Y∈ makePartner D
     | refl
     | STC.seal-transfer-paired {Wᵖ = Wᵖ} {γᵖ = γᵖ}
         {P = P} monoᵖ rbᵖ scᵖ source⊢ target⊢

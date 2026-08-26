@@ -236,6 +236,7 @@ SealDescentAtVar =
     {A : Ty Δᴸ} {S : Ty Δᴿ}
     {Xᴸ : TyVar Δᴸ} {Y : TyVar Δᴿ}
     {r : A ⊑ᵂ⟨ Wʳ ⟩ ＇ Y}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono Wᵒ Wʳ
@@ -256,6 +257,7 @@ SealDescentAtVarᴸ =
     {A : Ty (suc Δᴸ)} {S : Ty Δᴿ}
     {Xᴸ : TyVar Δᴸ} {Y : TyVar Δᴿ}
     {r : A ⊑ᵂ⟨ CTI2.liftWorldLeft X⊑★ Wʳ ⟩ ＇ Y}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono Wᵒ Wʳ
@@ -351,6 +353,7 @@ TagDispatchAt★ =
     {Y : TyVar Δᴿ} {ν : Env∼ Δᴿ}
     {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : A ⊑ᵂ⟨ Wᵖ ⟩ ★}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue V
   → Value N
   → CTI2.ImpEnvMono Wᵒ Wᵖ
@@ -371,6 +374,7 @@ TagDispatchAt★ᴸ =
     {Y : TyVar Δᴿ} {ν : Env∼ Δᴿ}
     {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : A ⊑ᵂ⟨ CTI2.liftWorldLeft X⊑★ Wᵖ ⟩ ★}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue V
   → Value N
   → CTI2.ImpEnvMono Wᵒ Wᵖ
@@ -391,6 +395,7 @@ TargetStripAt★ =
     {A : Ty Δᴸ} {S : Ty Δᴿ} {Xᴸ : TyVar Δᴸ}
     {Y : TyVar Δᴿ} {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : A ⊑ᵂ⟨ Wᵖ ⟩ ★}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono Wᵒ Wᵖ
@@ -412,6 +417,7 @@ TargetStripAt★ᴸ =
     {Xᴸ : TyVar Δᴸ} {Y : TyVar Δᴿ}
     {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : A ⊑ᵂ⟨ CTI2.liftWorldLeft X⊑★ Wᵖ ⟩ ★}
+  → CTI2.NoAliasWorld Wᵒ
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono Wᵒ Wᵖ
@@ -429,32 +435,32 @@ target-strip★-from-slices :
   → TagDispatchAt★
   → TargetStripAt★
 target-strip★-from-slices seal-at-var tag-dispatch
-    sv vU mono rb sc source∈ target∈ D
-    with tag-dispatch sv (vU ↓ seal) mono rb sc source∈ D
+    na sv vU mono rb sc source∈ target∈ D
+    with tag-dispatch na sv (vU ↓ seal) mono rb sc source∈ D
 target-strip★-from-slices seal-at-var tag-dispatch
-    sv vU mono rb sc source∈ target∈ D
+    na sv vU mono rb sc source∈ target∈ D
     | dispatch-tag (tag-node★ r prem)
-    with seal-at-var sv vU mono rb sc source∈ target∈ prem
+    with seal-at-var na sv vU mono rb sc source∈ target∈ prem
 target-strip★-from-slices seal-at-var tag-dispatch
-    sv vU mono rb sc source∈ target∈ D
+    na sv vU mono rb sc source∈ target∈ D
     | dispatch-tag (tag-node★ r prem)
     | target-seal-terminus-data U★ Y★ W★ γ★ mono★ same★ boundary★
         target∈★ q★ premise★ =
   target-strip★-data U★ Y★ W★ γ★ mono★ same★ boundary★ target∈★
     q★ premise★ (λ _ → D)
 target-strip★-from-slices seal-at-var tag-dispatch
-    sv vU mono rb sc source∈ target∈ D
+    na sv vU mono rb sc source∈ target∈ D
     | dispatch-tag (tag-node★ r prem)
     | target-seal-terminus-paired source∈ᵒ target∈ᵒ boundaryᵒ
         residualᵒ monoᵐ sameᵐ partnerᵐ premiseᵐ =
   target-strip★-paired source∈ᵒ target∈ᵒ boundaryᵒ residualᵒ
     monoᵐ sameᵐ partnerᵐ premiseᵐ (λ _ → D)
 target-strip★-from-slices seal-at-var tag-dispatch
-    sv vU mono rb sc source∈ target∈ D
+    na sv vU mono rb sc source∈ target∈ D
     | dispatch-source-fold resume =
   resume refl vU target∈
 target-strip★-from-slices seal-at-var tag-dispatch
-    sv vU mono rb sc source∈ target∈ D
+    na sv vU mono rb sc source∈ target∈ D
     | dispatch-nonvar-empty bad =
   ⊥-elim bad
 
@@ -465,18 +471,20 @@ target-strip★ᴸ-from-slices :
 target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
     {Wᵖ = Wᵖ} {γᵖ = γᵖ} {γᵇ = γᵇ}
     {U = U} {S = S} {Xᴸ = Xᴸ} {Y = Y} {cY = cY} {p = p}
-    sv vU mono rb sc source∈ target∈ liftγ D
-    with tag-dispatchᴸ sv (vU ↓ seal) mono rb sc source∈ liftγ D
+    na sv vU mono rb sc source∈ target∈ liftγ D
+    with tag-dispatchᴸ na sv (vU ↓ seal) mono rb sc source∈
+      liftγ D
 target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
     {Wᵖ = Wᵖ} {γᵖ = γᵖ} {γᵇ = γᵇ}
     {U = U} {S = S} {Xᴸ = Xᴸ} {Y = Y} {cY = cY} {p = p}
-    sv vU mono rb sc source∈ target∈ liftγ D
+    na sv vU mono rb sc source∈ target∈ liftγ D
     | dispatch-tagᴸ (tag-node★ᴸ r prem)
-    with seal-at-varᴸ sv vU mono rb sc source∈ target∈ liftγ prem
+    with seal-at-varᴸ na sv vU mono rb sc source∈ target∈
+      liftγ prem
 target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
     {Wᵖ = Wᵖ} {γᵖ = γᵖ} {γᵇ = γᵇ}
     {U = U} {S = S} {Xᴸ = Xᴸ} {Y = Y} {cY = cY} {p = p}
-    sv vU mono rb sc source∈ target∈ liftγ D
+    na sv vU mono rb sc source∈ target∈ liftγ D
     | dispatch-tagᴸ (tag-node★ᴸ r prem)
     | target-seal-terminusᴸ-data U★ Y★ W★ γ★ γᵒᴸ γ★ᴸ liftᵒ lift★
         mono★ same★ boundary★ target∈★ body★ U⊢★ premise★ =
@@ -485,7 +493,7 @@ target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
 target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
     {Wᵖ = Wᵖ} {γᵖ = γᵖ} {γᵇ = γᵇ}
     {U = U} {S = S} {Xᴸ = Xᴸ} {Y = Y} {cY = cY} {p = p}
-    sv vU mono rb sc source∈ target∈ liftγ D
+    na sv vU mono rb sc source∈ target∈ liftγ D
     | dispatch-tagᴸ (tag-node★ᴸ r prem)
     | target-seal-terminusᴸ-paired {P = P} A≡ V≡ γᵒᴸ liftᵒ
         source∈ᵒ target∈ᵒ boundaryᵒ residualᵒ monoᵐ sameᵐ
@@ -497,12 +505,12 @@ target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
 target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
     {Wᵖ = Wᵖ} {γᵖ = γᵖ} {γᵇ = γᵇ}
     {U = U} {S = S} {Xᴸ = Xᴸ} {Y = Y} {cY = cY} {p = p}
-    sv vU mono rb sc source∈ target∈ liftγ D
+    na sv vU mono rb sc source∈ target∈ liftγ D
     | dispatch-source-foldᴸ resume =
   resume refl vU target∈
 target-strip★ᴸ-from-slices seal-at-varᴸ tag-dispatchᴸ
     {Wᵖ = Wᵖ} {γᵖ = γᵖ} {γᵇ = γᵇ}
     {U = U} {S = S} {Xᴸ = Xᴸ} {Y = Y} {cY = cY} {p = p}
-    sv vU mono rb sc source∈ target∈ liftγ D
+    na sv vU mono rb sc source∈ target∈ liftγ D
     | dispatch-nonvar-emptyᴸ bad =
   ⊥-elim bad

@@ -97,13 +97,12 @@ composeSourceRebase {Δᴸ = Δᴸ} {W₁ = W₁} {Wₗ} {W₂}
 private
   dyn-var-star : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
       {X : TyVar Δᴸ}
+    → (∀ {T}
+        → CTX.impEnvʷ W (toRenameᵗ (CTX.ηᴸʷ W) X) ≡ X⊑ᵗ T
+        → ⊥)
     → (＇ X) ⊑ᵂ⟨ SPT.dynWorld W ⟩ ★
-  dyn-var-star {W = W} {X = X} =
-    X⊑★ (SPT.dynWorld-mark W (toRenameᵗ (CTX.ηᴸʷ W) X))
-
-  dyn-mono : ∀ {Δᴸ Δᴿ Δ} {W W′ : World Δᴸ Δᴿ Δ}
-    → CTX.ImpEnvMono (SPT.dynWorld W) (SPT.dynWorld W′)
-  dyn-mono Z eq = refl
+  dyn-var-star {W = W} {X = X} not-al =
+    X⊑★ (SPT.dynWorld-mark W (toRenameᵗ (CTX.ηᴸʷ W) X) not-al)
 
   composeSameCtx : ∀ {Δᴸ Δᴿ Δ₁ Δ₂ Δ₃}
       {W₁ : World Δᴸ Δᴿ Δ₁} {W₂ : World Δᴸ Δᴿ Δ₂}
@@ -119,16 +118,17 @@ private
   target-seal-rebase-source : ∀ {Δᴸ Δᴿ Δ}
       {W₄ W₁ : World Δᴸ Δᴿ Δ}
       {X : TyVar Δᴸ} {Y : TyVar Δᴿ}
+    → CTX.NoAliasWorld W₁
     → CTX.RebaseAtᴿ W₄ W₁ (just Y)
     → (＇ X) ⊑ᵂ⟨ W₁ ⟩ (＇ Y)
     → RebaseAt W₄ W₁ X Y
   target-seal-rebase-source {W₁ = W₁} {X = X} {Y = Y}
-      (CTX.rebase-varᴿ rb) q
+      na₁ (CTX.rebase-varᴿ rb) q
       with toRenameᵗ-injective (CTX.ηᴸʷ W₁)
         (trans (CTX.RebaseAt.pivotAligned rb)
           (sym (SVD.variable-obligation-aligns
-            {W = W₁} {X = X} {Y = Y} q)))
-  target-seal-rebase-source (CTX.rebase-varᴿ rb) q | refl = rb
+            {W = W₁} {X = X} {Y = Y} na₁ q)))
+  target-seal-rebase-source na₁ (CTX.rebase-varᴿ rb) q | refl = rb
 
   dynRep★PartnerOK : ∀ {Δᴸ Δᴿ Δ}
       {W : World Δᴸ Δᴿ Δ}
@@ -238,7 +238,7 @@ sameCtx-refl {γ = CTX.ctx-imp A B p ∷ γ} =
 
 impEnvMono-refl : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
   → CTX.ImpEnvMono W W
-impEnvMono-refl Z eq = eq
+impEnvMono-refl = CTX.idᵉᵐ
 
 premise-partner-from-tag-rebase : ∀ {Δᴸ Δᴿ Δ}
     {Wᵖ W : World Δᴸ Δᴿ Δ} {X : TyVar Δᴸ} {Xᴿ?}
@@ -413,11 +413,18 @@ private
     → CTX.ImpEnvMono W₁ W₂
     → CTX.ImpEnvMono W₂ W₃
     → CTX.ImpEnvMono W₁ W₃
-  impEnvMono-∘ mono₁ mono₂ Z eq = mono₂ Z (mono₁ Z eq)
+  impEnvMono-∘ mono₁ mono₂ =
+    CTX.imp-env-mono
+      (λ Z eq → CTX.starMono mono₂ Z (CTX.starMono mono₁ Z eq))
+      (CTX.alias-same-trans (CTX.aliasAgree mono₁)
+        (CTX.aliasAgree mono₂))
 
   dyn-decay-mono : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
     → CTX.ImpEnvMono W (SPT.dynWorld W)
-  dyn-decay-mono Z eq = refl
+  dyn-decay-mono {W = W} =
+    CTX.imp-env-mono
+      (WD.env-mono (SPT.dynWorld-decay W))
+      (WD.env-alias (SPT.dynWorld-decay W))
 
   dynLink : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
       {Z : TyVar Δᴸ} {Y : TyVar Δᴿ}
@@ -519,87 +526,88 @@ seal-transfer : ∀ {Δᴸ Δᴿ Δ} {W₁ : World Δᴸ Δᴿ Δ}
     {γ₁ : CtxImp W₁} {V : Term Δᴸ} {U : Term Δᴿ}
     {Z : TyVar Δᴸ} {Y : TyVar Δᴿ}
     {p : (＇ Z) ⊑ᵂ⟨ W₁ ⟩ (＇ Y)}
+  → CTX.NoAliasWorld W₁
   → SpineValue V
   → Value U
   → CTX.sourceStoreʷ W₁ ∋ Z ⦂ ★
   → W₁ ∣ γ₁ ⊢² V ⊑ (U ↓ Conversion.seal Y ★) ∶ p
   → SealTransferResult W₁ γ₁ Z Y p V U
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-ƛ N) vU source★ D
+    na (sv-ƛ N) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-ƛ N) vU source★ D | ()
+    na (sv-ƛ N) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-Λ sv) vU source★ D
+    na (sv-Λ sv) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-Λ sv) vU source★ D | ()
+    na (sv-Λ sv) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-$ (κℕ n)) vU source★ D
+    na (sv-$ (κℕ n)) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-$ (κℕ n)) vU source★ D | ()
+    na (sv-$ (κℕ n)) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-$ (κ𝔹 b)) vU source★ D
+    na (sv-$ (κ𝔹 b)) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-$ (κ𝔹 b)) vU source★ D | ()
+    na (sv-$ (κ𝔹 b)) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv inj) vU source★ D
+    na (sv-cast sv inj) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv inj) vU source★ D | ()
+    na (sv-cast sv inj) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv fun) vU source★ D
+    na (sv-cast sv fun) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv fun) vU source★ D | ()
+    na (sv-cast sv fun) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv all) vU source★ D
+    na (sv-cast sv all) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv all) vU source★ D | ()
+    na (sv-cast sv all) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv (genᵥ A≠★ safe)) vU source★ D
+    na (sv-cast sv (genᵥ A≠★ safe)) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-cast sv (genᵥ A≠★ safe)) vU source★ D | ()
+    na (sv-cast sv (genᵥ A≠★ safe)) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-reveal-fun sv) vU source★ D
+    na (sv-reveal-fun sv) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-reveal-fun sv) vU source★ D | ()
+    na (sv-reveal-fun sv) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-conceal-fun sv) vU source★ D
+    na (sv-conceal-fun sv) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-conceal-fun sv) vU source★ D | ()
+    na (sv-conceal-fun sv) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-reveal-all sv) vU source★ D
+    na (sv-reveal-all sv) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-reveal-all sv) vU source★ D | ()
+    na (sv-reveal-all sv) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-conceal-all sv) vU source★ D
+    na (sv-conceal-all sv) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-conceal-all sv) vU source★ D | ()
+    na (sv-conceal-all sv) vU source★ D | ()
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-seal sv) vU source★ D
+    na (sv-seal sv) vU source★ D
     with CTI2T.source-typing² D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-seal sv) vU source★ D
+    na (sv-seal sv) vU source★ D
     | ⊢conceal (⊢↓-seal Z∈) V₀⊢
     with store-lookup-unique Z∈ source★ | D
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-seal sv) vU source★ D
+    na (sv-seal sv) vU source★ D
     | ⊢conceal (⊢↓-seal Z∈) V₀⊢
     | refl
     | CTI2.⊑conceal² {W′ = W₄} {γ′ = γ₄} mono₄ rb₄ sc₄
         (Conv.⊢↓-sealˣ Y∈) prem .p
-    with target-seal-rebase-source rb₄ p
+    with target-seal-rebase-source na rb₄ p
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-seal sv) vU source★ D
+    na (sv-seal sv) vU source★ D
     | ⊢conceal (⊢↓-seal Z∈) V₀⊢
     | refl
     | CTI2.⊑conceal² {W′ = W₄} {γ′ = γ₄} mono₄ rb₄ sc₄
@@ -611,9 +619,11 @@ seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
       {W₃ = SPT.dynWorld W₄} mono₄ (dyn-decay-mono {W = W₄}))
     (SVD.decaySameCtxʳ (SPT.dynWorld-decay W₄) sc₄)
     (TD.⊢²-decay-at (SPT.dynWorld-decay W₄) prem
-      (dyn-var-star {W = W₄} {X = Z}))
+      (dyn-var-star {W = W₄} {X = Z}
+        (λ al →
+          CTX.no-alias-same (CTX.aliasAgree mono₄) na _ al)))
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-seal sv) vU source★ D
+    na (sv-seal sv) vU source★ D
     | ⊢conceal (⊢↓-seal Z∈) V₀⊢
     | refl
     | CTI2.packaged-seal-star² {Wᵖ = Wᵖ} {γᵖ = γᵖ}
@@ -621,7 +631,7 @@ seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
         (Conv.⊢↓-sealˣ Y∈) prem sourcePrem .p =
   seal-transfer-stripped rbᵖ monoᵖ scᵖ sourcePrem
 seal-transfer {W₁ = W₁} {γ₁ = γ₁} {Z = Z} {Y = Y} {p = p}
-    (sv-seal sv) vU source★ D
+    na (sv-seal sv) vU source★ D
     | ⊢conceal (⊢↓-seal Z∈) V₀⊢
     | refl
     | CTI2.conceal⊑conceal² {Wᵖ = Wᵖ} {γᵖ = γᵖ} {M = P}

@@ -34,11 +34,15 @@ open import proof.ImprecisionConsistency using
 ⊑-extᵐ-instᵐ : ∀ {Δ} {μ : ImpEnv Δ} {A B : Ty (Nat.suc Δ)}
   → extᵐ μ ⊢ A ⊑ B
   → instᵐ μ ⊢ A ⊑ B
-⊑-extᵐ-instᵐ p = ⊑-env-mono cond p
+⊑-extᵐ-instᵐ {μ = μ} p = ⊑-env-mono cond alias-cond p
   where
-  cond : ∀ Z → extᵐ _ Z ≡ X⊑★ → instᵐ _ Z ≡ X⊑★
+  cond : ∀ Z → extᵐ μ Z ≡ X⊑★ → instᵐ μ Z ≡ X⊑★
   cond Fin.zero ()
   cond (Fin.suc Z) eq = eq
+
+  alias-cond : ∀ Z {T} → extᵐ μ Z ≡ X⊑ᵗ T → instᵐ μ Z ≡ X⊑ᵗ T
+  alias-cond Fin.zero ()
+  alias-cond (Fin.suc Z) eq = eq
 
 ∀⊑★-body-no0 : ∀ {Δ} {μ : ImpEnv Δ} {A : Ty (Nat.suc Δ)}
   → μ ⊢ `∀ A ⊑ ★

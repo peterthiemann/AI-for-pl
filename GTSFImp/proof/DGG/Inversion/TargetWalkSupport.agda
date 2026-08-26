@@ -66,7 +66,7 @@ open SVD using
 open import proof.ImprecisionConsistency using
   (ground-cast-source⊑; source-occurs-target; rename-occurs;
    ext-injective; toRenameᵗ-injective; nonstar-from-≢★; rename-⊑;
-   fin-suc-injective; nonvar-occurs-nonstar; unshift-⊑)
+   fin-suc-injective; nonvar-occurs-nonstar; shift-⊑; unshift-⊑)
 import proof.Imprecision as PI
 open import proof.TypeInTermSubst using (toRename-keep-eq)
 
@@ -119,7 +119,7 @@ lowerWorldLeft-shift-⊑ᵂ {W = W} {A = A} {B = B} p =
         p))
 
 liftWorldBoth-⊑ᵂ : ∀ {Δᴸ Δᴿ Δ} {W : World Δᴸ Δᴿ Δ}
-    {A : Ty Δᴸ} {B : Ty Δᴿ} {v : VarImp}
+    {A : Ty Δᴸ} {B : Ty Δᴿ} {v : VarImp (suc Δ)}
   → A ⊑ᵂ⟨ W ⟩ B
   → ⇑ᵗ A ⊑ᵂ⟨ CTX.liftWorldBoth v W ⟩ ⇑ᵗ B
 liftWorldBoth-⊑ᵂ {W = W} {A = A} {B = B} {v = v} p =
@@ -139,7 +139,7 @@ liftWorldBoth-⊑ᵂ {W = W} {A = A} {B = B} {v = v} p =
 -- the world-level counterpart of the shifted-pivot conversion rules.
 
 liftRebaseAt : ∀ {Δᴸ Δᴿ Δ} {W W′ : World Δᴸ Δᴿ Δ}
-    {Xᴸ : TyVar Δᴸ} {Xᴿ : TyVar Δᴿ} {v : VarImp}
+    {Xᴸ : TyVar Δᴸ} {Xᴿ : TyVar Δᴿ} {v : VarImp (suc Δ)}
   → CTX.RebaseAt W W′ Xᴸ Xᴿ
   → CTX.RebaseAt (CTX.liftWorldBoth v W)
       (CTX.liftWorldBoth v W′) (Fin.suc Xᴸ) (Fin.suc Xᴿ)
@@ -212,7 +212,7 @@ liftPivot nothing = nothing
 liftPivot (just X) = just (Fin.suc X)
 
 liftRebaseAtᴸ : ∀ {Δᴸ Δᴿ Δ} {W W′ : World Δᴸ Δᴿ Δ}
-    {Xᴸ? : Maybe (TyVar Δᴸ)} {v : VarImp}
+    {Xᴸ? : Maybe (TyVar Δᴸ)} {v : VarImp (suc Δ)}
   → CTX.RebaseAtᴸ W W′ Xᴸ?
   → CTX.RebaseAtᴸ (CTX.liftWorldBoth v W)
       (CTX.liftWorldBoth v W′) (liftPivot Xᴸ?)
@@ -221,7 +221,8 @@ liftRebaseAtᴸ (CTX.rebase-varᴸ rb) =
   CTX.rebase-varᴸ (liftRebaseAt rb)
 liftRebaseAtᴸ {Δᴿ = Δᴿ} {W = W} {v = v}
     (CTX.rebase-onlyᴸ {Xᴸ = Xᴸ} to-star disaligned represented) =
-  CTX.rebase-onlyᴸ to-star lifted-disaligned
+  CTX.rebase-onlyᴸ (cong ⇑ᵛ to-star)
+    lifted-disaligned
     (liftWorldBoth-⊑ᵂ
       {W = W} {A = CTX.resolveVar (sourceStoreʷ W) Xᴸ}
       {B = ★} {v = v}
@@ -248,7 +249,11 @@ impEnvMono-∘ : ∀ {Δᴸ Δᴿ Δ} {W₁ W₂ W₃ : World Δᴸ Δᴿ Δ}
   → CTX.ImpEnvMono W₁ W₂
   → CTX.ImpEnvMono W₂ W₃
   → CTX.ImpEnvMono W₁ W₃
-impEnvMono-∘ m₁ m₂ Z eq = m₂ Z (m₁ Z eq)
+impEnvMono-∘ m₁ m₂ =
+  CTX.imp-env-mono
+    (λ Z eq → CTX.starMono m₂ Z (CTX.starMono m₁ Z eq))
+    (CTX.alias-same-trans (CTX.aliasAgree m₁)
+      (CTX.aliasAgree m₂))
 
 sameCtx-∘ : ∀ {Δᴸ Δᴿ Δ₁ Δ₂ Δ₃}
     {W₁ : World Δᴸ Δᴿ Δ₁} {W₂ : World Δᴸ Δᴿ Δ₂}
@@ -505,6 +510,8 @@ store-chain-unaligned {W = W} {X₀ = X₀} chain root-aligned aligned =
 source-chain-target-⊥ : ∀ {Δᴸ Δᴿ Δ}
     {W W′ Wᵖ : World Δᴸ Δᴿ Δ}
     {Xᴸ X X₂ : TyVar Δᴸ} {Y Y₁ : TyVar Δᴿ}
+  → CTX.NoAliasWorld W
+  → CTX.NoAliasWorld Wᵖ
   → CTX.RebaseAt W′ W Xᴸ Y
   → CTX.RebaseAt Wᵖ W′ X Y₁
   → sourceStoreʷ W ∋ Xᴸ ⦂ (＇ X)
@@ -513,9 +520,9 @@ source-chain-target-⊥ : ∀ {Δᴸ Δᴿ Δ}
   → (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)
   → ⊥
 source-chain-target-⊥ {W = W} {W′ = W′} {Wᵖ = Wᵖ}
-    {Xᴸ = Xᴸ} {X = X} {X₂ = X₂} {Y = Y} ra rb X∈ X∈′ p q =
+    {Xᴸ = Xᴸ} {X = X} {X₂ = X₂} {Y = Y} naW naP ra rb X∈ X∈′ p q =
   store-chain-unaligned {W = W} chain
-    (variable-obligation-aligns {W = W} {X = Xᴸ} {Y = Y} q)
+    (variable-obligation-aligns {W = W} {X = Xᴸ} {Y = Y} naW q)
     aligned-end
   where
   X∈′W : sourceStoreʷ W ∋ X ⦂ (＇ X₂)
@@ -536,7 +543,7 @@ source-chain-target-⊥ {W = W} {W′ = W′} {Wᵖ = Wᵖ}
     trans (CTX.RebaseAt.ηᴸ-off-pivot ra X₂≢Xᴸ)
       (trans (CTX.RebaseAt.ηᴸ-off-pivot rb X₂≢X)
         (trans (variable-obligation-aligns
-          {W = Wᵖ} {X = X₂} {Y = Y} p)
+          {W = Wᵖ} {X = X₂} {Y = Y} naP p)
           (trans (sym (CTX.RebaseAt.ηᴿ-frozen rb Y))
             (sym (CTX.RebaseAt.ηᴿ-frozen ra Y)))))
 
@@ -568,15 +575,17 @@ source-chain-frozen-⊥ {W = W} {W′ = W′} {W₂ = W₂}
 target-seal-rebase-source : ∀ {Δᴸ Δᴿ Δ}
     {W′ W : World Δᴸ Δᴿ Δ}
     {X : TyVar Δᴸ} {Y : TyVar Δᴿ}
+  → CTX.NoAliasWorld W
   → CTX.RebaseAtᴿ W′ W (just Y)
   → (＇ X) ⊑ᵂ⟨ W ⟩ (＇ Y)
   → CTX.RebaseAt W′ W X Y
 target-seal-rebase-source {W = W} {X = X} {Y = Y}
-    (CTX.rebase-varᴿ rb) q
+    naW (CTX.rebase-varᴿ rb) q
     with toRenameᵗ-injective (ηᴸʷ W)
       (trans (CTX.RebaseAt.pivotAligned rb)
-        (sym (variable-obligation-aligns {W = W} {X = X} {Y = Y} q)))
-target-seal-rebase-source (CTX.rebase-varᴿ rb) q | refl = rb
+        (sym (variable-obligation-aligns
+          {W = W} {X = X} {Y = Y} naW q)))
+target-seal-rebase-source naW (CTX.rebase-varᴿ rb) q | refl = rb
 
 rebase-pivot-obligation : ∀ {Δᴸ Δᴿ Δ}
     {W W′ : World Δᴸ Δᴿ Δ}
@@ -639,14 +648,18 @@ star-source-nonstar-⊥ {S = `∀ A} () nonstar-∀
 
 var-source-nonstar-⊥ : ∀ {Δᴸ Δᴿ Δ}
     {W : World Δᴸ Δᴿ Δ} {X : TyVar Δᴸ} {S : Ty Δᴿ}
+  → CTX.NoAliasWorld W
   → (＇ X) ⊑ᵂ⟨ W ⟩ S
   → NonVar S
   → NonStar S
   → ⊥
-var-source-nonstar-⊥ {S = ＇ Y} q () nonstar-X
-var-source-nonstar-⊥ {S = ‵ ι} () nonvar-base nonstar-ι
-var-source-nonstar-⊥ {S = A ⇒ B} () nonvar-fun nonstar-⇒
-var-source-nonstar-⊥ {S = `∀ A} () nonvar-all nonstar-∀
+var-source-nonstar-⊥ {S = ＇ Y} na q () nonstar-X
+var-source-nonstar-⊥ {S = ‵ ι} na (alias mode p)
+    nonvar-base nonstar-ι = na _ mode
+var-source-nonstar-⊥ {S = A ⇒ B} na (alias mode p)
+    nonvar-fun nonstar-⇒ = na _ mode
+var-source-nonstar-⊥ {S = `∀ A} na (alias mode p)
+    nonvar-all nonstar-∀ = na _ mode
 
 seal-target-nonstar-⊥ : ∀ {Δᴸ Δᴿ Δ}
     {W′ W : World Δᴸ Δᴿ Δ}
@@ -712,16 +725,18 @@ composeSealRebase {Δᴸ = Δᴸ} {W = W} {W′ = W′} {W₂ = W₂}
 inner-source-pivot-eq : ∀ {Δᴸ Δᴿ Δ}
     {W W′ : World Δᴸ Δᴿ Δ}
     {Xᴸ X₂ : TyVar Δᴸ} {Y : TyVar Δᴿ}
+  → CTX.NoAliasWorld W
+  → CTX.NoAliasWorld W′
   → CTX.RebaseAt W′ W Xᴸ Y
   → (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)
   → (＇ X₂) ⊑ᵂ⟨ W′ ⟩ (＇ Y)
   → X₂ ≡ Xᴸ
 inner-source-pivot-eq {W = W} {W′ = W′}
-    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} rb q p
+    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} naW naW′ rb q p
     with Fin._≟_ X₂ Xᴸ
-inner-source-pivot-eq rb q p | yes refl = refl
+inner-source-pivot-eq naW naW′ rb q p | yes refl = refl
 inner-source-pivot-eq {W = W} {W′ = W′}
-    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} rb q p | no X₂≢Xᴸ =
+    {Xᴸ = Xᴸ} {X₂ = X₂} {Y = Y} naW naW′ rb q p | no X₂≢Xᴸ =
   ⊥-elim (X₂≢Xᴸ
     (toRenameᵗ-injective (ηᴸʷ W) same-center))
   where
@@ -729,10 +744,11 @@ inner-source-pivot-eq {W = W} {W′ = W′}
     toRenameᵗ (ηᴸʷ W) X₂ ≡ toRenameᵗ (ηᴸʷ W) Xᴸ
   same-center =
     trans (CTX.RebaseAt.ηᴸ-off-pivot rb X₂≢Xᴸ)
-      (trans (variable-obligation-aligns {W = W′} {X = X₂} {Y = Y} p)
+      (trans (variable-obligation-aligns
+        {W = W′} {X = X₂} {Y = Y} naW′ p)
         (trans (sym (CTX.RebaseAt.ηᴿ-frozen rb Y))
           (sym (variable-obligation-aligns
-            {W = W} {X = Xᴸ} {Y = Y} q))))
+            {W = W} {X = Xᴸ} {Y = Y} naW q))))
 
 composeSamePivotRebase : ∀ {Δᴸ Δᴿ Δ}
     {W W′ W₂ : World Δᴸ Δᴿ Δ}
@@ -826,6 +842,7 @@ tagged-target-nonvar-nonstar-spine-⊥ : ∀ {Δᴸ Δᴿ Δ}
     {A : Ty Δᴸ} {S : Ty Δᴿ} {Y : TyVar Δᴿ}
     {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : A ⊑ᵂ⟨ W ⟩ ★}
+  → CTX.NoAliasWorld W
   → SpineValue V
   → NonVar A
   → NonStar A
@@ -835,103 +852,116 @@ tagged-target-nonvar-nonstar-spine-⊥ : ∀ {Δᴸ Δᴿ Δ}
 open OccupiedNonStarSourceSealResidual public
 
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {A = A} {Y = Y}
-    sv Anv Ans (CTI2.⊑cast² {p = p} cY prem q)
+    na sv Anv Ans (CTI2.⊑cast² {p = p} cY prem q)
     with SPT.right-var-obligation-view {W = W} {R = A} {Y = Y} p
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {A = A} {Y = Y}
-    sv Anv Ans (CTI2.⊑cast² {p = p} cY prem q)
-    | X₂ , refl , aligned
+    na sv Anv Ans (CTI2.⊑cast² {p = p} cY prem q)
+    | SPT.rv-aligned X₂ refl aligned
     with Anv
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {A = .(＇ X₂)}
-    {Y = Y} sv Anv Ans
+    {Y = Y} na sv Anv Ans
     (CTI2.⊑cast² {p = p} cY prem q)
-    | X₂ , refl , aligned | ()
+    | SPT.rv-aligned X₂ refl aligned | ()
+tagged-target-nonvar-nonstar-spine-⊥ {W = W} {A = A} {Y = Y}
+    na sv Anv Ans (CTI2.⊑cast² {p = p} cY prem q)
+    | SPT.rv-aliased X₂ eqA mode q′ = na _ mode
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
-    (sv-cast sv₀ inert) Anv Ans
+    na (sv-cast sv₀ inert) Anv Ans
     (CTI2.cast⊑cast² {p = p} c c′ prem q)
     with SPT.right-var-obligation-view {W = W} {Y = Y} p
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
-    (sv-cast sv₀ inert) Anv Ans
+    na (sv-cast sv₀ inert) Anv Ans
     (CTI2.cast⊑cast² {p = p} c c′ prem q)
-    | X₂ , refl , aligned
+    | SPT.rv-aliased X₂ eqA mode q′ = na _ mode
+tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
+    na (sv-cast sv₀ inert) Anv Ans
+    (CTI2.cast⊑cast² {p = p} c c′ prem q)
+    | SPT.rv-aligned X₂ refl aligned
     with SPT.var-consistency-view c
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
-    (sv-cast sv₀ inert) Anv Ans
+    na (sv-cast sv₀ inert) Anv Ans
     (CTI2.cast⊑cast² {p = p} c c′ prem q)
-    | X₂ , refl , aligned | inj₁ refl
+    | SPT.rv-aligned X₂ refl aligned | inj₁ refl
     with Anv
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
-    (sv-cast sv₀ inert) Anv Ans
+    na (sv-cast sv₀ inert) Anv Ans
     (CTI2.cast⊑cast² {p = p} c c′ prem q)
-    | X₂ , refl , aligned | inj₁ refl | ()
+    | SPT.rv-aligned X₂ refl aligned | inj₁ refl | ()
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
-    (sv-cast sv₀ inert) Anv Ans
+    na (sv-cast sv₀ inert) Anv Ans
     (CTI2.cast⊑cast² {p = p} c c′ prem q)
-    | X₂ , refl , aligned | inj₂ refl
+    | SPT.rv-aligned X₂ refl aligned | inj₂ refl
     with Ans
 tagged-target-nonvar-nonstar-spine-⊥ {W = W} {Y = Y}
-    (sv-cast sv₀ inert) Anv Ans
+    na (sv-cast sv₀ inert) Anv Ans
     (CTI2.cast⊑cast² {p = p} c c′ prem q)
-    | X₂ , refl , aligned | inj₂ refl | ()
-tagged-target-nonvar-nonstar-spine-⊥ (sv-Λ sv₀) Anv Ans
+    | SPT.rv-aligned X₂ refl aligned | inj₂ refl | ()
+tagged-target-nonvar-nonstar-spine-⊥ {W = W} na (sv-Λ sv₀) Anv Ans
     (CTI2.Λ⊑² Anv₀ z∈A liftγ vV target⊢ prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ Anv₀
+  tagged-target-nonvar-nonstar-spine-⊥
+    (CTX.no-alias-lift-left {W = W} {v = X⊑★} (λ ()) na) sv₀ Anv₀
     (nonvar-occurs-nonstar Anv₀ z∈A) prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-Λ sv₀) Anv Ans
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-Λ sv₀) Anv Ans
     (CTI2.Λ⊑²-smart-comma Anv₀ z∈A liftW liftγ vV target⊢ prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ Anv₀
+  tagged-target-nonvar-nonstar-spine-⊥
+    (CTX.no-alias-smart-comma liftW na) sv₀ Anv₀
     (nonvar-occurs-nonstar Anv₀ z∈A) prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-cast sv₀ inj)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-cast sv₀ inj)
     Anv () (CTI2.cast⊑² c prem q)
-tagged-target-nonvar-nonstar-spine-⊥ (sv-cast sv₀ fun)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-cast sv₀ fun)
     Anv Ans (CTI2.cast⊑² c prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-fun
+  tagged-target-nonvar-nonstar-spine-⊥ na sv₀ nonvar-fun
     nonstar-⇒ prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-cast sv₀ all)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-cast sv₀ all)
     Anv Ans (CTI2.cast⊑² c prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-all
+  tagged-target-nonvar-nonstar-spine-⊥ na sv₀ nonvar-all
     nonstar-∀ prem
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = ＇ X} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q)
     with SPT.var-consistency-view c
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = ＇ X} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q) | inj₁ ()
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = ＇ X} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q) | inj₂ ()
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = ‵ ι} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-base
+  tagged-target-nonvar-nonstar-spine-⊥ na sv₀ nonvar-base
     nonstar-ι prem
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = ★} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q) =
   ⊥-elim (A≢★ refl)
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = A ⇒ B} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-fun
+  tagged-target-nonvar-nonstar-spine-⊥ na sv₀ nonvar-fun
     nonstar-⇒ prem
-tagged-target-nonvar-nonstar-spine-⊥
+tagged-target-nonvar-nonstar-spine-⊥ na
     (sv-cast {A = `∀ A} sv₀ (genᵥ A≢★ safe))
     Anv Ans (CTI2.cast⊑² c prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-all
+  tagged-target-nonvar-nonstar-spine-⊥ na sv₀ nonvar-all
     nonstar-∀ prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-reveal-fun sv₀)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-reveal-fun sv₀)
     Anv Ans (CTI2.reveal⊑² mono rb sc c⊢ prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-fun
+  tagged-target-nonvar-nonstar-spine-⊥
+    (CTX.no-alias-same (CTX.aliasAgree mono) na) sv₀ nonvar-fun
     nonstar-⇒ prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-reveal-all sv₀)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-reveal-all sv₀)
     Anv Ans (CTI2.reveal⊑² mono rb sc c⊢ prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-all
+  tagged-target-nonvar-nonstar-spine-⊥
+    (CTX.no-alias-same (CTX.aliasAgree mono) na) sv₀ nonvar-all
     nonstar-∀ prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-conceal-fun sv₀)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-conceal-fun sv₀)
     Anv Ans (CTI2.conceal⊑²-source-ok ok mono rb sc c⊢ prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-fun
+  tagged-target-nonvar-nonstar-spine-⊥
+    (CTX.no-alias-same (CTX.aliasAgree mono) na) sv₀ nonvar-fun
     nonstar-⇒ prem
-tagged-target-nonvar-nonstar-spine-⊥ (sv-conceal-all sv₀)
+tagged-target-nonvar-nonstar-spine-⊥ na (sv-conceal-all sv₀)
     Anv Ans (CTI2.conceal⊑²-source-ok ok mono rb sc c⊢ prem q) =
-  tagged-target-nonvar-nonstar-spine-⊥ sv₀ nonvar-all
+  tagged-target-nonvar-nonstar-spine-⊥
+    (CTX.no-alias-same (CTX.aliasAgree mono) na) sv₀ nonvar-all
     nonstar-∀ prem

@@ -528,6 +528,21 @@ data SmartCommaLiftᴸ {Δᴸ Δᴿ Δ}
     → SmartAliasMergeGuard W Wᵐ β α
     → SmartCommaLiftᴸ W Wᵐ
 
+-- A smart comma lift never invents aliases: the fresh route keeps the
+-- old entries verbatim behind a star head, and the merge route agrees
+-- with the old environment on every alias.
+
+no-alias-smart-comma : ∀ {Δᴸ Δᴿ Δ Δᵐ}
+    {W : World Δᴸ Δᴿ Δ} {Wᵐ : World (Nat.suc Δᴸ) Δᴿ Δᵐ}
+  → SmartCommaLiftᴸ W Wᵐ
+  → NoAliasWorld W
+  → NoAliasWorld Wᵐ
+no-alias-smart-comma (smart-fresh-behind guard) na =
+  SmartFreshBehindGuard.fresh-no-alias guard na
+no-alias-smart-comma (smart-merge-alias guard) na =
+  no-alias-same (SmartAliasMergeGuard.old-alias-agree guard) na
+
+
 smartCommaLift-transport⊑ᵂ : ∀ {Δᴸ Δᴿ Δ Δᵐ}
     {W : World Δᴸ Δᴿ Δ}
     {Wᵐ : World (Nat.suc Δᴸ) Δᴿ Δᵐ}
