@@ -39,6 +39,7 @@ RightInjInversion² =
     {gH : Ground H} {H∼★ : ν ⊢ H ∼★} {Hns : NonStar H}
     {cH : ν ⊢ H ∼ H}
     {p : A ⊑ᵂ⟨ W ⟩ ★}
+  → CTX.NoAliasWorld W
   → SpineValue M
   → Value N
   → W ∣ γ ⊢² M

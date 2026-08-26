@@ -21,19 +21,19 @@ target-tag-seal-walk : OccupiedNonStarSourceSealResidual
   → TargetTagSealWalk
 target-tag-seal-walk occupied
     {U = U} {S = S} {Y = Y} {ν = ν} {cY = cY}
-    sv vU mono rb sc X∈ Y∈ D
+    na sv vU mono rb sc X∈ Y∈ D
     with source-spine-strip occupied {U = U} {S = S} {Y = Y}
-      {ν = ν} {cY = cY} sv vU mono rb sc X∈ Y∈ D
+      {ν = ν} {cY = cY} na sv vU mono rb sc X∈ Y∈ D
 target-tag-seal-walk occupied
     {U = U} {S = S} {Y = Y} {ν = ν} {cY = cY}
-    sv vU mono rb sc X∈ Y∈ D
-    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , spine ,
+    na sv vU mono rb sc X∈ Y∈ D
+    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , naᵒ , spine ,
         spine-sealed Pᵖ Aᵖ spineᵖ sealed finish =
   finish sealed
 target-tag-seal-walk occupied
     {U = U} {S = S} {Y = Y} {ν = ν} {cY = cY}
-    sv vU mono rb sc X∈ Y∈ D
-    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , spine ,
+    na sv vU mono rb sc X∈ Y∈ D
+    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , naᵒ , spine ,
         spine-tagged Pᵖ Aᵖ spineᵖ Wᵖ γᵖ pᵖ monoᵒᵖ sameᵒᵖ
           boundaryᵖᵒ source∈ᵒ target∈ᵒ premiseᶜ finish =
   finish
@@ -43,11 +43,11 @@ target-tag-seal-walk occupied
       {P = Pᵖ} {U = U} {A = Aᵖ} {S = S}
       {Xᴸ = Xᵒ} {Y = Y} {ν = ν} {cY = cY}
       {p = pᵖ} {q = qᵒ}
-      spineᵖ vU monoᵒᵖ boundaryᵖᵒ sameᵒᵖ source∈ᵒ target∈ᵒ
+      naᵒ spineᵖ vU monoᵒᵖ boundaryᵖᵒ sameᵒᵖ source∈ᵒ target∈ᵒ
       (core-tagged premiseᶜ))
 target-tag-seal-walk occupied
     {U = U} {S = S} {Y = Y} {ν = ν} {cY = cY}
-    sv vU mono rb sc X∈ Y∈ D
-    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , spine ,
+    na sv vU mono rb sc X∈ Y∈ D
+    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , naᵒ , spine ,
         spine-paired Pᵖ Aᵖ spineᵖ paired finish =
   finish paired

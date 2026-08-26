@@ -40,6 +40,7 @@ TargetTagSealWalk =
     {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p₀ : R ⊑ᵂ⟨ W′ ⟩ ★}
     {q : (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+  → CTI2.NoAliasWorld W
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono W W′

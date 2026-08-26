@@ -271,6 +271,7 @@ SourceSpineStrip =
     {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p₀ : R ⊑ᵂ⟨ W′ ⟩ ★}
     {q : (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+  → CTI2.NoAliasWorld W
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono W W′
@@ -285,7 +286,8 @@ SourceSpineStrip =
     Σ[ Wᵒ ∈ World Δᴸ Δᴿ Δ ]
     Σ[ γᵒ ∈ CtxImp Wᵒ ]
     Σ[ qᵒ ∈ (＇ Xᵒ) ⊑ᵂ⟨ Wᵒ ⟩ (＇ Y) ]
-      (SpineValue Core
+      (CTI2.NoAliasWorld Wᵒ
+       × SpineValue Core
        × SourceSpineStripBranch W γ V R U Xᴸ Y S cY q
            Core CoreTy Xᵒ Wᵒ γᵒ qᵒ)
 
@@ -299,6 +301,7 @@ SourceColumnStrip =
     {ν : Env∼ Δᴿ} {cY : ν ⊢ (＇ Y) ∼ ★}
     {p : (＇ Xᴸ) ⊑ᵂ⟨ W′ ⟩ ★}
     {q : (＇ Xᴸ) ⊑ᵂ⟨ W ⟩ (＇ Y)}
+  → CTI2.NoAliasWorld W
   → SpineValue V
   → Value U
   → CTI2.ImpEnvMono W W′
@@ -312,7 +315,8 @@ SourceColumnStrip =
     Σ[ Wᵒ ∈ World Δᴸ Δᴿ Δ ]
     Σ[ γᵒ ∈ CtxImp Wᵒ ]
     Σ[ qᵒ ∈ (＇ Xᵒ) ⊑ᵂ⟨ Wᵒ ⟩ (＇ Y) ]
-      (SpineValue Core
+      (CTI2.NoAliasWorld Wᵒ
+       × SpineValue Core
        × SourceColumnStripBranch W γ V U Xᴸ Y S cY q
            Core CoreTy Xᵒ Wᵒ γᵒ qᵒ)
 
