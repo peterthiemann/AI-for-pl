@@ -60,6 +60,7 @@ open import proof.ImprecisionConsistency using
    source-nonvar-from-target; source-nonvar-target; source-occurs-target;
    subst-⊑; subst₂-⊑; subst-zero-occurs-exts; target-occurs-source;
    toRenameᵗ-injective)
+open import Data.Sum using (inj₁; inj₂)
 import proof.ImprecisionConsistency as PIC
 open import proof.TypeInTermSubst using
   (renameᵗᵐ-preserves-Value; rename-occurs; StoreTransport;
@@ -584,6 +585,7 @@ target-left-lift-eq η B =
 Λ-fresh-to-mid-shifted-⊑ᵂ {W = W} {A = A} {B = B} p =
   WD.⊑-env-mono
     (λ Z dynamic → trans (sym (Λ-fresh-mid-env-eq W Z)) dynamic)
+    (λ Z al → trans (sym (Λ-fresh-mid-env-eq W Z)) al)
     (subst≡
       (λ R → CTX.impEnvʷ
           (TBL.ΛLiftToBindFreshWorld I.X⊑★ W)
@@ -608,6 +610,7 @@ target-left-lift-eq η B =
 Λ-mid-to-out-shifted-⊑ᵂ {W = W} {A = A} {B = B} p =
   WD.⊑-env-mono
     (λ Z dynamic → trans (sym (Λ-mid-out-env-eq W Z)) dynamic)
+    (λ Z al → trans (sym (Λ-mid-out-env-eq W Z)) al)
     (subst≡
       (λ R → CTX.impEnvʷ (ΛPostMidWorld W)
         ⊢ CTX.embedᴸ Wout (⇑ᵗ A) ⊑ R)
@@ -757,10 +760,15 @@ liftCtxᴸ-target (CTX.liftᴸ-∷ liftγ) =
     (W : CTX.World Δᴸ Δᴿ Δ)
   → CTX.ImpEnvMono (ΛPostMidWorld W)
       (TBL.ΛLiftToBindFreshWorld I.X⊑★ W)
-Λ-mid-fresh-mono W Fin.zero eq = refl
-Λ-mid-fresh-mono W (Fin.suc Fin.zero) eq = refl
-Λ-mid-fresh-mono W (Fin.suc (Fin.suc Fin.zero)) eq = refl
-Λ-mid-fresh-mono W (Fin.suc (Fin.suc (Fin.suc Z))) eq = eq
+Λ-mid-fresh-mono W = CTX.eqᵉᵐ env-eq
+  where
+  env-eq : ∀ Z
+    → CTX.impEnvʷ (ΛPostMidWorld W) Z
+      ≡ CTX.impEnvʷ (TBL.ΛLiftToBindFreshWorld I.X⊑★ W) Z
+  env-eq Fin.zero = refl
+  env-eq (Fin.suc Fin.zero) = refl
+  env-eq (Fin.suc (Fin.suc Fin.zero)) = refl
+  env-eq (Fin.suc (Fin.suc (Fin.suc Z))) = refl
 
 
 Λ-out-mid-mono : ∀ {Δᴸ Δᴿ Δ}
@@ -769,10 +777,18 @@ liftCtxᴸ-target (CTX.liftᴸ-∷ liftγ) =
       (CTX.liftWorldLeft I.X⊑★
         (CTX.rightOnlyWorld (CTX.rightOnlyWorld W ★) (＇ Fin.zero)))
       (ΛPostMidWorld W)
-Λ-out-mid-mono W Fin.zero eq = refl
-Λ-out-mid-mono W (Fin.suc Fin.zero) eq = refl
-Λ-out-mid-mono W (Fin.suc (Fin.suc Fin.zero)) eq = refl
-Λ-out-mid-mono W (Fin.suc (Fin.suc (Fin.suc Z))) eq = eq
+Λ-out-mid-mono W = CTX.eqᵉᵐ env-eq
+  where
+  env-eq : ∀ Z
+    → CTX.impEnvʷ
+        (CTX.liftWorldLeft I.X⊑★
+          (CTX.rightOnlyWorld (CTX.rightOnlyWorld W ★)
+            (＇ Fin.zero))) Z
+      ≡ CTX.impEnvʷ (ΛPostMidWorld W) Z
+  env-eq Fin.zero = refl
+  env-eq (Fin.suc Fin.zero) = refl
+  env-eq (Fin.suc (Fin.suc Fin.zero)) = refl
+  env-eq (Fin.suc (Fin.suc (Fin.suc Z))) = refl
 
 
 Λ-inner-rebaseᴿ : ∀ {Δᴸ Δᴿ Δ}
@@ -961,7 +977,32 @@ innerρ₃-star-map : ∀ {Δ} {μ : I.ImpEnv Δ}
   → ∀ X → I.extendᵐ I.X⊑X μ X ≡ I.X⊑★
       → I.instᵐ (I.instᵐ (I.instᵐ μ)) (innerρ₃ X) ≡ I.X⊑★
 innerρ₃-star-map Fin.zero ()
-innerρ₃-star-map (Fin.suc X) eq = eq
+innerρ₃-star-map (Fin.suc X) eq =
+  cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ (I.lift-star-inv eq)))
+
+
+innerρ₃-alias-map : ∀ {Δ} {μ : I.ImpEnv Δ}
+  → PIC.RenameAliasMap innerρ₃
+      (I.extendᵐ I.X⊑X μ)
+      (I.instᵐ (I.instᵐ (I.instᵐ μ)))
+innerρ₃-alias-map Fin.zero ()
+innerρ₃-alias-map (Fin.suc X) {T} eq
+    with I.lift-alias-inv eq
+innerρ₃-alias-map (Fin.suc X) {T} eq | T₀ , mode , refl =
+  trans
+    (cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ mode)))
+    (cong I.X⊑ᵗ (sym (shift-rename₃-eq T₀)))
+  where
+  shift-rename₃-eq : ∀ (T₀ : Ty _)
+    → renameᵗ innerρ₃ (⇑ᵗ T₀) ≡ ⇑ᵗ (⇑ᵗ (⇑ᵗ T₀))
+  shift-rename₃-eq T₀ =
+    trans (renameᵗ-comp Fin.suc innerρ₃ T₀)
+      (trans (renameᵗ-cong T₀ (λ Y → refl))
+        (sym
+          (trans
+            (renameᵗ-comp Fin.suc Fin.suc (⇑ᵗ T₀))
+            (renameᵗ-comp Fin.suc
+              (λ Y → Fin.suc (Fin.suc Y)) T₀))))
 
 
 split★-same : ∀ {Δ} {μ : I.ImpEnv Δ}
@@ -977,7 +1018,9 @@ split★-star : ∀ {Δ} {μ : I.ImpEnv Δ}
   → I.extendᵐ I.X⊑X μ X ≡ I.X⊑★
   → I.instᵐ (I.instᵐ (I.instᵐ μ)) ⊢ splitSource₃ X ⊑ ★
 split★-star Fin.zero ()
-split★-star (Fin.suc X) eq = I.X⊑★ eq
+split★-star (Fin.suc X) eq =
+  I.X⊑★
+    (cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ (I.lift-star-inv eq))))
 
 
 route1Innerρ : ∀ {Δ Δ₁ Δ₂}
@@ -1259,20 +1302,22 @@ route1-old-mark-out : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
       (route1OldCenter κ₁ κ₂ Z) ≡ I.X⊑★
 route1-old-mark-out {W₁ = W₁} {W₂ = W₂}
     {κ₁ = κ₁} {ins₁ = ins₁} {ins₂ = ins₂} facts Z old-star =
-  subst≡
-    (λ C → CTX.impEnvʷ W₂ C ≡ I.X⊑★)
-    (TE.window-old (targetWindow₂ facts)
-      (toRenameᵗ κ₁ (Fin.suc Z)))
-    (trans (TE.impEnv-insert ins₂
+  cong I.⇑ᵛ
+    (subst≡
+      (λ C → CTX.impEnvʷ W₂ C ≡ I.X⊑★)
+      (TE.window-old (targetWindow₂ facts)
         (toRenameᵗ κ₁ (Fin.suc Z)))
-      old-star₁)
+      (trans (TE.impEnv-insert ins₂
+          (toRenameᵗ κ₁ (Fin.suc Z)))
+        (cong (I.renameᵛ (toRenameᵗ _)) old-star₁)))
   where
   old-star₁ :
       CTX.impEnvʷ W₁ (toRenameᵗ κ₁ (Fin.suc Z)) ≡ I.X⊑★
   old-star₁ =
     subst≡ (λ C → CTX.impEnvʷ W₁ C ≡ I.X⊑★)
       (TE.window-old (targetWindow₁ facts) Z)
-      (trans (TE.impEnv-insert ins₁ Z) old-star)
+      (trans (TE.impEnv-insert ins₁ Z)
+        (cong (I.renameᵛ (toRenameᵗ _)) old-star))
 
 
 window-zero-off : ∀ {Δ Δ′}
@@ -1301,13 +1346,14 @@ route1-mid-source-pivot-from-windows {W = W} {W₂ = W₂}
     win₁ win₂ =
   subst≡ (λ C → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W₂) C
       ≡ I.X⊑★)
-    (sym point-eq) star₂
+    (sym point-eq) (cong I.⇑ᵛ star₂)
   where
   star₁ = TE.impEnv-off-insert ins₁
     (window-zero-off (TE.windowEmbedding win₁))
   star₂ = subst≡ (λ C → CTX.impEnvʷ W₂ C ≡ I.X⊑★)
     (TE.window-old win₂ (toRenameᵗ κ₁ Fin.zero))
-    (trans (TE.impEnv-insert ins₂ (toRenameᵗ κ₁ Fin.zero)) star₁)
+    (trans (TE.impEnv-insert ins₂ (toRenameᵗ κ₁ Fin.zero))
+      (cong (I.renameᵛ (toRenameᵗ _)) star₁))
   point-eq = cong Fin.suc
     (trans
       (CR.toRenameᵗ-∘ κ₂ (skip (κ₁ CR.∘↪ keep (CTX.ηᴸʷ W)))
@@ -1334,6 +1380,110 @@ route1-split★-same facts Fin.zero = I.X⊑★ refl
 route1-split★-same facts (Fin.suc X) = I.X⊑X
 
 
+route1-old-alias-out : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
+    {W : CTX.World Δᴸ Δᴿ Δ}
+    {W₁ : CTX.World Δᴸ (suc Δᴿ) Δ₁}
+    {W₂ : CTX.World Δᴸ (suc (suc Δᴿ)) Δ₂}
+    {π₁ : Δ ↪ᵗ Δ₁}
+    {π₂ : Δ₁ ↪ᵗ Δ₂}
+    {κ₁ : suc Δ ↪ᵗ Δ₁}
+    {κ₂ : suc Δ₁ ↪ᵗ Δ₂}
+    {ins₁ : TE.TargetInsert wk↪ᵗ π₁ W W₁}
+    {ins₂ : TE.TargetInsert wk↪ᵗ π₂ W₁ W₂}
+  → ΛRouteOneWindowFacts κ₁ κ₂ ins₁ ins₂
+  → ∀ Z {T : Ty Δ}
+  → CTX.impEnvʷ W Z ≡ I.X⊑ᵗ T
+  → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W₂)
+      (route1OldCenter κ₁ κ₂ Z)
+    ≡ I.X⊑ᵗ (renameᵗ (route1OldCenter κ₁ κ₂) T)
+route1-old-alias-out {W = W} {W₁ = W₁} {W₂ = W₂}
+    {π₁ = π₁} {π₂ = π₂} {κ₁ = κ₁} {κ₂ = κ₂}
+    {ins₁ = ins₁} {ins₂ = ins₂} facts Z {T} eq =
+  subst≡
+    (λ C → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W₂) C
+      ≡ I.X⊑ᵗ (renameᵗ (route1OldCenter κ₁ κ₂) T))
+    var-eq
+    (trans (cong I.⇑ᵛ step₂)
+      (cong I.X⊑ᵗ rep-eq))
+  where
+  win₁ = ΛRouteOneWindowFacts.targetWindow₁ facts
+  win₂ = ΛRouteOneWindowFacts.targetWindow₂ facts
+
+  step₁ : CTX.impEnvʷ W₁ (toRenameᵗ π₁ Z)
+      ≡ I.X⊑ᵗ (renameᵗ (toRenameᵗ π₁) T)
+  step₁ =
+    trans (TE.impEnv-insert ins₁ Z)
+      (cong (I.renameᵛ (toRenameᵗ π₁)) eq)
+
+  step₂ : CTX.impEnvʷ W₂ (toRenameᵗ π₂ (toRenameᵗ π₁ Z))
+      ≡ I.X⊑ᵗ (renameᵗ (toRenameᵗ π₂)
+          (renameᵗ (toRenameᵗ π₁) T))
+  step₂ =
+    trans (TE.impEnv-insert ins₂ (toRenameᵗ π₁ Z))
+      (cong (I.renameᵛ (toRenameᵗ π₂)) step₁)
+
+  var-eq :
+    Fin.suc (toRenameᵗ π₂ (toRenameᵗ π₁ Z))
+      ≡ route1OldCenter κ₁ κ₂ Z
+  var-eq =
+    cong Fin.suc
+      (trans
+        (cong (toRenameᵗ π₂) (TE.window-old win₁ Z))
+        (TE.window-old win₂ (toRenameᵗ κ₁ (Fin.suc Z))))
+
+  rep-eq :
+    ⇑ᵗ (renameᵗ (toRenameᵗ π₂) (renameᵗ (toRenameᵗ π₁) T))
+      ≡ renameᵗ (route1OldCenter κ₁ κ₂) T
+  rep-eq =
+    trans
+      (cong ⇑ᵗ (renameᵗ-comp (toRenameᵗ π₁)
+        (toRenameᵗ π₂) T))
+    (trans
+      (renameᵗ-comp
+        (λ Y → toRenameᵗ π₂ (toRenameᵗ π₁ Y)) Fin.suc T)
+      (renameᵗ-cong T
+        (λ Y →
+          cong Fin.suc
+            (trans
+              (cong (toRenameᵗ π₂) (TE.window-old win₁ Y))
+              (TE.window-old win₂
+                (toRenameᵗ κ₁ (Fin.suc Y)))))))
+
+
+route1-split★-alias : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
+    {W : CTX.World Δᴸ Δᴿ Δ}
+    {W₁ : CTX.World Δᴸ (suc Δᴿ) Δ₁}
+    {W₂ : CTX.World Δᴸ (suc (suc Δᴿ)) Δ₂}
+    {π₁ : Δ ↪ᵗ Δ₁}
+    {π₂ : Δ₁ ↪ᵗ Δ₂}
+    {κ₁ : suc Δ ↪ᵗ Δ₁}
+    {κ₂ : suc Δ₁ ↪ᵗ Δ₂}
+    {ins₁ : TE.TargetInsert wk↪ᵗ π₁ W W₁}
+    {ins₂ : TE.TargetInsert wk↪ᵗ π₂ W₁ W₂}
+  → ΛRouteOneWindowFacts κ₁ κ₂ ins₁ ins₂
+  → PIC.SubstAliasMap
+      (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑X W))
+      (CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W₂))
+      (route1SplitSource κ₁ κ₂)
+route1-split★-alias facts Fin.zero ()
+route1-split★-alias {W = W} {κ₁ = κ₁} {κ₂ = κ₂}
+    facts (Fin.suc Z) {T} eq
+    with I.lift-alias-inv eq
+route1-split★-alias {W = W} {κ₁ = κ₁} {κ₂ = κ₂}
+    facts (Fin.suc Z) {T} eq | T₀ , mode , refl =
+  inj₂ (route1OldCenter κ₁ κ₂ Z , refl ,
+    trans (route1-old-alias-out facts Z mode)
+      (cong I.X⊑ᵗ (sym (shift-subst-eq T₀))))
+  where
+  shift-subst-eq : ∀ (T₀ : Ty _)
+    → substᵗ (route1SplitSource κ₁ κ₂) (⇑ᵗ T₀)
+      ≡ renameᵗ (route1OldCenter κ₁ κ₂) T₀
+  shift-subst-eq T₀ =
+    trans (substᵗ-rename (route1SplitSource κ₁ κ₂)
+        Fin.suc T₀)
+      (rename-as-subst (route1OldCenter κ₁ κ₂) T₀)
+
+
 route1-split★-star : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {W₁ : CTX.World Δᴸ (suc Δᴿ) Δ₁}
@@ -1351,7 +1501,8 @@ route1-split★-star : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
       ⊢ route1SplitSource κ₁ κ₂ X ⊑ ★
 route1-split★-star facts Fin.zero ()
 route1-split★-star facts (Fin.suc X) eq =
-  I.X⊑★ (route1-old-mark-out facts X eq)
+  I.X⊑★
+    (route1-old-mark-out facts X (I.lift-star-inv eq))
 
 
 route1-inner-star-map : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
@@ -1371,7 +1522,7 @@ route1-inner-star-map : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
       (route1Innerρ κ₁ κ₂ X) ≡ I.X⊑★
 route1-inner-star-map facts Fin.zero ()
 route1-inner-star-map facts (Fin.suc X) eq =
-  route1-old-mark-out facts X eq
+  route1-old-mark-out facts X (I.lift-star-inv eq)
 
 
 route1-source-split-eq : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
@@ -1471,7 +1622,8 @@ route1-target-split★-eq {W = W} {W₂ = W₂}
         ⊑ R)
       (route1-target-split★-eq facts B)
       (subst₂-⊑ (route1-split★-same facts)
-        (route1-split★-star facts) body-p))
+        (route1-split★-star facts)
+        (route1-split★-alias facts) body-p))
   where
   Wout = CTX.liftWorldLeft I.X⊑★ W₂
 
@@ -1574,6 +1726,38 @@ route1-target-inner-eq {W = W} {W₂ = W₂}
           (inner-reveal-target-eq B)))))
 
 
+route1-inner-alias-map : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
+    {W : CTX.World Δᴸ Δᴿ Δ}
+    {W₁ : CTX.World Δᴸ (suc Δᴿ) Δ₁}
+    {W₂ : CTX.World Δᴸ (suc (suc Δᴿ)) Δ₂}
+    {π₁ : Δ ↪ᵗ Δ₁}
+    {π₂ : Δ₁ ↪ᵗ Δ₂}
+    {κ₁ : suc Δ ↪ᵗ Δ₁}
+    {κ₂ : suc Δ₁ ↪ᵗ Δ₂}
+    {ins₁ : TE.TargetInsert wk↪ᵗ π₁ W W₁}
+    {ins₂ : TE.TargetInsert wk↪ᵗ π₂ W₁ W₂}
+  → ΛRouteOneWindowFacts κ₁ κ₂ ins₁ ins₂
+  → PIC.RenameAliasMap (route1Innerρ κ₁ κ₂)
+      (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑X W))
+      (CTX.impEnvʷ (ΛRouteOneMidWorldAt W W₂ κ₁ κ₂))
+route1-inner-alias-map facts Fin.zero ()
+route1-inner-alias-map {W = W} {κ₁ = κ₁} {κ₂ = κ₂}
+    facts (Fin.suc Z) {T} eq
+    with I.lift-alias-inv eq
+route1-inner-alias-map {W = W} {κ₁ = κ₁} {κ₂ = κ₂}
+    facts (Fin.suc Z) {T} eq | T₀ , mode , refl =
+  trans (route1-old-alias-out facts Z mode)
+    (cong I.X⊑ᵗ (sym (shift-rename-eq T₀)))
+  where
+  shift-rename-eq : ∀ (T₀ : Ty _)
+    → renameᵗ (route1Innerρ κ₁ κ₂) (⇑ᵗ T₀)
+      ≡ renameᵗ (route1OldCenter κ₁ κ₂) T₀
+  shift-rename-eq T₀ =
+    trans (renameᵗ-comp Fin.suc
+        (route1Innerρ κ₁ κ₂) T₀)
+      (renameᵗ-cong T₀ (λ Y → refl))
+
+
 Λ-route1-inner-body-⊑ᵂ : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {W₁ : CTX.World Δᴸ (suc Δᴿ) Δ₁}
@@ -1606,7 +1790,8 @@ route1-target-inner-eq {W = W} {W₂ = W₂}
       (route1-target-inner-eq facts B)
       (rename-⊑ (route1Innerρ κ₁ κ₂)
         (route1Innerρ-injective κ₁ κ₂)
-        (route1-inner-star-map facts) body-p))
+        (route1-inner-star-map facts)
+        (route1-inner-alias-map facts) body-p))
   where
   Wmid = ΛRouteOneMidWorldAt W W₂ κ₁ κ₂
 
@@ -1990,6 +2175,35 @@ target-split★₃-eq W B =
   var-eq (Fin.suc X) = refl
 
 
+split★-alias : ∀ {Δ} {μ : I.ImpEnv Δ}
+  → PIC.SubstAliasMap (I.extendᵐ I.X⊑X μ)
+      (I.instᵐ (I.instᵐ (I.instᵐ μ)))
+      splitSource₃
+split★-alias Fin.zero ()
+split★-alias (Fin.suc X) {T} eq
+    with I.lift-alias-inv eq
+split★-alias (Fin.suc X) {T} eq | T₀ , mode , refl =
+  inj₂ (Fin.suc (Fin.suc (Fin.suc X)) , refl ,
+    trans
+      (cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ mode)))
+      (cong I.X⊑ᵗ (sym (shift-subst₃-eq T₀))))
+  where
+  shift-subst₃-eq : ∀ (T₀ : Ty _)
+    → substᵗ splitSource₃ (⇑ᵗ T₀) ≡ ⇑ᵗ (⇑ᵗ (⇑ᵗ T₀))
+  shift-subst₃-eq T₀ =
+    trans (substᵗ-rename splitSource₃ Fin.suc T₀)
+      (trans
+        (substᵗ-cong T₀ (λ Y → refl))
+        (trans
+          (rename-as-subst
+            (λ Y → Fin.suc (Fin.suc (Fin.suc Y))) T₀)
+          (sym
+            (trans
+              (renameᵗ-comp Fin.suc Fin.suc (⇑ᵗ T₀))
+              (renameᵗ-comp Fin.suc
+                (λ Y → Fin.suc (Fin.suc Y)) T₀)))))
+
+
 Λ-final-body-⊑ᵂ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {A : Ty (suc Δᴸ)} {B : Ty (suc Δᴿ)}
@@ -2008,7 +2222,8 @@ target-split★₃-eq W B =
           (CTX.embedᴸ (CTX.liftWorldBoth I.X⊑X W) A)
         ⊑ R)
       (target-split★₃-eq W B)
-      (subst₂-⊑ split★-same split★-star body-p))
+      (subst₂-⊑ split★-same split★-star split★-alias
+        body-p))
   where
   Wout =
     CTX.liftWorldLeft I.X⊑★
@@ -2074,7 +2289,8 @@ target-inner₃-eq W B =
           (CTX.embedᴸ (CTX.liftWorldBoth I.X⊑X W) A)
         ⊑ R)
       (target-inner₃-eq W B)
-      (rename-⊑ innerρ₃ innerρ₃-injective innerρ₃-star-map body-p))
+      (rename-⊑ innerρ₃ innerρ₃-injective innerρ₃-star-map
+        innerρ₃-alias-map body-p))
 
 
 Λ-inner-body-⊑ᵂ-applyBody : ∀ {Δᴸ Δᴿ Δ}
@@ -2901,7 +3117,7 @@ open ΛRouteOnePostWindowSupport public
     {κ₂ : suc Δ₁ ↪ᵗ Δ₂}
   → CTX.ImpEnvMono (CTX.liftWorldLeft I.X⊑★ W₂)
       (ΛRouteOneMidWorldAt W W₂ κ₁ κ₂)
-Λ-route1-out-mid-mono-at Z eq = eq
+Λ-route1-out-mid-mono-at = CTX.eqᵉᵐ (λ Z → refl)
 
 
 Λ-route1-mid-fresh-mono-at : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
@@ -2915,63 +3131,82 @@ open ΛRouteOnePostWindowSupport public
     {ins₁ : TE.TargetInsert wk↪ᵗ π₁ W W₁}
     {ins₂ : TE.TargetInsert wk↪ᵗ π₂ W₁ W₂}
   → (facts : ΛRouteOneWindowFacts κ₁ κ₂ ins₁ ins₂)
+  → CTX.NoAliasWorld W
   → CTX.ImpEnvMono
       (ΛRouteOneMidWorldAt W W₂ κ₁ κ₂)
       (ΛRouteOneFreshWorldAt W₁ κ₂ (CTX.targetStoreʷ W₂))
-Λ-route1-mid-fresh-mono-at {W₁ = W₁} {W₂ = W₂}
-    {κ₂ = κ₂} facts Fin.zero eq = refl
-Λ-route1-mid-fresh-mono-at {W₁ = W₁} {W₂ = W₂}
-    {κ₂ = κ₂} {ins₂ = ins₂} facts (Fin.suc Z′) eq
-    with CR.preimage? κ₂ Z′ in pre
-Λ-route1-mid-fresh-mono-at {W₁ = W₁} {W₂ = W₂}
-    {κ₂ = κ₂} {ins₂ = ins₂} facts (Fin.suc Z′) eq
-    | nothing =
-  CR.renameEnv-off κ₂
-    (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑★ W₁))
-    pre
-Λ-route1-mid-fresh-mono-at {W₁ = W₁} {W₂ = W₂}
-    {κ₂ = κ₂} {ins₂ = ins₂} facts (Fin.suc Z′) eq
-    | just Fin.zero =
-  subst≡
-    (λ C → CR.renameEnv κ₂
-      (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑★ W₁)) C
-      ≡ I.X⊑★)
-    (sym image-eq)
-    (CR.renameEnv-image κ₂
-      (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑★ W₁))
-      Fin.zero)
+Λ-route1-mid-fresh-mono-at {W = W} {W₁ = W₁} {W₂ = W₂}
+    {κ₁ = κ₁} {κ₂ = κ₂} {ins₁ = ins₁} {ins₂ = ins₂} facts na =
+  CTX.imp-env-mono star
+    (CTX.alias-same alias-fwdʹ alias-bwdʹ)
   where
-  image-eq : Z′ ≡ toRenameᵗ κ₂ Fin.zero
-  image-eq = CR.preimage?-sound κ₂ pre
-Λ-route1-mid-fresh-mono-at {W₁ = W₁} {W₂ = W₂}
-    {π₂ = π₂} {κ₂ = κ₂} {ins₂ = ins₂} facts (Fin.suc Z′) eq
-    | just (Fin.suc Z) =
-  subst≡
-    (λ C → CR.renameEnv κ₂
-      (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑★ W₁)) C
-      ≡ I.X⊑★)
-    (sym image-eq)
-    (trans
-      (CR.renameEnv-image κ₂
-        (CTX.impEnvʷ (CTX.liftWorldBoth I.X⊑★ W₁))
-        (Fin.suc Z))
-      old-star)
-  where
-  image-eq : Z′ ≡ toRenameᵗ κ₂ (Fin.suc Z)
-  image-eq = CR.preimage?-sound κ₂ pre
+  na₁ : CTX.NoAliasWorld W₁
+  na₁ = TE.no-alias-insert ins₁ na
 
-  final-star : CTX.impEnvʷ W₂ (toRenameᵗ π₂ Z) ≡ I.X⊑★
-  final-star =
-    subst≡ (λ C → CTX.impEnvʷ W₂ C ≡ I.X⊑★)
-      (sym
-        (trans (TE.TargetWindowInsert.window-old
-          (ΛRouteOneWindowFacts.targetWindow₂ facts) Z)
-          (sym image-eq)))
-      eq
+  na₂ : CTX.NoAliasWorld W₂
+  na₂ = TE.no-alias-insert ins₂ na₁
 
-  old-star : CTX.impEnvʷ W₁ Z ≡ I.X⊑★
-  old-star = trans (sym (TE.impEnv-insert ins₂ Z)) final-star
+  star : ∀ Z
+    → CTX.impEnvʷ (ΛRouteOneMidWorldAt W W₂ κ₁ κ₂) Z ≡ I.X⊑★
+    → CTX.impEnvʷ
+        (ΛRouteOneFreshWorldAt W₁ κ₂ (CTX.targetStoreʷ W₂)) Z
+      ≡ I.X⊑★
+  star Fin.zero eq = refl
+  star (Fin.suc Z′) eq with CR.preimage? κ₂ Z′ in pre
+  star (Fin.suc Z′) eq | nothing = refl
+  star (Fin.suc Z′) eq | just Fin.zero = refl
+  star (Fin.suc Z′) eq | just (Fin.suc Z) =
+    cong (I.renameᵛ (toRenameᵗ (skip κ₂)))
+      (cong I.⇑ᵛ old-star)
+    where
+    image-eq : Z′ ≡ toRenameᵗ κ₂ (Fin.suc Z)
+    image-eq = CR.preimage?-sound κ₂ pre
 
+    final-star : CTX.impEnvʷ W₂ (toRenameᵗ _ Z) ≡ I.X⊑★
+    final-star =
+      subst≡ (λ C → CTX.impEnvʷ W₂ C ≡ I.X⊑★)
+        (trans image-eq
+          (sym (TE.TargetWindowInsert.window-old
+            (ΛRouteOneWindowFacts.targetWindow₂ facts) Z)))
+        (I.lift-star-inv eq)
+
+    old-star : CTX.impEnvʷ W₁ Z ≡ I.X⊑★
+    old-star =
+      I.renameᵛ-star-inv
+        (trans (sym (TE.impEnv-insert ins₂ Z)) final-star)
+
+  alias-fwdʹ : ∀ Z {T}
+    → CTX.impEnvʷ (ΛRouteOneMidWorldAt W W₂ κ₁ κ₂) Z
+      ≡ I.X⊑ᵗ T
+    → CTX.impEnvʷ
+        (ΛRouteOneFreshWorldAt W₁ κ₂ (CTX.targetStoreʷ W₂)) Z
+      ≡ I.X⊑ᵗ T
+  alias-fwdʹ Fin.zero ()
+  alias-fwdʹ (Fin.suc Z′) {T} eq
+      with I.lift-alias-inv eq
+  alias-fwdʹ (Fin.suc Z′) {T} eq | T₀ , mode , _ =
+    ⊥-elim (na₂ Z′ mode)
+
+  alias-bwdʹ : ∀ Z {T}
+    → CTX.impEnvʷ
+        (ΛRouteOneFreshWorldAt W₁ κ₂ (CTX.targetStoreʷ W₂)) Z
+      ≡ I.X⊑ᵗ T
+    → CTX.impEnvʷ (ΛRouteOneMidWorldAt W W₂ κ₁ κ₂) Z
+      ≡ I.X⊑ᵗ T
+  alias-bwdʹ Fin.zero ()
+  alias-bwdʹ (Fin.suc Z′) {T} eq
+      with CR.preimage? κ₂ Z′ in pre
+  alias-bwdʹ (Fin.suc Z′) {T} () | nothing
+  alias-bwdʹ (Fin.suc Z′) {T} eq | just Z
+      with I.renameᵛ-alias-inv eq
+  alias-bwdʹ (Fin.suc Z′) {T} eq | just Fin.zero
+      | T₀ , () , _
+  alias-bwdʹ (Fin.suc Z′) {T} eq | just (Fin.suc Z)
+      | T₀ , mode , _
+      with I.lift-alias-inv mode
+  alias-bwdʹ (Fin.suc Z′) {T} eq | just (Fin.suc Z)
+      | T₀ , mode , _ | T₁ , mode₁ , _ =
+    ⊥-elim (na₁ Z mode₁)
 
 Λ-route1-post-window-support-at : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
     {W : CTX.World Δᴸ Δᴿ Δ}
@@ -3579,6 +3814,7 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
     {Wᵐ : CTX.World (suc Δᴸ) Δᴿ Δ}
     {β α : Fin.Fin Δᴿ}
   → (guard : CTX.SmartAliasMergeGuard W Wᵐ β α)
+  → CTX.NoAliasWorld Wᵐ
   → ΛPostWindowGeometry Wᵐ
       (TE.smartAliasInsertWorld
         (TE.rightBindTargetInsert
@@ -3586,10 +3822,10 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
         (TE.smartAliasInsertWorld
           (TE.rightBindTargetInsert {W = W} {B = ★}) Wᵐ))
       (Λ-route1-smart-alias-ext₂ guard)
-Λ-route1-smart-alias-post-window guard =
+Λ-route1-smart-alias-post-window guard naᵐ =
   Λ-route1-post-window-at facts
     (Λ-route1-post-window-support-at facts
-      (Λ-route1-mid-fresh-mono-at facts)
+      (Λ-route1-mid-fresh-mono-at facts naᵐ)
       (λ Bpre-zero∈ →
         generated-reveal-⊢↑-present Bpre-zero∈ (Z∋ refl))
       (λ zero∈B →
@@ -3679,6 +3915,7 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {Wᵐ : CTX.World (suc Δᴸ) Δᴿ Δᵐ}
   → (guard : CTX.SmartFreshBehindGuard W Wᵐ)
+  → CTX.NoAliasWorld Wᵐ
   → ΛPostWindowGeometry Wᵐ
       (TE.smartFreshInsertWorld
         (TE.rightBindTargetInsert
@@ -3686,10 +3923,10 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
         (TE.smartFreshGuardInsert
           (TE.rightBindTargetInsert {W = W} {B = ★}) guard))
       (Λ-route1-smart-fresh-ext₂ guard)
-Λ-route1-smart-fresh-post-window guard =
+Λ-route1-smart-fresh-post-window guard naᵐ =
   Λ-route1-post-window-at facts
     (Λ-route1-post-window-support-at facts
-      (Λ-route1-mid-fresh-mono-at facts)
+      (Λ-route1-mid-fresh-mono-at facts naᵐ)
       (λ Bpre-zero∈ →
         generated-reveal-⊢↑-present Bpre-zero∈ (Z∋ refl))
       (λ zero∈B →
@@ -3703,9 +3940,10 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {Wᵐ : CTX.World (suc Δᴸ) Δᴿ Δᵐ}
   → (plan : ΛTwoInsertPostPlan W)
+  → CTX.NoAliasWorld Wᵐ
   → CTX.SmartCommaLiftᴸ W Wᵐ
   → ΛSmartChildPostPlan plan
-Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan
+Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan naᵐ
     (CTX.smart-merge-alias guard) =
   record
     { childPlan = record
@@ -3758,23 +3996,23 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
   first-entry = subst≡
     (λ Σ → Σ ∋ Fin.zero ⦂ ⇑ᵗ ★) (sym follows₁) (Z∋ refl)
   support = Λ-route1-post-window-support-at facts
-    (Λ-route1-mid-fresh-mono-at facts)
+    (Λ-route1-mid-fresh-mono-at facts naᵐ)
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just Fin.zero ] _)
       (sym follows₂) (generated-reveal-⊢↑-present z (Z∋ refl)))
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just (Fin.suc Fin.zero) ] _)
       (sym follows₂) (TE.reveal-renameˣ StoreRename-suc-bind
         (generated-reveal-⊢↑-present z first-entry)))
-Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan
+Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan naᵐ
     (CTX.smart-fresh-behind guard)
     with TE.smartFreshTargetWindowInsert (ins₁ plan) guard
       (targetWindow₁ (windowFacts plan))
-Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan
+Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan naᵐ
     (CTX.smart-fresh-behind guard) | κᵐ₁ , winᵐ₁
     with TE.smartFreshTargetWindowInsert (ins₂ plan) guard₁
       (targetWindow₂ (windowFacts plan))
   where
   guard₁ = TE.smartFreshGuardInsert (ins₁ plan) guard
-Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan
+Λ-two-insert-smart-child {Wᵐ = Wᵐ} plan naᵐ
     (CTX.smart-fresh-behind guard)
     | κᵐ₁ , winᵐ₁ | κᵐ₂ , winᵐ₂ =
   record
@@ -3827,7 +4065,7 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
   first-entry = subst≡
     (λ Σ → Σ ∋ Fin.zero ⦂ ⇑ᵗ ★) (sym follows₁) (Z∋ refl)
   support = Λ-route1-post-window-support-at facts
-    (Λ-route1-mid-fresh-mono-at facts)
+    (Λ-route1-mid-fresh-mono-at facts naᵐ)
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just Fin.zero ] _)
       (sym follows₂) (generated-reveal-⊢↑-present z (Z∋ refl)))
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just (Fin.suc Fin.zero) ] _)
@@ -3845,7 +4083,7 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
   subst≡
     (λ Y → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
       (Fin.suc Y) ≡ I.X⊑★)
-    (sym (toRename-id-eq Z)) eq
+    (sym (toRename-id-eq Z)) (cong I.⇑ᵛ eq)
 
 
 Λ-front-target-frozen : ∀ {Δᴸ Δᴿ Δ}
@@ -3879,7 +4117,48 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
   → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
       (toRenameᵗ
         (CTX.ηᴿʷ (CTX.liftWorldLeft I.X⊑★ W)) Xᴿ) ≡ I.X⊑★
-Λ-front-target-mark-mono W Xᴿ eq = eq
+Λ-front-target-mark-mono W Xᴿ eq = cong I.⇑ᵛ eq
+
+
+Λ-front-old-alias-frozen : ∀ {Δᴸ Δᴿ Δ}
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → ∀ Z {T}
+  → CTX.impEnvʷ W Z ≡ I.X⊑ᵗ T
+  → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
+      (toRenameᵗ (skip id↪ᵗ) Z)
+    ≡ I.X⊑ᵗ (renameᵗ (toRenameᵗ (skip id↪ᵗ)) T)
+Λ-front-old-alias-frozen W Z {T} eq =
+  subst≡
+    (λ Y → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
+      (Fin.suc Y)
+      ≡ I.X⊑ᵗ (renameᵗ (toRenameᵗ (skip id↪ᵗ)) T))
+    (sym (toRename-id-eq Z))
+    (trans (cong I.⇑ᵛ eq)
+      (cong I.X⊑ᵗ
+        (renameᵗ-cong T
+          (λ X → cong Fin.suc (sym (toRename-id-eq X))))))
+
+
+Λ-front-old-alias-reflect : ∀ {Δᴸ Δᴿ Δ}
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → ∀ Z {T}
+  → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
+      (toRenameᵗ (skip id↪ᵗ) Z)
+    ≡ I.X⊑ᵗ T
+  → Σ[ T₀ ∈ Ty Δ ]
+      ((CTX.impEnvʷ W Z ≡ I.X⊑ᵗ T₀)
+      × (T ≡ renameᵗ (toRenameᵗ (skip id↪ᵗ)) T₀))
+Λ-front-old-alias-reflect W Z {T} eq
+    with I.lift-alias-inv
+      (subst≡
+        (λ Y → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
+          (Fin.suc Y) ≡ I.X⊑ᵗ T)
+        (toRename-id-eq Z) eq)
+Λ-front-old-alias-reflect W Z {T} eq | T₀ , mode , T-eq =
+  T₀ , mode ,
+  trans T-eq
+    (renameᵗ-cong T₀
+      (λ X → cong Fin.suc (sym (toRename-id-eq X))))
 
 
 Λ-front-smart-guard : ∀ {Δᴸ Δᴿ Δ}
@@ -3891,6 +4170,35 @@ record ΛSmartChildPostPlan {Δᴸ Δᴿ Δ Δᵐ}
     (λ p → p) (Λ-front-old-mark-mono W) (Λ-front-target-frozen W)
     (Λ-front-old-source-frozen W) (λ _ ()) refl
     (Λ-front-target-mark-mono W)
+    (Λ-front-old-alias-frozen W)
+    (Λ-front-old-alias-reflect W)
+    (λ na → CTX.no-alias-lift-left {W = W} {v = I.X⊑★}
+      (λ ()) na)
+
+
+renameᵛ-comp′ : ∀ {Δ₁ Δ₂ Δ₃}
+    (ρ₁ : Δ₁ ⇒ʳ Δ₂) (ρ₂ : Δ₂ ⇒ʳ Δ₃) (w : I.VarImp Δ₁)
+  → I.renameᵛ ρ₂ (I.renameᵛ ρ₁ w)
+    ≡ I.renameᵛ (λ X → ρ₂ (ρ₁ X)) w
+renameᵛ-comp′ ρ₁ ρ₂ I.X⊑X = refl
+renameᵛ-comp′ ρ₁ ρ₂ I.X⊑★ = refl
+renameᵛ-comp′ ρ₁ ρ₂ (I.X⊑ᵗ T) =
+  cong I.X⊑ᵗ (renameᵗ-comp ρ₁ ρ₂ T)
+
+
+renameᵛ-cong′ : ∀ {Δ Δ′} {ρ ρ′ : Δ ⇒ʳ Δ′} (w : I.VarImp Δ)
+  → (∀ X → ρ X ≡ ρ′ X)
+  → I.renameᵛ ρ w ≡ I.renameᵛ ρ′ w
+renameᵛ-cong′ I.X⊑X eq = refl
+renameᵛ-cong′ I.X⊑★ eq = refl
+renameᵛ-cong′ (I.X⊑ᵗ T) eq = cong I.X⊑ᵗ (renameᵗ-cong T eq)
+
+
+⇑ᵛ-as-rename : ∀ {Δ} (w : I.VarImp Δ)
+  → I.⇑ᵛ w ≡ I.renameᵛ Fin.suc w
+⇑ᵛ-as-rename I.X⊑X = refl
+⇑ᵛ-as-rename I.X⊑★ = refl
+⇑ᵛ-as-rename (I.X⊑ᵗ T) = refl
 
 
 record ExactSmartFreshGuard {Δᴸ Δᴿ Δ Δᵐ}
@@ -3902,10 +4210,19 @@ record ExactSmartFreshGuard {Δᴸ Δᴿ Δ Δᵐ}
       → CTX.impEnvʷ Wᵐ
           (toRenameᵗ
             (CTX.SmartFreshBehindGuard.oldCenters guard) Z)
-        ≡ CTX.impEnvʷ W Z
+        ≡ I.renameᵛ
+            (toRenameᵗ
+              (CTX.SmartFreshBehindGuard.oldCenters guard))
+            (CTX.impEnvʷ W Z)
     fresh-off-old :
       CR.preimage? (CTX.SmartFreshBehindGuard.oldCenters guard)
         (toRenameᵗ (CTX.ηᴸʷ Wᵐ) Fin.zero) ≡ nothing
+    off-old-no-alias : ∀ Zᵐ {T}
+      → CR.preimage?
+          (CTX.SmartFreshBehindGuard.oldCenters guard) Zᵐ
+        ≡ nothing
+      → CTX.impEnvʷ Wᵐ Zᵐ ≡ I.X⊑ᵗ T
+      → ⊥
 
 open ExactSmartFreshGuard public
 
@@ -3917,17 +4234,33 @@ open ExactSmartFreshGuard public
   { guard = Λ-front-smart-guard
   ; old-mark-exact = exact
   ; fresh-off-old = refl
+  ; off-old-no-alias = off-na
   }
   where
+  off-na : ∀ Zᵐ {T}
+    → CR.preimage? (skip id↪ᵗ) Zᵐ ≡ nothing
+    → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W) Zᵐ
+      ≡ I.X⊑ᵗ T
+    → ⊥
+  off-na Fin.zero pre ()
+  off-na (Fin.suc Y) pre al
+      with trans (sym (TE.preimage-id↪ Y)) pre
+  off-na (Fin.suc Y) pre al | ()
+
   exact : ∀ Z
     → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
         (toRenameᵗ (skip id↪ᵗ) Z)
-      ≡ CTX.impEnvʷ W Z
+      ≡ I.renameᵛ (toRenameᵗ (skip id↪ᵗ)) (CTX.impEnvʷ W Z)
   exact Z =
     subst≡
       (λ Y → CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W)
-        (Fin.suc Y) ≡ CTX.impEnvʷ W Z)
-      (sym (toRename-id-eq Z)) refl
+        (Fin.suc Y)
+        ≡ I.renameᵛ (toRenameᵗ (skip id↪ᵗ))
+            (CTX.impEnvʷ W Z))
+      (sym (toRename-id-eq Z))
+      (trans (⇑ᵛ-as-rename (CTX.impEnvʷ W Z))
+        (renameᵛ-cong′ (CTX.impEnvʷ W Z)
+          (λ X → cong Fin.suc (sym (toRename-id-eq X)))))
 
 
 exactSmartFreshSubst : ∀ {Δᴸ Δᴿ Δ Δᵐ}
@@ -4018,7 +4351,7 @@ exactSmartFreshSubst-star {W = W} {Wᵐ = Wᵐ} exact Zᵐ star
     | nothing = I.X⊑★ refl
 exactSmartFreshSubst-star {W = W} {Wᵐ = Wᵐ} exact Zᵐ star
     | just Z =
-  I.X⊑★ parent-star
+  I.X⊑★ (cong I.⇑ᵛ parent-star)
   where
   old = CTX.SmartFreshBehindGuard.oldCenters (guard exact)
 
@@ -4030,7 +4363,8 @@ exactSmartFreshSubst-star {W = W} {Wᵐ = Wᵐ} exact Zᵐ star
     subst≡ (λ C → CTX.impEnvʷ Wᵐ C ≡ I.X⊑★) image-eq star
 
   parent-star : CTX.impEnvʷ W Z ≡ I.X⊑★
-  parent-star = trans (sym (old-mark-exact exact Z)) child-star
+  parent-star = I.renameᵛ-star-inv
+    (trans (sym (old-mark-exact exact Z)) child-star)
 
 
 exactSmartFreshSubst-source-eq : ∀ {Δᴸ Δᴿ Δ Δᵐ}
@@ -4065,6 +4399,49 @@ exactSmartFreshSubst-target-eq {W = W} {Wᵐ = Wᵐ} exact B =
         (toRenameᵗ (CTX.ηᴿʷ (CTX.liftWorldLeft I.X⊑★ W))) B))
 
 
+exactSmartFreshSubst-alias : ∀ {Δᴸ Δᴿ Δ Δᵐ}
+    {W : CTX.World Δᴸ Δᴿ Δ}
+    {Wᵐ : CTX.World (suc Δᴸ) Δᴿ Δᵐ}
+  → (exact : ExactSmartFreshGuard W Wᵐ)
+  → PIC.SubstAliasMap (CTX.impEnvʷ Wᵐ)
+      (CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W))
+      (exactSmartFreshSubst exact)
+exactSmartFreshSubst-alias {W = W} {Wᵐ = Wᵐ} exact Zᵐ {T} al
+    with CR.preimage?
+      (CTX.SmartFreshBehindGuard.oldCenters (guard exact)) Zᵐ
+      in pre
+exactSmartFreshSubst-alias {W = W} {Wᵐ = Wᵐ} exact Zᵐ {T} al
+    | nothing =
+  ⊥-elim (off-old-no-alias exact Zᵐ pre al)
+exactSmartFreshSubst-alias {W = W} {Wᵐ = Wᵐ} exact Zᵐ {T} al
+    | just Z
+    with I.renameᵛ-alias-inv
+      (trans (sym (old-mark-exact exact Z))
+        (subst≡ (λ C → CTX.impEnvʷ Wᵐ C ≡ I.X⊑ᵗ T)
+          (CR.preimage?-sound
+            (CTX.SmartFreshBehindGuard.oldCenters
+              (guard exact)) pre)
+          al))
+exactSmartFreshSubst-alias {W = W} {Wᵐ = Wᵐ} exact Zᵐ {T} al
+    | just Z | T₀ , mode , T-eq =
+  inj₂ (Fin.suc Z , refl ,
+    trans (cong I.⇑ᵛ mode)
+      (cong I.X⊑ᵗ
+        (sym
+          (trans (cong (substᵗ σ) T-eq)
+            (trans
+              (substᵗ-rename σ
+                (toRenameᵗ
+                  (CTX.SmartFreshBehindGuard.oldCenters
+                    (guard exact))) T₀)
+              (trans
+                (substᵗ-cong T₀
+                  (exactSmartFreshSubst-image exact))
+                (rename-as-subst Fin.suc T₀)))))))
+  where
+  σ = exactSmartFreshSubst exact
+
+
 exactSmartFresh-untransport : ∀ {Δᴸ Δᴿ Δ Δᵐ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {Wᵐ : CTX.World (suc Δᴸ) Δᴿ Δᵐ}
@@ -4083,7 +4460,8 @@ exactSmartFresh-untransport {W = W} {Wᵐ = Wᵐ} {A = A} {B = B}
         ⊢ substᵗ (exactSmartFreshSubst exact) (CTX.embedᴸ Wᵐ A)
         ⊑ R)
       (exactSmartFreshSubst-target-eq exact B)
-      (subst-⊑ (exactSmartFreshSubst-star exact) p))
+      (subst-⊑ (exactSmartFreshSubst-star exact)
+        (exactSmartFreshSubst-alias exact) p))
 
 
 exactSmartFreshGuardInsert : ∀ {Δᴸ Δᴿ Δᴿ′ Δ Δ′ Δᵐ}
@@ -4100,6 +4478,7 @@ exactSmartFreshGuardInsert {π = π} {W = W} {W′ = W′}
   { guard = TE.smartFreshGuardInsert ins guard₀
   ; old-mark-exact = exact′
   ; fresh-off-old = fresh-off′
+  ; off-old-no-alias = off′
   }
   where
   guard₀ = guard exact
@@ -4109,23 +4488,67 @@ exactSmartFreshGuardInsert {π = π} {W = W} {W′ = W′}
   old′ = CR.EmbeddingPushout.old′ po
   commutes = CR.EmbeddingPushout.commutes po
 
+  off′ : ∀ Zᵐ′ {T}
+    → CR.preimage? old′ Zᵐ′ ≡ nothing
+    → CTX.impEnvʷ (TE.smartFreshInsertWorld ins guard₀) Zᵐ′
+      ≡ I.X⊑ᵗ T
+    → ⊥
+  off′ Zᵐ′ pre′ al with CR.preimage? premise Zᵐ′ in prem
+  off′ Zᵐ′ pre′ () | nothing
+  off′ Zᵐ′ pre′ al | just Z₁
+      with I.renameᵛ-alias-inv al
+  off′ Zᵐ′ pre′ al | just Z₁ | T₀ , mode , T-eq
+      with CR.preimage? old Z₁ in oldpre
+  off′ Zᵐ′ pre′ al | just Z₁ | T₀ , mode , T-eq | nothing =
+    off-old-no-alias exact Z₁ oldpre mode
+  off′ Zᵐ′ pre′ al | just Z₁ | T₀ , mode , T-eq | just Z₀ =
+    conflict
+      (trans
+        (sym
+          (trans
+            (cong (CR.preimage? old′)
+              (trans (CR.preimage?-sound premise prem)
+                (trans
+                  (cong (toRenameᵗ premise)
+                    (CR.preimage?-sound old oldpre))
+                  (commutes Z₀))))
+            (CR.preimage?-image old′ (toRenameᵗ π Z₀))))
+        pre′)
+    where
+    conflict : just (toRenameᵗ π Z₀) ≡ nothing → ⊥
+    conflict ()
+
   exact′ : ∀ Z′
     → CTX.impEnvʷ (TE.smartFreshInsertWorld ins guard₀)
         (toRenameᵗ old′ Z′)
-      ≡ CTX.impEnvʷ W′ Z′
+      ≡ I.renameᵛ (toRenameᵗ old′) (CTX.impEnvʷ W′ Z′)
   exact′ Z′ with CR.preimage? π Z′ in pre
   exact′ Z′ | nothing =
     trans
       (CR.renameEnv-off premise (CTX.impEnvʷ Wᵐ)
         (CR.pushout-old-off-premise π old pre))
-      (sym (TE.impEnv-off-insert ins pre))
+      (sym (cong (I.renameᵛ (toRenameᵗ old′))
+        (TE.impEnv-off-insert ins pre)))
   exact′ Z′ | just Z =
     trans
       (cong (CR.renameEnv premise (CTX.impEnvʷ Wᵐ)) old-image)
       (trans
         (CR.renameEnv-image premise (CTX.impEnvʷ Wᵐ)
           (toRenameᵗ old Z))
-        (trans (old-mark-exact exact Z) (sym target-image)))
+        (trans
+          (cong (I.renameᵛ (toRenameᵗ premise))
+            (old-mark-exact exact Z))
+          (trans
+            (renameᵛ-comp′ (toRenameᵗ old) (toRenameᵗ premise)
+              (CTX.impEnvʷ W Z))
+            (trans
+              (renameᵛ-cong′ (CTX.impEnvʷ W Z) commutes)
+              (sym
+                (trans
+                  (cong (I.renameᵛ (toRenameᵗ old′))
+                    target-image)
+                  (renameᵛ-comp′ (toRenameᵗ π) (toRenameᵗ old′)
+                    (CTX.impEnvʷ W Z))))))))
     where
     z′-eq : Z′ ≡ toRenameᵗ π Z
     z′-eq = CR.preimage?-sound π pre
@@ -4135,7 +4558,8 @@ exactSmartFreshGuardInsert {π = π} {W = W} {W′ = W′}
     old-image = trans (cong (toRenameᵗ old′) z′-eq)
       (sym (commutes Z))
 
-    target-image : CTX.impEnvʷ W′ Z′ ≡ CTX.impEnvʷ W Z
+    target-image : CTX.impEnvʷ W′ Z′
+      ≡ I.renameᵛ (toRenameᵗ π) (CTX.impEnvʷ W Z)
     target-image = trans (cong (CTX.impEnvʷ W′) z′-eq)
       (TE.impEnv-insert ins Z)
 
@@ -4217,8 +4641,9 @@ open ΛFrontChildPostPlan public
 Λ-two-insert-front-child : ∀ {Δᴸ Δᴿ Δ}
     {W : CTX.World Δᴸ Δᴿ Δ}
   → (plan : ΛTwoInsertPostPlan W)
+  → CTX.NoAliasWorld W
   → ΛFrontChildPostPlan plan
-Λ-two-insert-front-child plan = record
+Λ-two-insert-front-child {W = W} plan na = record
   { frontChildPlan = ΛSmartChildPostPlan.childPlan smartChild
   ; frontPostExact = exact₂
   ; frontPostLift = ΛSmartChildPostPlan.postLift smartChild
@@ -4228,6 +4653,7 @@ open ΛFrontChildPostPlan public
   }
   where
   smartChild = Λ-two-insert-smart-child plan
+    (CTX.no-alias-lift-left {W = W} {v = I.X⊑★} (λ ()) na)
     (CTX.smart-fresh-behind Λ-front-smart-guard)
 
   exact₁ = exactSmartFreshGuardInsert
@@ -4267,6 +4693,32 @@ open ΛFrontChildPostPlan public
   ＇ (Fin.suc Fin.zero)
 Λ⊑²-smart-fresh-subst (Fin.suc (Fin.suc (Fin.suc Z))) =
   ＇ (Fin.suc (Fin.suc (Fin.suc Z)))
+
+
+Λ⊑²-lift³-eq : ∀ {Δ} (T₀ : Ty Δ)
+  → ⇑ᵗ (⇑ᵗ (⇑ᵗ T₀))
+    ≡ renameᵗ (λ X → Fin.suc (Fin.suc (Fin.suc X))) T₀
+Λ⊑²-lift³-eq T₀ =
+  trans (renameᵗ-comp Fin.suc Fin.suc (⇑ᵗ T₀))
+    (renameᵗ-comp Fin.suc
+      (λ X → Fin.suc (Fin.suc X)) T₀)
+
+
+Λ⊑²-old³-eq : ∀ {Δ} (T₀ : Ty Δ)
+  → renameᵗ (toRenameᵗ Λ⊑²-smart-fresh-oldCenters)
+      (⇑ᵗ (⇑ᵗ T₀))
+    ≡ renameᵗ (λ X → Fin.suc (Fin.suc (Fin.suc X))) T₀
+Λ⊑²-old³-eq T₀ =
+  trans (renameᵗ-comp Fin.suc
+      (toRenameᵗ Λ⊑²-smart-fresh-oldCenters) (⇑ᵗ T₀))
+    (trans (renameᵗ-comp Fin.suc
+        (λ X → toRenameᵗ Λ⊑²-smart-fresh-oldCenters
+          (Fin.suc X)) T₀)
+      (renameᵗ-cong T₀
+        (λ X → cong (λ Y → Fin.suc (Fin.suc (Fin.suc Y)))
+          (toRename-id-eq X))))
+
+
 
 
 Λ⊑²-smart-fresh-star : ∀ {Δᴸ Δᴿ Δ}
@@ -4355,6 +4807,60 @@ open ΛFrontChildPostPlan public
         (toRenameᵗ (CTX.ηᴿʷ (Λ⊑²-smart-fresh-world W))) C))
 
 
+Λ⊑²-smart-fresh-alias : ∀ {Δᴸ Δᴿ Δ}
+    {W : CTX.World Δᴸ Δᴿ Δ}
+  → PIC.SubstAliasMap
+      (CTX.impEnvʷ
+        (CTX.liftWorldLeft I.X⊑★
+          (CTX.rightOnlyWorld
+            (CTX.rightOnlyWorld W ★) (＇ Fin.zero))))
+      (CTX.impEnvʷ (Λ⊑²-smart-fresh-world W))
+      Λ⊑²-smart-fresh-subst
+Λ⊑²-smart-fresh-alias Fin.zero ()
+Λ⊑²-smart-fresh-alias (Fin.suc Fin.zero) ()
+Λ⊑²-smart-fresh-alias (Fin.suc (Fin.suc Fin.zero)) ()
+Λ⊑²-smart-fresh-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    with I.lift-alias-inv al
+Λ⊑²-smart-fresh-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    | T₂ , al₂ , T-eq
+    with I.lift-alias-inv al₂
+Λ⊑²-smart-fresh-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    | T₂ , al₂ , T-eq | T₁ , al₁ , T₂-eq
+    with I.lift-alias-inv al₁
+Λ⊑²-smart-fresh-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    | T₂ , al₂ , T-eq | T₁ , al₁ , T₂-eq | T₀ , mode , T₁-eq =
+  inj₂ (Fin.suc (Fin.suc (Fin.suc Z)) , refl ,
+    trans (cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ mode)))
+      (cong I.X⊑ᵗ
+        (sym
+          (trans
+            (cong (substᵗ Λ⊑²-smart-fresh-subst)
+              (trans T-eq
+                (trans (cong ⇑ᵗ T₂-eq)
+                  (cong ⇑ᵗ (cong ⇑ᵗ T₁-eq)))))
+            (trans
+              (substᵗ-rename Λ⊑²-smart-fresh-subst
+                Fin.suc (⇑ᵗ (⇑ᵗ T₀)))
+              (trans
+                (substᵗ-rename
+                  (λ X → Λ⊑²-smart-fresh-subst (Fin.suc X))
+                  Fin.suc (⇑ᵗ T₀))
+                (trans
+                  (substᵗ-rename
+                    (λ X → Λ⊑²-smart-fresh-subst
+                      (Fin.suc (Fin.suc X)))
+                    Fin.suc T₀)
+                  (trans
+                    (rename-as-subst
+                      (λ X → Fin.suc (Fin.suc (Fin.suc X)))
+                      T₀)
+                    (sym (Λ⊑²-lift³-eq T₀))))))))))
+
+
 Λ⊑²-smart-fresh-transport : ∀ {Δᴸ Δᴿ Δ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {A : Ty (suc Δᴸ)} {B : Ty (suc (suc Δᴿ))}
@@ -4377,7 +4883,8 @@ open ΛFrontChildPostPlan public
                 (CTX.rightOnlyWorld W ★) (＇ Fin.zero))) A)
         ⊑ R)
       (Λ⊑²-smart-fresh-target-eq W B)
-      (subst-⊑ (Λ⊑²-smart-fresh-star {W = W}) p))
+      (subst-⊑ (Λ⊑²-smart-fresh-star {W = W})
+        (Λ⊑²-smart-fresh-alias {W = W}) p))
 
 
 Λ⊑²-smart-front-subst : ∀ {Δ}
@@ -4452,6 +4959,57 @@ open ΛFrontChildPostPlan public
         (toRenameᵗ (CTX.ηᴿʷ (Λ⊑²-smart-front-world W))) C))
 
 
+Λ⊑²-smart-front-alias : ∀ {Δᴸ Δᴿ Δ}
+    {W : CTX.World Δᴸ Δᴿ Δ}
+  → PIC.SubstAliasMap
+      (CTX.impEnvʷ (Λ⊑²-smart-fresh-world W))
+      (CTX.impEnvʷ (Λ⊑²-smart-front-world W))
+      Λ⊑²-smart-front-subst
+Λ⊑²-smart-front-alias Fin.zero ()
+Λ⊑²-smart-front-alias (Fin.suc Fin.zero) ()
+Λ⊑²-smart-front-alias (Fin.suc (Fin.suc Fin.zero)) ()
+Λ⊑²-smart-front-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    with I.lift-alias-inv al
+Λ⊑²-smart-front-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    | T₂ , al₂ , T-eq
+    with I.lift-alias-inv al₂
+Λ⊑²-smart-front-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    | T₂ , al₂ , T-eq | T₁ , al₁ , T₂-eq
+    with I.lift-alias-inv al₁
+Λ⊑²-smart-front-alias {W = W}
+    (Fin.suc (Fin.suc (Fin.suc Z))) {T} al
+    | T₂ , al₂ , T-eq | T₁ , al₁ , T₂-eq | T₀ , mode , T₁-eq =
+  inj₂ (Fin.suc (Fin.suc (Fin.suc Z)) , refl ,
+    trans (cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ mode)))
+      (cong I.X⊑ᵗ
+        (sym
+          (trans
+            (cong (substᵗ Λ⊑²-smart-front-subst)
+              (trans T-eq
+                (trans (cong ⇑ᵗ T₂-eq)
+                  (cong ⇑ᵗ (cong ⇑ᵗ T₁-eq)))))
+            (trans
+              (substᵗ-rename Λ⊑²-smart-front-subst
+                Fin.suc (⇑ᵗ (⇑ᵗ T₀)))
+              (trans
+                (substᵗ-rename
+                  (λ X → Λ⊑²-smart-front-subst (Fin.suc X))
+                  Fin.suc (⇑ᵗ T₀))
+                (trans
+                  (substᵗ-rename
+                    (λ X → Λ⊑²-smart-front-subst
+                      (Fin.suc (Fin.suc X)))
+                    Fin.suc T₀)
+                  (trans
+                    (rename-as-subst
+                      (λ X → Fin.suc (Fin.suc (Fin.suc X)))
+                      T₀)
+                    (sym (Λ⊑²-lift³-eq T₀))))))))))
+
+
 Λ⊑²-smart-fresh-untransport : ∀ {Δᴸ Δᴿ Δ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {A : Ty (suc Δᴸ)} {B : Ty (suc (suc Δᴿ))}
@@ -4468,7 +5026,8 @@ open ΛFrontChildPostPlan public
           (CTX.embedᴸ (Λ⊑²-smart-fresh-world W) A)
         ⊑ R)
       (Λ⊑²-smart-front-target-eq W B)
-      (subst-⊑ (Λ⊑²-smart-front-star {W = W}) p))
+      (subst-⊑ (Λ⊑²-smart-front-star {W = W})
+        (Λ⊑²-smart-front-alias {W = W}) p))
 
 
 Λ⊑²-smart-fresh-top : ∀ {Δᴸ Δᴿ Δ}
@@ -4495,6 +5054,7 @@ open ΛFrontChildPostPlan public
   → (plan : ΛTwoInsertPostPlan W)
   → ⦃ Bnv : NonVar B ⦄
   → ⦃ zero∈B : Fin.zero ∈ᵗ B ⦄
+  → CTX.NoAliasWorld W
   → Aₒ CTX.⊑ᵂ⟨ W ⟩ `∀ B
   → Aₒ CTX.⊑ᵂ⟨ W₂ plan ⟩ substᵗ Λ⊑Λ²TargetSplit₂ B
 
@@ -4505,6 +5065,7 @@ open ΛFrontChildPostPlan public
   → (plan : ΛTwoInsertPostPlan W)
   → ⦃ Bnv : NonVar B ⦄
   → ⦃ zero∈B : Fin.zero ∈ᵗ B ⦄
+  → CTX.NoAliasWorld W
   → I._⊢_⊑_ (CTX.impEnvʷ W)
       (`∀ (renameᵗ (extᵗ (toRenameᵗ (CTX.ηᴸʷ W))) A))
       (`∀ (renameᵗ (extᵗ (toRenameᵗ (CTX.ηᴿʷ W))) B))
@@ -4565,12 +5126,16 @@ open ΛFrontChildPostPlan public
 
   rawAnv : NonVar
       (CTX.embedᴸ (CTX.liftWorldBoth I.X⊑X W) A)
-  rawAnv = source-nonvar-from-target body-pᵂ rawBnv rawZero∈B
+  rawAnv = source-nonvar-from-target
+    (PI.ext-aliases-avoid-zero (CTX.impEnvʷ W))
+    body-pᵂ rawBnv rawZero∈B
 
   rawZero∈A :
       toRenameᵗ (keep (CTX.ηᴸʷ W)) Fin.zero
         ∈ᵗ CTX.embedᴸ (CTX.liftWorldBoth I.X⊑X W) A
-  rawZero∈A = target-occurs-source body-pᵂ rawZero∈B
+  rawZero∈A = target-occurs-source
+    (PI.ext-aliases-avoid-zero (CTX.impEnvʷ W))
+    body-pᵂ rawZero∈B
 
   Anv : NonVar A
   Anv = unrenameNonVar (toRenameᵗ (keep (CTX.ηᴸʷ W))) rawAnv
@@ -4589,13 +5154,14 @@ open ΛFrontChildPostPlan public
   → ⦃ zero∈B : Fin.zero ∈ᵗ B ⦄
   → NonVar (renameᵗ (extᵗ (toRenameᵗ (CTX.ηᴸʷ W))) A)
   → Fin.zero ∈ᵗ renameᵗ (extᵗ (toRenameᵗ (CTX.ηᴸʷ W))) A
+  → CTX.NoAliasWorld W
   → I._⊢_⊑_ (I.instᵐ (CTX.impEnvʷ W))
       (renameᵗ (extᵗ (toRenameᵗ (CTX.ηᴸʷ W))) A)
       (⇑ᵗ (CTX.embedᴿ W (`∀ B)))
   → `∀ A CTX.⊑ᵂ⟨ W₂ plan ⟩ substᵗ Λ⊑Λ²TargetSplit₂ B
 Λ-post-outer-obligation-∀⊑-case {W = W} {A = A} {B = B}
     plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄
-    rawAnv rawZero∈A rawBody =
+    rawAnv rawZero∈A na rawBody =
   ∀⊑ᵂ-from-left-lift
     {W = W₂ plan}
     {A = A} {B = substᵗ Λ⊑Λ²TargetSplit₂ B}
@@ -4604,6 +5170,8 @@ open ΛFrontChildPostPlan public
       (Λ-post-outer-obligation {Aₒ = A} {B = B}
         (frontChildPlan front)
         ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄
+        (CTX.no-alias-lift-left {W = W} {v = I.X⊑★}
+          (λ ()) na)
         (subst≡
           (λ R → I.instᵐ (CTX.impEnvʷ W)
             ⊢ CTX.embedᴸ (CTX.liftWorldLeft I.X⊑★ W) A
@@ -4611,7 +5179,7 @@ open ΛFrontChildPostPlan public
           (sym (target-left-lift-eq (CTX.ηᴿʷ W) (`∀ B)))
           body-source)))
   where
-  front = Λ-two-insert-front-child plan
+  front = Λ-two-insert-front-child plan na
 
   raw-source-eq :
       renameᵗ (extᵗ (toRenameᵗ (CTX.ηᴸʷ W))) A
@@ -4638,44 +5206,45 @@ open ΛFrontChildPostPlan public
       (extᵗ (toRenameᵗ (CTX.ηᴸʷ W)))
       (ext-injective (toRenameᵗ-injective (CTX.ηᴸʷ W)))
       rawZero∈A
-Λ-post-outer-obligation-∀ {B = ＇ X} plan ⦃ Bnv = () ⦄ q
-Λ-post-outer-obligation-∀ {B = ‵ ι} plan ⦃ zero∈B = () ⦄ q
-Λ-post-outer-obligation-∀ {B = ★} plan ⦃ zero∈B = () ⦄ q
+Λ-post-outer-obligation-∀ {B = ＇ X} plan ⦃ Bnv = () ⦄ na q
+Λ-post-outer-obligation-∀ {B = ‵ ι} plan ⦃ zero∈B = () ⦄ na q
+Λ-post-outer-obligation-∀ {B = ★} plan ⦃ zero∈B = () ⦄ na q
 Λ-post-outer-obligation-∀ {W = W} {A = A} {B = B₁ ⇒ B₂}
-    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ (I.∀⊑∀ body-p) =
+    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ na (I.∀⊑∀ body-p) =
   Λ-post-outer-obligation-∀∀-case
     {W = W} {A = A} {B = B₁ ⇒ B₂} plan
     ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄ body-p
 Λ-post-outer-obligation-∀ {W = W} {A = A} {B = B₁ ⇒ B₂}
-    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄
+    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ na
     (I.∀⊑ rawAnv rawZero∈A rawBody) =
   Λ-post-outer-obligation-∀⊑-case
     {W = W} {A = A} {B = B₁ ⇒ B₂} plan
     ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄
-    rawAnv rawZero∈A rawBody
+    rawAnv rawZero∈A na rawBody
 Λ-post-outer-obligation-∀ {W = W} {A = A} {B = `∀ B}
-    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ (I.∀⊑∀ body-p) =
+    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ na (I.∀⊑∀ body-p) =
   Λ-post-outer-obligation-∀∀-case
     {W = W} {A = A} {B = `∀ B} plan
     ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄ body-p
 Λ-post-outer-obligation-∀ {W = W} {A = A} {B = `∀ B}
-    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄
+    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ na
     (I.∀⊑ rawAnv rawZero∈A rawBody) =
   Λ-post-outer-obligation-∀⊑-case
     {W = W} {A = A} {B = `∀ B} plan
     ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄
-    rawAnv rawZero∈A rawBody
+    rawAnv rawZero∈A na rawBody
 
 
-Λ-post-outer-obligation {Aₒ = ＇ X} plan ()
-Λ-post-outer-obligation {Aₒ = ‵ ι} plan ()
-Λ-post-outer-obligation {Aₒ = ★} plan ()
-Λ-post-outer-obligation {Aₒ = A₁ ⇒ A₂} plan ()
+Λ-post-outer-obligation {Aₒ = ＇ X} plan na (I.alias mode q) =
+  ⊥-elim (na _ mode)
+Λ-post-outer-obligation {Aₒ = ‵ ι} plan na ()
+Λ-post-outer-obligation {Aₒ = ★} plan na ()
+Λ-post-outer-obligation {Aₒ = A₁ ⇒ A₂} plan na ()
 Λ-post-outer-obligation {W = W} {Aₒ = `∀ A} {B = B}
-    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ q =
+    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ na q =
   Λ-post-outer-obligation-∀
     {W = W} {A = A} {B = B} plan
-    ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄ q
+    ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄ na q
 
 
 Λ-source-body-nonvar-occurs-∀∀ : ∀ {Δᴸ Δᴿ Δ}
@@ -4726,12 +5295,16 @@ open ΛFrontChildPostPlan public
 
   rawAnv : NonVar
       (CTX.embedᴸ (CTX.liftWorldBoth I.X⊑X W) A)
-  rawAnv = source-nonvar-from-target body-pᵂ rawBnv rawZero∈B
+  rawAnv = source-nonvar-from-target
+    (PI.ext-aliases-avoid-zero (CTX.impEnvʷ W))
+    body-pᵂ rawBnv rawZero∈B
 
   rawZero∈A :
       toRenameᵗ (keep (CTX.ηᴸʷ W)) Fin.zero
         ∈ᵗ CTX.embedᴸ (CTX.liftWorldBoth I.X⊑X W) A
-  rawZero∈A = target-occurs-source body-pᵂ rawZero∈B
+  rawZero∈A = target-occurs-source
+    (PI.ext-aliases-avoid-zero (CTX.impEnvʷ W))
+    body-pᵂ rawZero∈B
 
   Anv : NonVar A
   Anv = unrenameNonVar (toRenameᵗ (keep (CTX.ηᴸʷ W))) rawAnv
@@ -4861,7 +5434,7 @@ open ΛFrontChildPostPlan public
     (λ Y → CTX.impEnvʷ (Λ⊑²-smart-fresh-world W)
       (Fin.suc (Fin.suc (Fin.suc Y))) ≡ I.X⊑★)
     (sym (toRename-id-eq Z))
-    old-star
+    (cong I.⇑ᵛ old-star)
 
 
 Λ⊑²-smart-fresh-target-mark-mono : ∀ {Δᴸ Δᴿ Δ}
@@ -4879,7 +5452,113 @@ open ΛFrontChildPostPlan public
     ≡ I.X⊑★
 Λ⊑²-smart-fresh-target-mark-mono W Fin.zero eq = refl
 Λ⊑²-smart-fresh-target-mark-mono W (Fin.suc Fin.zero) eq = refl
-Λ⊑²-smart-fresh-target-mark-mono W (Fin.suc (Fin.suc Xᴿ)) eq = eq
+Λ⊑²-smart-fresh-target-mark-mono W (Fin.suc (Fin.suc Xᴿ)) eq =
+  cong I.⇑ᵛ eq
+
+
+Λ⊑²-smart-fresh-old-alias-frozen : ∀ {Δᴸ Δᴿ Δ}
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → ∀ Z {T}
+  → CTX.impEnvʷ
+      (CTX.rightOnlyWorld (CTX.rightOnlyWorld W ★) (＇ Fin.zero))
+      Z
+    ≡ I.X⊑ᵗ T
+  → CTX.impEnvʷ (Λ⊑²-smart-fresh-world W)
+      (toRenameᵗ Λ⊑²-smart-fresh-oldCenters Z)
+    ≡ I.X⊑ᵗ (renameᵗ (toRenameᵗ Λ⊑²-smart-fresh-oldCenters) T)
+Λ⊑²-smart-fresh-old-alias-frozen W Fin.zero ()
+Λ⊑²-smart-fresh-old-alias-frozen W (Fin.suc Fin.zero) ()
+Λ⊑²-smart-fresh-old-alias-frozen W (Fin.suc (Fin.suc Z)) {T} eq
+    with I.lift-alias-inv eq
+Λ⊑²-smart-fresh-old-alias-frozen W (Fin.suc (Fin.suc Z)) {T} eq
+    | T₁ , eq₁ , T-eq
+    with I.lift-alias-inv eq₁
+Λ⊑²-smart-fresh-old-alias-frozen W (Fin.suc (Fin.suc Z)) {T} eq
+    | T₁ , eq₁ , T-eq | T₀ , mode , T₁-eq =
+  subst≡
+    (λ Y → CTX.impEnvʷ (Λ⊑²-smart-fresh-world W)
+      (Fin.suc (Fin.suc (Fin.suc Y)))
+      ≡ I.X⊑ᵗ
+        (renameᵗ (toRenameᵗ Λ⊑²-smart-fresh-oldCenters) T))
+    (sym (toRename-id-eq Z))
+    (trans
+      (cong I.⇑ᵛ (cong I.⇑ᵛ (cong I.⇑ᵛ mode)))
+      (cong I.X⊑ᵗ
+        (trans (Λ⊑²-lift³-eq T₀)
+          (sym
+            (trans
+              (cong
+                (renameᵗ
+                  (toRenameᵗ Λ⊑²-smart-fresh-oldCenters))
+                (trans T-eq (cong ⇑ᵗ T₁-eq)))
+              (Λ⊑²-old³-eq T₀))))))
+
+
+Λ⊑²-smart-fresh-old-alias-reflect : ∀ {Δᴸ Δᴿ Δ}
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → ∀ Z {T}
+  → CTX.impEnvʷ (Λ⊑²-smart-fresh-world W)
+      (toRenameᵗ Λ⊑²-smart-fresh-oldCenters Z)
+    ≡ I.X⊑ᵗ T
+  → Σ[ T₀ ∈ Ty (suc (suc Δ)) ]
+      ((CTX.impEnvʷ
+          (CTX.rightOnlyWorld
+            (CTX.rightOnlyWorld W ★) (＇ Fin.zero)) Z
+        ≡ I.X⊑ᵗ T₀)
+      × (T ≡ renameᵗ
+          (toRenameᵗ Λ⊑²-smart-fresh-oldCenters) T₀))
+Λ⊑²-smart-fresh-old-alias-reflect W Fin.zero ()
+Λ⊑²-smart-fresh-old-alias-reflect W (Fin.suc Fin.zero) ()
+Λ⊑²-smart-fresh-old-alias-reflect
+    {Δ = Δ} W (Fin.suc (Fin.suc Z)) {T} eq
+    with I.lift-alias-inv
+      (subst≡
+        (λ Y → CTX.impEnvʷ (Λ⊑²-smart-fresh-world W)
+          (Fin.suc (Fin.suc (Fin.suc Y))) ≡ I.X⊑ᵗ T)
+        (toRename-id-eq Z) eq)
+Λ⊑²-smart-fresh-old-alias-reflect
+    {Δ = Δ} W (Fin.suc (Fin.suc Z)) {T} eq
+    | T₂ , eq₂ , T-eq
+    with I.lift-alias-inv eq₂
+Λ⊑²-smart-fresh-old-alias-reflect
+    {Δ = Δ} W (Fin.suc (Fin.suc Z)) {T} eq
+    | T₂ , eq₂ , T-eq | T₁ , eq₁ , T₂-eq
+    with I.lift-alias-inv eq₁
+Λ⊑²-smart-fresh-old-alias-reflect
+    {Δ = Δ} W (Fin.suc (Fin.suc Z)) {T} eq
+    | T₂ , eq₂ , T-eq | T₁ , eq₁ , T₂-eq | T₀ , mode , T₁-eq =
+  ⇑ᵗ (⇑ᵗ T₀) ,
+  cong I.⇑ᵛ (cong I.⇑ᵛ mode) ,
+  trans T-eq
+    (trans (cong ⇑ᵗ (trans T₂-eq (cong ⇑ᵗ T₁-eq)))
+      (trans (Λ⊑²-lift³-eq T₀)
+        (sym (Λ⊑²-old³-eq T₀))))
+
+
+Λ⊑²-smart-fresh-no-alias : ∀ {Δᴸ Δᴿ Δ}
+    (W : CTX.World Δᴸ Δᴿ Δ)
+  → (∀ Z {T}
+      → CTX.impEnvʷ
+          (CTX.rightOnlyWorld
+            (CTX.rightOnlyWorld W ★) (＇ Fin.zero)) Z
+        ≡ I.X⊑ᵗ T → ⊥)
+  → ∀ Z {T}
+  → CTX.impEnvʷ (Λ⊑²-smart-fresh-world W) Z ≡ I.X⊑ᵗ T
+  → ⊥
+Λ⊑²-smart-fresh-no-alias W na′ Fin.zero ()
+Λ⊑²-smart-fresh-no-alias W na′ (Fin.suc Fin.zero) ()
+Λ⊑²-smart-fresh-no-alias W na′ (Fin.suc (Fin.suc Fin.zero)) ()
+Λ⊑²-smart-fresh-no-alias W na′
+    (Fin.suc (Fin.suc (Fin.suc Y))) eq
+    with I.lift-alias-inv eq
+Λ⊑²-smart-fresh-no-alias W na′
+    (Fin.suc (Fin.suc (Fin.suc Y))) eq
+    | T₂ , eq₂ , T-eq
+    with I.lift-alias-inv eq₂
+Λ⊑²-smart-fresh-no-alias W na′
+    (Fin.suc (Fin.suc (Fin.suc Y))) eq
+    | T₂ , eq₂ , T-eq | T₁ , eq₁ , T₂-eq =
+  na′ (Fin.suc (Fin.suc Y)) (cong I.⇑ᵛ eq₁)
 
 
 Λ⊑²-smart-fresh-guard : ∀ {Δᴸ Δᴿ Δ}
@@ -4899,6 +5578,9 @@ open ΛFrontChildPostPlan public
     (Λ⊑²-smart-fresh-not-target W)
     refl
     (Λ⊑²-smart-fresh-target-mark-mono W)
+    (Λ⊑²-smart-fresh-old-alias-frozen W)
+    (Λ⊑²-smart-fresh-old-alias-reflect W)
+    (Λ⊑²-smart-fresh-no-alias W)
 Λ-route1-smart-alias-left-ext₂ : ∀ {Δᴸ Δᴿ Δ}
     {W : CTX.World Δᴸ Δᴿ Δ}
     {Wᵐ : CTX.World (suc Δᴸ) Δᴿ Δ}
@@ -5291,8 +5973,16 @@ rightOnlyImpEnvMono : ∀ {Δᴸ Δᴿ Δ}
   → CTX.ImpEnvMono W Wᵖ
   → CTX.ImpEnvMono (CTX.rightOnlyWorld W B)
       (CTX.rightOnlyWorld Wᵖ B)
-rightOnlyImpEnvMono mono Fin.zero eq = refl
-rightOnlyImpEnvMono mono (Fin.suc Z) eq = mono Z eq
+rightOnlyImpEnvMono {W = W} {Wᵖ = Wᵖ} mono =
+  CTX.imp-env-mono star
+    (CTX.alias-same-ext (CTX.aliasAgree mono))
+  where
+  star : ∀ Z
+    → I.instᵐ (CTX.impEnvʷ W) Z ≡ I.X⊑★
+    → I.instᵐ (CTX.impEnvʷ Wᵖ) Z ≡ I.X⊑★
+  star Fin.zero eq = eq
+  star (Fin.suc Z) eq =
+    cong I.⇑ᵛ (CTX.starMono mono Z (I.lift-star-inv eq))
 
 
 post-source-conceal-ok : ∀ {Δᴸ Δᴿ Δ Δ₁ Δ₂}
@@ -5327,16 +6017,17 @@ post-source-conceal-ok ins₁ ins₂ CTX.id-conceal-ok =
   → (plan : ΛTwoInsertPostPlan W)
   → ⦃ Bnv : NonVar B ⦄
   → ⦃ zero∈B : Fin.zero ∈ᵗ B ⦄
+  → CTX.NoAliasWorld W
   → A CTX.⊑ᵂ⟨ W ⟩ `∀ B
   → A CTX.⊑ᵂ⟨ W₂ plan ⟩ ΛResidualSource₂ B
 Λ-strip-prefix-p₂ {W = W} {A = A} {B = B}
-    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ q =
+    plan ⦃ Bnv ⦄ ⦃ zero∈B ⦄ na q =
   subst≡
     (λ C → A CTX.⊑ᵂ⟨ W₂ plan ⟩ C)
     (residual-source₂-eq B)
     (Λ-post-outer-obligation
       {W = W} {Aₒ = A} {B = B} plan
-      ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄ q)
+      ⦃ Bnv = Bnv ⦄ ⦃ zero∈B = zero∈B ⦄ na q)
 
 
 right-bind-right-bind-mono : ∀ {Δᴸ Δᴿ Δ}
@@ -5918,6 +6609,7 @@ right-bind-right-bind-tag-rebaseᴸ rb =
     {inner-p : `∀ A CTX.⊑ᵂ⟨
       CTX.liftWorldLeft I.X⊑★ W ⟩ `∀ B}
     {outer-p : `∀ (`∀ A) CTX.⊑ᵂ⟨ W ⟩ `∀ B}
+  → CTX.NoAliasWorld W
   → (vV : CT.Value V)
   → (vV′ : CT.Value V′)
   → (c′ : instᵐ ν ⊢ B ∼ ⇑ᵗ B′)
@@ -5942,7 +6634,7 @@ right-bind-right-bind-tag-rebaseᴸ rb =
         {W = W} {B = ★} {C = ＇ Fin.zero})
       c′ B′≢★
 Λ⊑²-plain-shared-smart-plan-prefix-at-base {W = W} {A = A} {B = B}
-    {outer-p = outer-p} vV vV′ c′ B′≢★ liftγᴸ liftγᴮ
+    {outer-p = outer-p} na vV vV′ c′ B′≢★ liftγᴸ liftγᴮ
     Anv zero∈A outer∈ target⊢ bodyRel =
   Λ⊑²-plain-shared-prefix-at-base vV vV′ c′ B′≢★
     liftγᴸ liftγᴮ Anv zero∈A outer∈ target⊢ bodyRel
@@ -5951,7 +6643,7 @@ right-bind-right-bind-tag-rebaseᴸ rb =
     (Λ-concrete-post-window
       {W = CTX.liftWorldLeft I.X⊑★ W})
     (Λ-strip-prefix-p₂ {W = W} {A = `∀ (`∀ A)} {B = B}
-      Λ-concrete-two-insert-post-plan outer-p)
+      Λ-concrete-two-insert-post-plan na outer-p)
 
 
 Λ-post-prefix-cast⊑²-base : ∀ {Δᴸ Δᴿ Δ Δ₂}
@@ -6089,13 +6781,14 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
 Λ-two-insert-rebase-child : ∀ {Δᴸ Δᴿ Δ}
     {W Wᵖ : CTX.World Δᴸ Δᴿ Δ} {Xᴸ?}
   → (plan : ΛTwoInsertPostPlan W)
+  → CTX.NoAliasWorld Wᵖ
   → CTX.RebaseAtᴸ W Wᵖ Xᴸ?
   → ΛRebaseChildPostPlan plan Xᴸ?
-Λ-two-insert-rebase-child plan rb
+Λ-two-insert-rebase-child plan naᵐ rb
     with TE.insertRebaseAtᴸ (ins₁ plan) rb
-Λ-two-insert-rebase-child plan rb | Wᵖ₁ , insᵖ₁ , rb₁
+Λ-two-insert-rebase-child plan naᵐ rb | Wᵖ₁ , insᵖ₁ , rb₁
     with TE.insertRebaseAtᴸ (ins₂ plan) rb₁
-Λ-two-insert-rebase-child plan rb
+Λ-two-insert-rebase-child plan naᵐ rb
     | Wᵖ₁ , insᵖ₁ , rb₁ | Wᵖ₂ , insᵖ₂ , rb₂ =
   record
     { childPlan = child ; sameΔ₂ = refl
@@ -6156,7 +6849,7 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
   first-entry = subst≡
     (λ Σ → Σ ∋ Fin.zero ⦂ ⇑ᵗ ★) (sym follows₁) (Z∋ refl)
   support = Λ-route1-post-window-support-at facts
-    (Λ-route1-mid-fresh-mono-at facts)
+    (Λ-route1-mid-fresh-mono-at facts naᵐ)
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just Fin.zero ] _)
       (sym follows₂) (generated-reveal-⊢↑-present z (Z∋ refl)))
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just (Fin.suc Fin.zero) ] _)
@@ -6176,13 +6869,14 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
 Λ-two-insert-tag-rebase-child : ∀ {Δᴸ Δᴿ Δ}
     {W Wᵖ : CTX.World Δᴸ Δᴿ Δ} {Xᴸ? Xᴿ?}
   → (plan : ΛTwoInsertPostPlan W)
+  → CTX.NoAliasWorld Wᵖ
   → CTX.TagRebaseAtᴸ Wᵖ W Xᴸ? Xᴿ?
   → ΛTagRebaseChildPostPlan plan Xᴸ? Xᴿ?
-Λ-two-insert-tag-rebase-child plan rb
+Λ-two-insert-tag-rebase-child plan naᵐ rb
     with TE.reverseTagRebaseAtᴸ (ins₁ plan) rb
-Λ-two-insert-tag-rebase-child plan rb | Wᵖ₁ , insᵖ₁ , rb₁
+Λ-two-insert-tag-rebase-child plan naᵐ rb | Wᵖ₁ , insᵖ₁ , rb₁
     with TE.reverseTagRebaseAtᴸ (ins₂ plan) rb₁
-Λ-two-insert-tag-rebase-child plan rb
+Λ-two-insert-tag-rebase-child plan naᵐ rb
     | Wᵖ₁ , insᵖ₁ , rb₁ | Wᵖ₂ , insᵖ₂ , rb₂ =
   record
     { childPlan = child ; sameΔ₂ = refl
@@ -6242,7 +6936,7 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
   first-entry = subst≡
     (λ Σ → Σ ∋ Fin.zero ⦂ ⇑ᵗ ★) (sym follows₁) (Z∋ refl)
   support = Λ-route1-post-window-support-at facts
-    (Λ-route1-mid-fresh-mono-at facts)
+    (Λ-route1-mid-fresh-mono-at facts naᵐ)
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just Fin.zero ] _)
       (sym follows₂) (generated-reveal-⊢↑-present z (Z∋ refl)))
     (λ z → subst≡ (λ Σ → Σ Conv.⊢↑[ just (Fin.suc Fin.zero) ] _)
@@ -6364,6 +7058,7 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
     {A : Ty Δᴸ} {B : Ty (suc Δᴿ)} {B′ : Ty Δᴿ}
     {ν : Env∼ Δᴿ} {p : A CTX.⊑ᵂ⟨ W ⟩ `∀ B}
   → (plan : ΛTwoInsertPostPlan W)
+  → CTX.NoAliasWorld W
   → (rel : W CTI2.∣ γ ⊢² M ⊑ Λ V′ ∶ p)
   → CT.Value M
   → CT.Value V′
@@ -6372,7 +7067,7 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
   → ⦃ zero∈B : Fin.zero ∈ᵗ B ⦄
   → (B′≢★ : B′ ≢ ★)
   → ΛPostPrefixPackageAtBase rel (postExtend plan) c′ B′≢★
-Λ-post-prefix-hereditary {W = W} {A = `∀ A} {B = B} plan
+Λ-post-prefix-hereditary {W = W} {A = `∀ A} {B = B} plan na
     rel@(CTI2.Λ⊑Λ² liftγ vV vV′ bodyRel q)
     (CT.Λ source-value) target-value c′
     ⦃ Bnv ⦄ ⦃ zero∈B ⦄ B′≢★ =
@@ -6384,41 +7079,55 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
     {W = W} {A = A} {B = B} q
   Anv = proj₁ source-facts
   zero∈A = proj₂ source-facts
-Λ-post-prefix-hereditary plan
+Λ-post-prefix-hereditary plan na
     rel@(CTI2.Λ⊑² Anv zero∈A liftγ vV target⊢ bodyRel q)
     (CT.Λ source-value) target-value c′ B′≢★ =
   Λ⊑²-smart-recursive-prefix-at-base rel vV c′ B′≢★
     Anv zero∈A (frontPostLift front)
     (frontPostLiftCtx front liftγ) bodyRel
-    (Λ-strip-prefix-p₂ plan q)
-    (Λ-post-prefix-hereditary (frontChildPlan front) bodyRel
+    (Λ-strip-prefix-p₂ plan na q)
+    (Λ-post-prefix-hereditary (frontChildPlan front)
+      (CTX.no-alias-extendᵐ (λ ()) na) bodyRel
       vV target-value c′ B′≢★)
   where
-  front = Λ-two-insert-front-child plan
-Λ-post-prefix-hereditary plan
+  front = Λ-two-insert-front-child plan na
+Λ-post-prefix-hereditary {W = W} plan na
     rel@(CTI2.Λ⊑²-smart-comma Anv zero∈A liftW liftγ vV
       target⊢ bodyRel q)
     (CT.Λ source-value) target-value c′ B′≢★ =
   Λ⊑²-smart-recursive-prefix-at-base rel vV c′ B′≢★
     Anv zero∈A (ΛSmartChildPostPlan.postLift child)
     (ΛSmartChildPostPlan.postLiftCtx child liftγ) bodyRel
-    (Λ-strip-prefix-p₂ plan q)
+    (Λ-strip-prefix-p₂ plan na q)
     (Λ-post-prefix-hereditary
-      (ΛSmartChildPostPlan.childPlan child) bodyRel
+      (ΛSmartChildPostPlan.childPlan child) naᵐ bodyRel
       vV target-value c′ B′≢★)
   where
-  child = Λ-two-insert-smart-child plan liftW
-Λ-post-prefix-hereditary plan
+  na-of : ∀ {Δᵐ} {Wᵐ : CTX.World _ _ Δᵐ}
+    → CTX.SmartCommaLiftᴸ W Wᵐ
+    → CTX.NoAliasWorld Wᵐ
+  na-of (CTX.smart-fresh-behind guard) =
+    CTX.SmartFreshBehindGuard.fresh-no-alias guard na
+  na-of (CTX.smart-merge-alias guard) =
+    CTX.no-alias-same
+      (CTX.SmartAliasMergeGuard.old-alias-agree guard) na
+
+  naᵐ = na-of liftW
+
+  child = Λ-two-insert-smart-child plan naᵐ liftW
+Λ-post-prefix-hereditary plan na
     rel@(CTI2.cast⊑² c prem q)
     (vM 《 inert 》) target-value c′ B′≢★ =
   Λ-post-prefix-cast⊑²-base c B′≢★
-    (Λ-strip-prefix-p₂ plan q)
-    (Λ-post-prefix-hereditary plan prem vM target-value c′ B′≢★)
-Λ-post-prefix-hereditary plan
+    (Λ-strip-prefix-p₂ plan na q)
+    (Λ-post-prefix-hereditary plan na prem vM target-value
+      c′ B′≢★)
+Λ-post-prefix-hereditary plan na
     rel@(CTI2.reveal⊑² mono rb sc c⊢ prem q)
     (vM ↑ reveal-value) target-value c′ B′≢★
-    with Λ-two-insert-rebase-child plan rb
-Λ-post-prefix-hereditary plan
+    with Λ-two-insert-rebase-child plan
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) rb
+Λ-post-prefix-hereditary plan na
     rel@(CTI2.reveal⊑² mono rb sc c⊢ prem q)
     (vM ↑ reveal-value) target-value c′ B′≢★
     | record
@@ -6429,13 +7138,16 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
     (mapCtxᴿ-sameCtx (postExtend plan) (postExtend child) sc)
     (TE.source-reveal-insert (ins₂ plan)
       (TE.source-reveal-insert (ins₁ plan) c⊢))
-    (Λ-strip-prefix-p₂ plan q)
-    (Λ-post-prefix-hereditary child prem vM target-value c′ B′≢★)
-Λ-post-prefix-hereditary plan
+    (Λ-strip-prefix-p₂ plan na q)
+    (Λ-post-prefix-hereditary child
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) prem vM
+      target-value c′ B′≢★)
+Λ-post-prefix-hereditary plan na
     rel@(CTI2.conceal⊑²-source-ok ok mono rb sc c⊢ prem q)
     (vM ↓ conceal-value) target-value c′ B′≢★
-    with Λ-two-insert-tag-rebase-child plan rb
-Λ-post-prefix-hereditary plan
+    with Λ-two-insert-tag-rebase-child plan
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) rb
+Λ-post-prefix-hereditary plan na
     rel@(CTI2.conceal⊑²-source-ok ok mono rb sc c⊢ prem q)
     (vM ↓ conceal-value) target-value c′ B′≢★
     | record
@@ -6447,8 +7159,10 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
     (mapCtxᴿ-sameCtx (postExtend plan) (postExtend child) sc)
     (TE.source-conceal-insert (ins₂ plan)
       (TE.source-conceal-insert (ins₁ plan) c⊢))
-    (Λ-strip-prefix-p₂ plan q)
-    (Λ-post-prefix-hereditary child prem vM target-value c′ B′≢★)
+    (Λ-strip-prefix-p₂ plan na q)
+    (Λ-post-prefix-hereditary child
+      (CTX.no-alias-same (CTX.aliasAgree mono) na) prem vM
+      target-value c′ B′≢★)
 
 
 Λ-inst-inversion-package : ∀ {fuel Δᴸ Δᴿ Δ}
@@ -6461,6 +7175,7 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
   → FuelStepSurface fuel
   → inst-alloc-decreaseᵀ
   → ResidualCastBuilderᵀ
+  → CTX.NoAliasWorld W
   → (rel : W CTI2.∣ γ ⊢² M ⊑ M′ ∶ p)
   → (vM : CT.Value M)
   → (vM′ : CT.Value M′)
@@ -6474,11 +7189,11 @@ record ΛTagRebaseChildPostPlan {Δᴸ Δᴿ Δ}
   → (q : A CTX.⊑ᵂ⟨ W ⟩ B′)
   → InstPostCatalogPackage fuel rel vM vM′ c′ B′≢★ c<fuel q
 Λ-inst-inversion-package {W = W} fuel-step inst-decrease
-    residual-cast-builder rel vM vM′ vV′ refl c′ B′≢★ c<fuel q =
+    residual-cast-builder na rel vM vM′ vV′ refl c′ B′≢★ c<fuel q =
   inst-post-at→root-package fuel-step residual-cast-builder rel vM vM′
-    c′ B′≢★ c<fuel q (postExtend plan)
+    c′ B′≢★ c<fuel q (postExtend plan) na
     (Λ-post-prefix-base→package-at inst-decrease rel vM vM′ c′
       B′≢★ c<fuel q (postExtend plan)
-      (Λ-post-prefix-hereditary plan rel vM vV′ c′ B′≢★))
+      (Λ-post-prefix-hereditary plan na rel vM vV′ c′ B′≢★))
   where
   plan = Λ-concrete-two-insert-post-plan {W = W}

@@ -472,6 +472,8 @@ record SmartFreshBehindGuard {Δᴸ Δᴿ Δ Δᵐ}
       → Σ[ T₀ ∈ Ty Δ ]
           ((impEnvʷ W Z ≡ X⊑ᵗ T₀)
           × (T ≡ renameᵗ (toRenameᵗ oldCenters) T₀))
+    fresh-no-alias : (∀ Z {T} → impEnvʷ W Z ≡ X⊑ᵗ T → ⊥)
+      → ∀ Z {T} → impEnvʷ Wᵐ Z ≡ X⊑ᵗ T → ⊥
 
 
 record SmartAliasMergeGuard {Δᴸ Δᴿ Δ}

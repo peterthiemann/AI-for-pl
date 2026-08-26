@@ -15,7 +15,7 @@ open import Data.Product using (Σ-syntax; _×_; _,_; proj₁; proj₂)
 import Data.Fin as Fin
 import Data.Fin.Properties as FinP
 import Data.Nat as Nat
-open import Data.Empty using (⊥-elim)
+open import Data.Empty using (⊥; ⊥-elim)
 open import Relation.Nullary using (yes; no)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; _≢_; refl; sym; trans; cong; cong₂)
@@ -1575,6 +1575,7 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ = Δ}
     source-store target-store transport′ old-mark-mono′
     target-frozen′ old-source-frozen′ fresh-not-target′ fresh-mark′
     target-mark-mono′ old-alias-frozen′ old-alias-reflect′
+    fresh-no-alias′
   where
   po = embeddingPushout π (CTX.SmartFreshBehindGuard.oldCenters guard)
   πᵐ = EmbeddingPushout.premise po
@@ -1908,6 +1909,33 @@ smartFreshGuardInsert {Δᴸ = Δᴸ} {Δᴿ′ = Δᴿ′} {Δ = Δ}
           y′-eq)
         (smartFresh-target-insert ins guard Y)
 
+
+  fresh-no-alias′ : (∀ Z {T}
+      → CTX.impEnvʷ W′ Z ≡ X⊑ᵗ T → ⊥)
+    → ∀ Z {T}
+    → CTX.impEnvʷ (smartFreshInsertWorld ins guard) Z
+      ≡ X⊑ᵗ T → ⊥
+  fresh-no-alias′ na′ Z {T} eq
+      with preimage? πᵐ Z
+  fresh-no-alias′ na′ Z {T} () | nothing
+  fresh-no-alias′ na′ Z {T} eq | just Z₀
+      with renameᵛ-alias-inv eq
+  fresh-no-alias′ na′ Z {T} eq | just Z₀
+      | T₀ , mode , T-eq =
+    CTX.SmartFreshBehindGuard.fresh-no-alias guard
+      na-W Z₀ mode
+    where
+    na-W : ∀ Z† {T†}
+      → CTX.impEnvʷ W Z† ≡ X⊑ᵗ T† → ⊥
+    na-W Z† eq† =
+      na′ (toRenameᵗ π Z†)
+        (subst≡ (λ C → CTX.impEnvʷ W′ C ≡ X⊑ᵗ _)
+          (sym (source-noop Z†))
+          (trans (impEnv-insert ins Z†)
+            (cong (renameᵛ (toRenameᵗ π)) eq†)))
+      where
+      source-noop : ∀ Z‡ → toRenameᵗ π Z‡ ≡ toRenameᵗ π Z‡
+      source-noop Z‡ = refl
 
 smartFreshTargetWindowInsert : ∀ {Δᴸ Δᴿ Δ Δ′ Δᵐ}
     {π : Δ ↪ᵗ Δ′}

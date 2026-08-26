@@ -9,7 +9,8 @@ module proof.DGG.SmartCommaWitness where
 --   * No simulation theorem consumes this file; `All.agda` imports it so the
 --     blocker-overcome witness stays checked.
 
-open import Data.Empty using (⊥-elim)
+open import Data.Empty using (⊥; ⊥-elim)
+open import Data.Product using (Σ-syntax; _×_; _,_)
 open import Data.List using ([]; _∷_)
 open import Data.Maybe using (just)
 open import Data.Nat using (suc)
@@ -38,7 +39,7 @@ import proof.DGG.CtxImp as CTX
 open CTI2 using (_∣_⊢²_⊑_∶_)
 import proof.DGG.CastTermImprecision2Typing as CTI2Typing
 import proof.DGG.Catchup.InstInversionProof as IIP
-open import proof.ImprecisionConsistency using (subst-⊑)
+open import proof.ImprecisionConsistency using (subst-⊑; SubstAliasMap)
 open import proof.TypeInTermSubst using (rename-occurs)
 
 ------------------------------------------------------------------------
@@ -245,12 +246,13 @@ transport⊑ᵂ-by-subst : ∀ {Δᴸ Δᴿ Δ Δ′}
   → (σ : Fin.Fin Δ → Ty Δ′)
   → (∀ Z → CTX.impEnvʷ W Z ≡ I.X⊑★
       → I._⊢_⊑_ (CTX.impEnvʷ W′) (σ Z) ★)
+  → SubstAliasMap (CTX.impEnvʷ W) (CTX.impEnvʷ W′) σ
   → (∀ C → substᵗ σ (CTX.embedᴸ W C) ≡ CTX.embedᴸ W′ C)
   → (∀ C → substᵗ σ (CTX.embedᴿ W C) ≡ CTX.embedᴿ W′ C)
   → A CTX.⊑ᵂ⟨ W ⟩ B
   → A CTX.⊑ᵂ⟨ W′ ⟩ B
 transport⊑ᵂ-by-subst {W = W} {W′ = W′} {A = A} {B = B}
-    σ star-map source-eq target-eq p =
+    σ star-map alias-map source-eq target-eq p =
   subst≡
     (λ L → I._⊢_⊑_ (CTX.impEnvʷ W′) L (CTX.embedᴿ W′ B))
     (source-eq A)
@@ -258,7 +260,7 @@ transport⊑ᵂ-by-subst {W = W} {W′ = W′} {A = A} {B = B}
       (λ R → I._⊢_⊑_ (CTX.impEnvʷ W′)
         (substᵗ σ (CTX.embedᴸ W A)) R)
       (target-eq B)
-      (subst-⊑ star-map p))
+      (subst-⊑ star-map alias-map p))
 
 d1-fresh-subst : Fin.Fin 3 → Ty 3
 d1-fresh-subst Fin.zero = ＇ (Fin.suc (Fin.suc Fin.zero))
@@ -311,8 +313,15 @@ d1-fresh-transport =
   transport⊑ᵂ-by-subst
     {W = CTX.liftWorldLeft I.X⊑★ W₂}
     {W′ = d1-outer-smart-world}
-    d1-fresh-subst d1-fresh-star d1-fresh-source-eq
-    d1-fresh-target-eq
+    d1-fresh-subst d1-fresh-star d1-fresh-alias
+    d1-fresh-source-eq d1-fresh-target-eq
+  where
+  d1-fresh-alias : SubstAliasMap
+      (CTX.impEnvʷ (CTX.liftWorldLeft I.X⊑★ W₂))
+      (CTX.impEnvʷ d1-outer-smart-world) d1-fresh-subst
+  d1-fresh-alias Fin.zero ()
+  d1-fresh-alias (Fin.suc Fin.zero) ()
+  d1-fresh-alias (Fin.suc (Fin.suc Fin.zero)) ()
 
 d1-merge-subst : Fin.Fin 4 → Ty 3
 d1-merge-subst Fin.zero = ＇ Fin.zero
@@ -380,8 +389,17 @@ d1-merge-transport =
   transport⊑ᵂ-by-subst
     {W = CTX.liftWorldLeft I.X⊑★ d1-outer-smart-world}
     {W′ = a3-d1-alias-world}
-    d1-merge-subst d1-merge-star d1-merge-source-eq
-    d1-merge-target-eq
+    d1-merge-subst d1-merge-star d1-merge-alias
+    d1-merge-source-eq d1-merge-target-eq
+  where
+  d1-merge-alias : SubstAliasMap
+      (CTX.impEnvʷ
+        (CTX.liftWorldLeft I.X⊑★ d1-outer-smart-world))
+      (CTX.impEnvʷ a3-d1-alias-world) d1-merge-subst
+  d1-merge-alias Fin.zero ()
+  d1-merge-alias (Fin.suc Fin.zero) ()
+  d1-merge-alias (Fin.suc (Fin.suc Fin.zero)) ()
+  d1-merge-alias (Fin.suc (Fin.suc (Fin.suc Fin.zero))) ()
 
 ------------------------------------------------------------------------
 -- The live D1 derivation.
@@ -389,11 +407,11 @@ d1-merge-transport =
 
 star-mono-d1-name-alias :
   CTX.ImpEnvMono a3-d1-name-world a3-d1-alias-world
-star-mono-d1-name-alias _ _ = refl
+star-mono-d1-name-alias = CTX.eqᵉᵐ (λ _ → refl)
 
 star-mono-d1-alias-name :
   CTX.ImpEnvMono a3-d1-alias-world a3-d1-name-world
-star-mono-d1-alias-name _ _ = refl
+star-mono-d1-alias-name = CTX.eqᵉᵐ (λ _ → refl)
 
 d1-alias-body-p :
   d1-source-body CTX.⊑ᵂ⟨ a3-d1-alias-world ⟩ d1-target-alias-body
@@ -433,8 +451,34 @@ d1-fresh-guard =
   CTX.smart-fresh-behind-guard η-tgt-βα-3 refl refl
     d1-fresh-transport (λ _ _ → refl)
     target-frozen (λ ()) fresh-not-target refl
-    (λ _ _ → refl)
+    (λ _ _ → refl) old-alias-frozen old-alias-reflect
+    (λ na′ → no-alias)
   where
+  old-alias-frozen : ∀ Z {T}
+    → CTX.impEnvʷ W₂ Z ≡ I.X⊑ᵗ T
+    → CTX.impEnvʷ d1-outer-smart-world
+        (toRenameᵗ η-tgt-βα-3 Z)
+      ≡ I.X⊑ᵗ (renameᵗ (toRenameᵗ η-tgt-βα-3) T)
+  old-alias-frozen Fin.zero ()
+  old-alias-frozen (Fin.suc Fin.zero) ()
+
+  old-alias-reflect : ∀ Z {T}
+    → CTX.impEnvʷ d1-outer-smart-world
+        (toRenameᵗ η-tgt-βα-3 Z)
+      ≡ I.X⊑ᵗ T
+    → Σ[ T₀ ∈ Ty 2 ]
+        ((CTX.impEnvʷ W₂ Z ≡ I.X⊑ᵗ T₀)
+        × (T ≡ renameᵗ (toRenameᵗ η-tgt-βα-3) T₀))
+  old-alias-reflect Fin.zero ()
+  old-alias-reflect (Fin.suc Fin.zero) ()
+
+  no-alias : ∀ Z {T}
+    → CTX.impEnvʷ d1-outer-smart-world Z ≡ I.X⊑ᵗ T
+    → ⊥
+  no-alias Fin.zero ()
+  no-alias (Fin.suc Fin.zero) ()
+  no-alias (Fin.suc (Fin.suc Fin.zero)) ()
+
   target-frozen : ∀ Xᴿ
     → toRenameᵗ (CTX.ηᴿʷ d1-outer-smart-world) Xᴿ
       ≡ toRenameᵗ η-tgt-βα-3 (toRenameᵗ (CTX.ηᴿʷ W₂) Xᴿ)
@@ -455,6 +499,7 @@ d1-merge-guard =
     refl refl d1-merge-transport (λ _ _ → refl)
     (λ _ → refl) refl old-source-frozen no-old-source
     refl refl target-mark-off-footprint
+    (CTX.alias-same (λ Z ()) (λ Z ()))
   where
   old-source-frozen : ∀ Xᴸ
     → toRenameᵗ (CTX.ηᴸʷ a3-d1-alias-world) (Fin.suc Xᴸ)

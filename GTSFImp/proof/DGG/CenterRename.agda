@@ -26,6 +26,7 @@ open import Conversion using (Conv↓)
 open import Imprecision
 open import CastTerms using (Term; ⟨_,_,_⟩; _⊢_⦂_)
 import proof.DGG.CastTermImprecision as CTI2
+open import Data.Empty using (⊥; ⊥-elim)
 import proof.DGG.CtxImp as CTX
 import proof.DGG.WorldDecay as WD
 import proof.DGG.TermImpDecay as TID
@@ -1022,7 +1023,7 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ} {Δ = Δ}
     (CTX.SmartFreshBehindGuard.targetStore-same guard)
     transport′ old-mark-mono′ target-frozen′ old-source-frozen′
     fresh-not-target′ fresh-mark′ target-mark-frozen′
-    old-alias-frozen′ old-alias-reflect′
+    old-alias-frozen′ old-alias-reflect′ fresh-no-alias′
   where
   old = CTX.SmartFreshBehindGuard.oldCenters guard
   po = embeddingPushout π old
@@ -1202,6 +1203,27 @@ renameSmartFreshBehindGuard {Δᴸ = Δᴸ} {Δᴿ = Δᴿ} {Δ = Δ}
     trans T-eq
       (trans (cong (renameᵗ (toRenameᵗ πᵐ)) T₁-eq)
         (rep-comm T₀))
+
+  fresh-no-alias′ : (∀ Z {T}
+      → CTX.impEnvʷ (renameWorld π W) Z ≡ X⊑ᵗ T → ⊥)
+    → ∀ Z {T}
+    → CTX.impEnvʷ (renameWorld πᵐ Wᵐ) Z ≡ X⊑ᵗ T → ⊥
+  fresh-no-alias′ na′ Z {T} eq
+      with preimage? πᵐ Z
+  fresh-no-alias′ na′ Z {T} () | nothing
+  fresh-no-alias′ na′ Z {T} eq | just Z₀
+      with renameᵛ-alias-inv eq
+  fresh-no-alias′ na′ Z {T} eq | just Z₀
+      | T₀ , mode , _ =
+    CTX.SmartFreshBehindGuard.fresh-no-alias guard
+      na-W Z₀ mode
+    where
+    na-W : ∀ Z† {T†}
+      → CTX.impEnvʷ W Z† ≡ X⊑ᵗ T† → ⊥
+    na-W Z† eq† =
+      na′ (toRenameᵗ π Z†)
+        (trans (renameEnv-image π (CTX.impEnvʷ W) Z†)
+          (cong (renameᵛ (toRenameᵗ π)) eq†))
 
 ------------------------------------------------------------------------
 -- Derivation transport

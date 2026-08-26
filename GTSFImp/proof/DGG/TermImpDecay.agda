@@ -199,6 +199,7 @@ decaySmartFreshBehindGuard
     target-mark-mono′
     old-alias-frozen′
     old-alias-reflect′
+    fresh-no-alias′
   where
   old = CTX.SmartFreshBehindGuard.oldCenters guard
 
@@ -269,6 +270,15 @@ decaySmartFreshBehindGuard
                (CTX.impEnvʷ Wᵐ (toRenameᵗ old Z)) eq)
   old-alias-reflect′ Z eq | T₀ , w-eq , T-eq =
     T₀ , CTX.alias-fwd al Z w-eq , T-eq
+
+  fresh-no-alias′ : (∀ Z {T}
+      → CTX.impEnvʷ Wᵈ Z ≡ X⊑ᵗ T → ⊥)
+    → ∀ Z {T}
+    → CTX.impEnvʷ (SPT.dynWorld Wᵐ) Z ≡ X⊑ᵗ T → ⊥
+  fresh-no-alias′ naᵈ Z eq =
+    CTX.SmartFreshBehindGuard.fresh-no-alias guard
+      (λ Z′ eq′ → naᵈ Z′ (CTX.alias-fwd al Z′ eq′))
+      Z (dynamize-alias-bwd (CTX.impEnvʷ Wᵐ Z) eq)
 
   smartSubst : suc Δ ⇒ˢ Δᵐ
   smartSubst Fin.zero =

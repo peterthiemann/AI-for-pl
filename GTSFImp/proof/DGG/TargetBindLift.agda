@@ -746,6 +746,10 @@ moveSmartFreshBehindGuard {W = W} {Wᵗ = Wᵗ}
             CTX.SmartFreshBehindGuard.old-alias-reflect
               guard Z al
       in T₀ , trans (same Z) w-eq , T-eq)
+    (λ na′ Z al →
+      CTX.SmartFreshBehindGuard.fresh-no-alias guard
+        (λ Z† eq† → na′ Z† (trans (same Z†) eq†))
+        Z al)
 
 moveSmartCommaLiftᴸ : ∀ {Δᴸ Δᴿ Δ Δᵐ}
     {W Wᵗ : World Δᴸ Δᴿ Δ}
