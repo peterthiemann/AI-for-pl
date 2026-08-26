@@ -50,6 +50,7 @@ module _ (inversion : RightInjInversion²) where
       {A : Ty Δᴸ} {G : Ty Δᴿ} {μ : Env∼ Δᴿ}
       {Gᵍ : Ground G} {G∼★ : μ ⊢ G ∼★}
       {p★ : A ⊑ᵂ⟨ W ⟩ ★}
+    → CTX.NoAliasWorld W
     → Value M
     → Value N
     → W ∣ γ ⊢² M ⊑
@@ -57,8 +58,8 @@ module _ (inversion : RightInjInversion²) where
             ⦃ C.ground-nonstar Gᵍ ⦄ ⟩ ∶ p★
     → (qG : A ⊑ᵂ⟨ W ⟩ G)
     → W ∣ γ ⊢² M ⊑ N ∶ qG
-  generated-project-same-replacement vM vN rel qG =
-    inversion (value→spine vM) vN rel qG
+  generated-project-same-replacement na vM vN rel qG =
+    inversion na (value→spine vM) vN rel qG
 
 
   generated-project-expand-replacement : ∀ {Δᴸ Δᴿ Δ}
@@ -67,6 +68,7 @@ module _ (inversion : RightInjInversion²) where
       {A : Ty Δᴸ} {G B : Ty Δᴿ} {μ ν : Env∼ Δᴿ}
       {Gᵍ : Ground G} {G∼★ : μ ⊢ G ∼★} {★∼G : ν ⊢★∼ G}
       {Bns : NonStar B} {p★ : A ⊑ᵂ⟨ W ⟩ ★}
+    → CTX.NoAliasWorld W
     → Value M
     → Value N
     → W ∣ γ ⊢² M ⊑
@@ -83,10 +85,11 @@ module _ (inversion : RightInjInversion²) where
           ⟨ c ⟩ ∶ qB
   generated-project-expand-replacement
       {Gᵍ = Gᵍ} {G∼★ = G∼★} {★∼G = ★∼G} {p★ = p★}
-      vM vN rel c qG qB =
+      na vM vN rel c qG qB =
     CTI2.⊑cast² c
       (CTI2.⊑cast² proj
-        (CTI2.⊑cast² tag (inversion (value→spine vM) vN rel qG) p★)
+        (CTI2.⊑cast² tag (inversion na (value→spine vM) vN rel qG)
+          p★)
         qG)
       qB
     where

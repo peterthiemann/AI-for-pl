@@ -648,6 +648,7 @@ structural-project-same-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     ⦃ ★∼G : ν ⊢★∼ G ⦄
     {p★ : A ⊑ᵂ⟨ W ⟩ ★} {qG : A ⊑ᵂ⟨ W ⟩ G}
   → RightInjInversion²
+  → CTX.NoAliasWorld W
   → Value M
   → Value N
   → W ∣ γ ⊢² M ⊑
@@ -663,14 +664,14 @@ structural-project-same-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
 structural-project-same-extra-cast-right-at {W = W} {γ = γ}
     {M = M} {N = N} {A = A} {G = G} {μ = μ} {ν = ν}
     ⦃ Gᵍ = Gᵍ ⦄ ⦃ G∼★ = G∼★ ⦄ ⦃ ★∼G = ★∼G ⦄
-    {p★ = p★} {qG = qG} inversion vM vN rel-tag =
+    {p★ = p★} {qG = qG} inversion na vM vN rel-tag =
   structural-catchup-keep-step vN
     (pure-step (tag-untag ⦃ Gns = ground-nonstar Gᵍ ⦄ vN))
     (exposed-project-same-step-inversion-⊑cast²
       inversion {W = W} {γ = γ} {M = M} {N = N}
       {A = A} {G = G} {μ = μ} {Gᵍ = Gᵍ}
       {G∼★ = G∼★} {p★ = p★}
-      vM vN rel-tag qG)
+      na vM vN rel-tag qG)
 
 
 structural-paired-project-same-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
@@ -684,6 +685,7 @@ structural-paired-project-same-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
     {qG : C ⊑ᵂ⟨ W ⟩ G}
     {q : A ⊑ᵂ⟨ W ⟩ G}
   → RightInjInversion²
+  → CTX.NoAliasWorld W
   → (cᴸ : νᴸ ⊢ C ∼ A)
   → Value M
   → Value N
@@ -702,7 +704,7 @@ structural-paired-project-same-extra-cast-right-at {W = W} {γ = γ}
     {M = M} {N = N} {C = C} {G = G} {μ = μ}
     ⦃ Gᵍ = Gᵍ ⦄ ⦃ G∼★ = G∼★ ⦄ ⦃ ★∼G = ★∼G ⦄
     {p★ = p★} {qG = qG} {q = q}
-    inversion cᴸ vM vN inertᴸ rel-tag =
+    inversion na cᴸ vM vN inertᴸ rel-tag =
   structural-catchup-keep-step vN
     (pure-step (tag-untag ⦃ Gns = ground-nonstar Gᵍ ⦄ vN))
     (CTI2.cast⊑² cᴸ core q)
@@ -713,7 +715,7 @@ structural-paired-project-same-extra-cast-right-at {W = W} {γ = γ}
       inversion {W = W} {γ = γ} {M = M} {N = N}
       {A = C} {G = G} {μ = μ} {Gᵍ = Gᵍ}
       {G∼★ = G∼★} {p★ = p★}
-      vM vN rel-tag qG
+      na vM vN rel-tag qG
 
 
 structural-project-expand-extra-cast-right-at : ∀ {Δᴸ Δᴿ Δ}
@@ -770,13 +772,13 @@ structural-project-expand-extra-cast-right-at {W = W} {γ = γ}
       {A = A} {G = G} {B = B} {μ = μ} {ν = ν}
       {Gᵍ = Gᵍ} {G∼★ = G∼★} {★∼G = ★∼G}
       {Bns = Bns} {p★ = p★}
-      vM vN rel-tag c qG qB
+      na vM vN rel-tag c qG qB
 
   child : StructuralCatchupRightResult W γ M
       ((N ⟨ tag ⟩) ⟨ proj ⟩) qG
   child =
     structural-project-same-extra-cast-right-at
-      inversion vM vN rel-tag
+      inversion na vM vN rel-tag
 
   plan = StructuralCatchupRightResult.structural-ext child
   ext = structural-world-extendᴿ plan
@@ -857,7 +859,7 @@ structural-paired-project-expand-extra-cast-right-at {W = W} {γ = γ}
       inversion {W = W} {γ = γ} {M = M} {N = N}
       {A = C} {G = G} {μ = μ} {Gᵍ = Gᵍ}
       {G∼★ = G∼★} {p★ = p★}
-      vM vN rel-tag qG
+      na vM vN rel-tag qG
 
   cᴿ< =
     project-expand-decrease cᴿ

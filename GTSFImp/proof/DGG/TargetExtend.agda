@@ -3382,8 +3382,7 @@ right-bind-impEnv-insert : ∀ {Δᴸ Δᴿ Δ}
   → CTX.impEnvʷ (CTX.rightOnlyWorld W B) (toRenameᵗ wk↪ᵗ Z)
       ≡ renameᵛ (toRenameᵗ wk↪ᵗ) (CTX.impEnvʷ W Z)
 right-bind-impEnv-insert {W = W} Z
-    rewrite toRename-wk-eq Z
-          | toRename-id-eq Z =
+    rewrite toRename-id-eq Z =
   mode-wk-comm (CTX.impEnvʷ W Z)
 
 right-bind-impEnv-off-insert : ∀ {Δᴸ Δᴿ Δ}

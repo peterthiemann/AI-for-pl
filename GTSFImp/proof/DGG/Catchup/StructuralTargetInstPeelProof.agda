@@ -11,7 +11,8 @@ import Data.Fin as Fin
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Nat using (suc)
 open import Data.Product using (Σ-syntax; _,_)
-open import Relation.Binary.PropositionalEquality using (_≡_; _≢_; refl; sym; trans)
+open import Relation.Binary.PropositionalEquality using
+  (_≡_; _≢_; refl; sym; trans)
   renaming (subst to subst≡)
 
 open import Types using (Ty; TyCtx; NonVar; _∈ᵗ_; ＇_; ★; _[_]ᵗ; ⇑ᵗ)

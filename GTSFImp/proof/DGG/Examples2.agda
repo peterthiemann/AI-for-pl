@@ -470,7 +470,8 @@ example12-lambda-Z :
     ⊑ (ƛ (` 0)) ↑ example12-target-Y-reveal ∶
       example12-Z-function-local
 example12-lambda-Z =
-  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl)) (CTX.rebase-varᴿ example12-rebase-Z-to-Y) CTX.same-[]
+  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl))
+    (CTX.rebase-varᴿ example12-rebase-Z-to-Y) CTX.same-[]
     example12-target-Y-reveal-⊢ˣ example12-lambda-Y
     example12-Z-function-local
 
@@ -480,7 +481,8 @@ example12-lambda-star :
         ↑ example12-target-Z-reveal ∶
       example12-X-function-to-star
 example12-lambda-star =
-  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl)) (CTX.rebase-varᴿ Ex12.example12-rebase-X-to-Z) CTX.same-[]
+  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl))
+    (CTX.rebase-varᴿ Ex12.example12-rebase-X-to-Z) CTX.same-[]
     example12-target-Z-reveal-⊢ˣ example12-lambda-Z
     example12-X-function-to-star
 
@@ -624,7 +626,8 @@ example12-target-Z-seal-checkpoint₃ :
         ↓ example12-target-Z-seal ∶
       example12-Z-var⊑
 example12-target-Z-seal-checkpoint₃ =
-  CTI2.⊑conceal² (idᵐ₂ (λ _ → refl)) (CTX.rebase-varᴿ Ex12.example12-rebase-X-to-Z) CTX.same-[]
+  CTI2.⊑conceal² (idᵐ₂ (λ _ → refl))
+    (CTX.rebase-varᴿ Ex12.example12-rebase-X-to-Z) CTX.same-[]
     example12-target-Z-seal-⊢ˣ example12-target-X!-checkpoint₃
     example12-Z-var⊑
 
@@ -637,7 +640,8 @@ example12-target-Y-seal-checkpoint₃ :
         ↓ example12-target-Y-seal ∶
       example12-Y-var⊑
 example12-target-Y-seal-checkpoint₃ =
-  CTI2.⊑conceal² (idᵐ₂ (λ _ → refl)) (CTX.rebase-varᴿ example12-rebase-Z-to-Y) CTX.same-[]
+  CTI2.⊑conceal² (idᵐ₂ (λ _ → refl))
+    (CTX.rebase-varᴿ example12-rebase-Z-to-Y) CTX.same-[]
     example12-target-Y-seal-⊢ˣ example12-target-Z-seal-checkpoint₃
     example12-Y-var⊑
 
@@ -651,7 +655,8 @@ example12-target-Y-unseal-checkpoint₃ :
         ↑ example12-target-Y-unseal ∶
       example12-Z-var⊑
 example12-target-Y-unseal-checkpoint₃ =
-  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl)) (CTX.rebase-varᴿ example12-rebase-Z-to-Y) CTX.same-[]
+  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl))
+    (CTX.rebase-varᴿ example12-rebase-Z-to-Y) CTX.same-[]
     example12-target-Y-unseal-⊢ˣ example12-target-Y-seal-checkpoint₃
     example12-Z-var⊑
 
@@ -666,7 +671,8 @@ example12-target-Z-unseal-checkpoint₃ :
         ↑ example12-target-Z-unseal ∶
       example12-X-var-to-star
 example12-target-Z-unseal-checkpoint₃ =
-  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl)) (CTX.rebase-varᴿ Ex12.example12-rebase-X-to-Z) CTX.same-[]
+  CTI2.⊑reveal² (idᵐ₂ (λ _ → refl))
+    (CTX.rebase-varᴿ Ex12.example12-rebase-X-to-Z) CTX.same-[]
     example12-target-Z-unseal-⊢ˣ example12-target-Y-unseal-checkpoint₃
     example12-X-var-to-star
 

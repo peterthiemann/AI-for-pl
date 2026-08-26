@@ -1740,7 +1740,8 @@ mutual
       | Δ₁ , π , W₁ , ins , follows , child-target , finish-target
       with StructuralStrictViewSurfaces.Λ-cell surfaces plan chain-plan
         rel vM vV spine chain typed ins follows child-target
-  structural-name-instantiation-acc surfaces {B = B} {X = X} fuel-step residual-cast-builder
+  structural-name-instantiation-acc surfaces {B = B} {X = X}
+      fuel-step residual-cast-builder
       inst-decrease na plan chain-plan rel vM (CT.Λ vV)
       (allv-Λ vV′ refl) spine chain typed (WF.acc smaller) target
       | Δ₁ , π , W₁ , ins , follows , child-target , finish-target
@@ -1777,14 +1778,16 @@ mutual
       (allv-∀ vV′ refl) spine chain typed (WF.acc smaller) target
       | Prog.av-∀ vVᵗ refl
       with structural-target-all-peel vV spine target
-  structural-name-instantiation-acc surfaces {X = X} fuel-step residual-cast-builder
+  structural-name-instantiation-acc surfaces {X = X}
+      fuel-step residual-cast-builder
       inst-decrease na plan chain-plan rel vM (vV CT.《 CT.all {c = d} 》)
       (allv-∀ vV′ refl) spine chain typed (WF.acc smaller) target
       | Prog.av-∀ vVᵗ refl
       | child-target , finish-target
       with StructuralStrictViewSurfaces.∀-cast-cell surfaces plan
         chain-plan rel vM vV spine chain typed child-target
-  structural-name-instantiation-acc surfaces {X = X} fuel-step residual-cast-builder
+  structural-name-instantiation-acc surfaces {X = X}
+      fuel-step residual-cast-builder
       inst-decrease na plan chain-plan rel vM (vV CT.《 CT.all {c = d} 》)
       (allv-∀ vV′ refl) spine chain typed (WF.acc smaller) target
       | Prog.av-∀ vVᵗ refl
@@ -1811,13 +1814,15 @@ mutual
       (allv-gen vV′ A≢★′ safe′ refl) spine chain typed (WF.acc smaller) target
       with Prog.canonical-∀ (vV CT.《 CT.genᵥ A≢★ safe 》)
         (CTI2T.target-typing² rel)
-  structural-name-instantiation-acc surfaces {X = X} fuel-step residual-cast-builder
+  structural-name-instantiation-acc surfaces {X = X}
+      fuel-step residual-cast-builder
       inst-decrease na plan chain-plan rel vM
       (vV CT.《 CT.genᵥ A≢★ safe 》)
       (allv-gen vV′ A≢★′ safe′ refl) spine chain typed (WF.acc smaller) target
       | Prog.av-gen vVᵗ A≢★ᵗ safeᵗ refl
       with structural-target-gen-peel vV A≢★ safe spine target
-  structural-name-instantiation-acc surfaces {X = X} fuel-step residual-cast-builder
+  structural-name-instantiation-acc surfaces {X = X}
+      fuel-step residual-cast-builder
       inst-decrease na plan chain-plan rel vM
       (vV CT.《 CT.genᵥ {c = c} A≢★ safe 》)
       (allv-gen vV′ A≢★′ safe′ refl) spine chain typed (WF.acc smaller) target
@@ -1825,7 +1830,8 @@ mutual
       | Δ₁ , π , W₁ , ins , follows , child-target , finish-target
       with StructuralStrictViewSurfaces.gen-cell surfaces plan chain-plan
         A≢★ rel vM vV safe spine chain typed ins follows child-target
-  structural-name-instantiation-acc surfaces {X = X} fuel-step residual-cast-builder
+  structural-name-instantiation-acc surfaces {X = X}
+      fuel-step residual-cast-builder
       inst-decrease na plan chain-plan rel vM
       (vV CT.《 CT.genᵥ {c = c} A≢★ safe 》)
       (allv-gen vV′ A≢★′ safe′ refl) spine chain typed (WF.acc smaller) target
@@ -1970,7 +1976,8 @@ structural-value-instantiation {fuel = fuel} {W = W} {γ = γ}
     {A = A} {B = B} {R = R} {q = q}
     surfaces name-worker fuel-step residual-cast-builder inst-decrease na plan
     chain-plan rel vM vV view target =
-  erase-structural-name-root surfaces name-worker fuel-step residual-cast-builder
+  erase-structural-name-root surfaces name-worker fuel-step
+    residual-cast-builder
     inst-decrease na plan chain-plan rel vM
     (renameᵗᵐ-preserves-Value wk↪ᵗ vV)
     (SpineValueProof.rename-all-value-view wk↪ᵗ view)

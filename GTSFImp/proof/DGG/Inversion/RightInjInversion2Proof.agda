@@ -394,7 +394,9 @@ module _
       (⇒⊑⇒ qA qB) =
     CTI2.reveal⊑² mono (CTX.rebase-varᴸ rb) sc ⊢c
       (right-inj-inversion²
-        (CTX.no-alias-same (CTX.aliasAgree mono) na) sv vN prem (⇒⊑⇒ pA pB)) (⇒⊑⇒ qA qB)
+        (CTX.no-alias-same (CTX.aliasAgree mono) na) sv vN prem
+        (⇒⊑⇒ pA pB))
+      (⇒⊑⇒ qA qB)
   right-inj-inversion² {gH = ＇ Y} na (sv-reveal-fun sv)
     vN (CTI2.reveal⊑² _ _ _ _ _ _) ()
   right-inj-inversion² {gH = ‵ ι} na (sv-reveal-fun sv)

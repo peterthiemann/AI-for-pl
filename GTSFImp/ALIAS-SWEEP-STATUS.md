@@ -9,58 +9,28 @@ the four `∀⊑∀` reveal/conceal obligations
 
 ## Where things stand
 
-**GREEN**: `make agda` (i.e. `agda --safe -v0 All.agda`) — the entire
-live development typechecks with the alias mode.
+**GTSFImp is DONE**: `make check` (All.agda under `--safe`, LegacyAll,
+and postulate-check with the NON_COVERING baseline) is fully green on
+this branch, cosmetics included (80-column pass, no rewrite warnings,
+`git diff --check` clean).
 
-**IN PROGRESS**: `make agda-legacy` (`agda -v0 LegacyAll.agda`).  The
-error-driven sweep stopped mid-file in
-`proof/DGG/Inversion/SourceStripWorkerProof.agda` (WIP committed; the
-file does NOT typecheck right now).  Everything before it in the
-LegacyAll order is green: `SealTransferCore`, `TagTransport`,
-`TargetWalkSupport`, `TargetDescentProof`, `TargetStripDef`,
-`TargetStripProof`, `TargetChainProof`, `SourceStripProof` (the small
-one), `SealPeelToolkit` additions.
+The legacy sweep finishing touches beyond the earlier checkpoint:
 
-## Exact breakpoint
+* `SourceColumnStrip` / `SourceSpineStrip` / `SourceTagSealCore` /
+  `TargetTagSealWalk` / `TargetSourceStarAt` / `TargetSourceStarChain`
+  and `RightInjInversion²` all take a leading `NoAliasWorld` premise;
+  the strip Σ-results additionally RETURN `CTX.NoAliasWorld Wᵒ` for the
+  output world (between `qᵒ` and the `SpineValue Core` component), which
+  is what lets `TargetWalkLemma`/`TargetWalkProof` feed the core.
+* `RightInjInversion²`'s six previously-absurd `with q | ()` clauses
+  (var-vs-ground obligations) are discharged with `| alias mode p₁ =
+  ⊥-elim (na _ mode)`.
+* Its live consumers were updated: `GeneratedProjectionReplacementProof`
+  (both replacements take `na`), `ExtraCastRightAtProof`'s four
+  structural-project wrappers take `na` after the inversion argument.
 
-In `proof/DGG/Inversion/SourceStripWorkerProof.agda`:
-
-* `self-column-sealed` and `self-spine-sealed` (both in the `private`/
-  `abstract` blocks near line 184/219) were given a new first explicit
-  premise `CTX.NoAliasWorld W`, because they call
-  `variable-obligation-aligns` which now requires it.
-* Their six call sites do **not** pass `na` yet — lines
-  726, 802, 847, 889, 895, 1551 (`self-column-sealed rb …` /
-  `self-spine-sealed rb …`).  Each enclosing helper
-  (`source-column-direct-branch`, the spine-strip cast branches,
-  `source-spine-strip-worker-*`, and the clause at 1551) must gain its
-  own `CTX.NoAliasWorld W` premise and thread it down, exactly like the
-  files already finished (see recipes below).
-* The chain terminates at the public worker types `SourceColumnStrip`
-  and `SourceSpineStrip` in `proof/DGG/Inversion/SourceStripDef.agda`
-  (lines ~264 and ~293): add `→ CTI2.NoAliasWorld W` right before the
-  `→ SpineValue V` premise in BOTH types.  (An attempted scripted edit
-  did not apply — as of this commit only `SourceTagSealCore` at line
-  ~335 has the premise.)  Callers of these workers (RightInjInversion2Proof,
-  SliceCheck, notes files) will then surface and need `na` at their
-  call sites, derived per the recipes.
-* CAUTION: this file has exactly 13 `{-# NON_COVERING #-}` pragmas and
-  `SourceStripColumnView.agda` exactly 1; `make postulate-check` pins
-  those counts.  Do not add or remove pragmas.
-
-Continue with:
-
-```
-cd GTSFImp && make agda-legacy
-```
-
-and fix errors one at a time.  Expect the remainder of the sweep to
-touch: `SourceStripWorkerProof` (current), `RightInjInversion2Proof`,
-possibly `SourceStripColumnView`, `SliceCheck`/notes probes
-(`TargetStripStrengthenScratch` still defines the old function-style
-`impEnvMono-∘`), then `make check` (postulate-check + NON_COVERING
-counts), a line-length pass (≤ 80 columns, check with python `len`),
-and `git diff --check`.
+**NEXT**: sweep `GTSFImp-Interpreter` to green (see below), then the
+step-4/5 work.
 
 ## Recurring mechanical recipes (used dozens of times already)
 
@@ -140,11 +110,6 @@ and `git diff --check`.
 
 ## Known cosmetic debt (fix before declaring GTSFImp done)
 
-* `proof/DGG/TargetExtend.agda:3385` emits a
-  `rewrite did not apply` warning in `right-bind-impEnv-insert` —
-  drop the dead rewrite.
-* Line-length pass has not been re-run since the ExactSmartFreshGuard /
-  TargetChainProof edits; check ≤ 80 columns on all touched files.
 * Prefer `make agda` / `make agda-legacy` over ad-hoc per-file `agda`
   calls: the live target uses `--safe`, the legacy one does not, and
   mixing flags on shared dependencies invalidates `.agdai` files and

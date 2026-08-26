@@ -18,21 +18,21 @@ target-walk-from-strip :
   SourceSpineStrip
   → SourceTagSealCore
   → TargetTagSealWalk
-target-walk-from-strip strip core sv vU mono rb sc X∈ Y∈ D
-    with strip sv vU mono rb sc X∈ Y∈ D
-target-walk-from-strip strip core sv vU mono rb sc X∈ Y∈ D
-    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , spine ,
+target-walk-from-strip strip core na sv vU mono rb sc X∈ Y∈ D
+    with strip na sv vU mono rb sc X∈ Y∈ D
+target-walk-from-strip strip core na sv vU mono rb sc X∈ Y∈ D
+    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , naᵒ , spine ,
         spine-sealed Pᵖ Aᵖ spineᵖ sealed finish =
   finish sealed
-target-walk-from-strip strip core sv vU mono rb sc X∈ Y∈ D
-    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , spine ,
+target-walk-from-strip strip core na sv vU mono rb sc X∈ Y∈ D
+    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , naᵒ , spine ,
         spine-tagged Pᵖ Aᵖ spineᵖ Wᵖ γᵖ pᵖ monoᵒᵖ sameᵒᵖ
           boundaryᵖᵒ source∈ᵒ target∈ᵒ premiseᶜ finish =
   finish
     (core {Xᴸ = Xᵒ} {q = qᵒ}
-      spineᵖ vU monoᵒᵖ boundaryᵖᵒ sameᵒᵖ source∈ᵒ target∈ᵒ
+      naᵒ spineᵖ vU monoᵒᵖ boundaryᵖᵒ sameᵒᵖ source∈ᵒ target∈ᵒ
       (core-tagged premiseᶜ))
-target-walk-from-strip strip core sv vU mono rb sc X∈ Y∈ D
-    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , spine ,
+target-walk-from-strip strip core na sv vU mono rb sc X∈ Y∈ D
+    | P , A , Xᵒ , Wᵒ , γᵒ , qᵒ , naᵒ , spine ,
         spine-paired Pᵖ Aᵖ spineᵖ paired finish =
   finish paired
