@@ -239,7 +239,7 @@ mutual
     Σ[ Bᴵ ∈ Ty _ ]
       (embedPrecise (core W) (`∀ Bᴾ) ≡ `∀ Aᴾ)
       × (embedImprecise (core W) (`∀ Bᴵ) ≡ `∀ Aᴵ)
-      × UniversalsRelated W p Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+      × UniversalFamily W p Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
 
   ValueImprecisionᵏ (suc k) W
       (I.⇒⊑★ {A = A} {B = B} p q) Vᴵ Vᴾ =
@@ -393,6 +393,32 @@ mutual
   -- lifted precise value, the corresponding instantiation chain (see
   -- REPLACEMENT-CLOSURE-DESIGN.md).  Projecting at the reflexive
   -- future and the empty sequence recovers the plain chain.
+
+  -- The wrap-closed family stored by the `∀⊑∀` clause: at every
+  -- future and every two-sided wrapper sequence the wrapped values
+  -- satisfy the plain instantiation chain.  Projecting the empty
+  -- sequence at the reflexive future recovers the old clause.
+
+  UniversalFamily : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
+    → (W : World Δᴾ Δᴵ Δᶜ)
+    → I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ
+    → Ty (suc Δᴾ)
+    → Ty (suc Δᴵ)
+    → ℕ
+    → Term Δᴵ
+    → Term Δᴾ
+    → Set
+  UniversalFamily W p Bᴾ Bᴵ k Vᴵ Vᴾ =
+    ∀ {Δᴾ′ Δᴵ′ Δᶜ′} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+      (W≼W′ : Future W W′)
+      {Bᴾ′ : Ty (suc Δᴾ′)} {Bᴵ′ : Ty (suc Δᴵ′)}
+      (σ : UniWrapsᵇ W′ (liftPreciseBody W≼W′ Bᴾ)
+             (liftImpreciseBody W≼W′ Bᴵ) Bᴾ′ Bᴵ′)
+    → UniversalsRelated W′
+        (liftCenterBodyImprecision W≼W′ p)
+        Bᴾ′ Bᴵ′ k
+        (wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ))
+        (wrapTermᴾᵇ σ (liftPreciseTerm W≼W′ Vᴾ))
 
   RightUniversalFamily : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     → (W : World Δᴾ Δᴵ Δᶜ)

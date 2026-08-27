@@ -39,9 +39,10 @@ related-universal-instantiation : ∀
                  (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
 related-universal-instantiation {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W}
     {r = r}
-    (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , head , tail) =
+    (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
   Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
-  (λ s → head W (future-refl {W = W}) Rᴾ Rᴵ r s)
+  (λ s → proj₁ (fam (future-refl {W = W}) []) W
+           (future-refl {W = W}) Rᴾ Rᴵ r s)
 
 right-related-universal-instantiation : ∀
     {Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty (suc Δᶜ)} {Aᴵ : Ty Δᶜ}

@@ -108,8 +108,9 @@ value-imprecision-downward {p = I.⇒⊑⇒ p q} {k = suc k}
     (endpoints , head , tail) =
   endpoints , tail
 value-imprecision-downward {p = I.∀⊑∀ p} {k = suc k}
-    (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , head , tail) =
-  endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , tail
+    (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
+  endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
+  (λ W≼W′ σ → Data.Product.proj₂ (fam W≼W′ σ))
 value-imprecision-downward {p = I.⇒⊑★ p q} {k = suc k}
     (endpoints , shape , payload) =
   endpoints , shape , value-imprecision-downward payload
@@ -647,6 +648,143 @@ functions-related-future {k = suc k} W≼W′ (head , tail) =
             (liftPreciseTerm-trans W≼W′ W′≼K _))
           (head K composite argument′)) ,
   functions-related-future W≼W′ tail
+
+universals-phantom : ∀
+    {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ Aᴾ′ Aᴵ′}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+    {k : ℕ} {Vᴵ Vᴾ}
+    (p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ)
+    (q : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ′ ⊑ Aᴵ′)
+  → UniversalsRelated W p Bᴾ Bᴵ k Vᴵ Vᴾ
+  → UniversalsRelated W q Bᴾ Bᴵ k Vᴵ Vᴾ
+universals-phantom {k = zero} p q related = related
+universals-phantom {k = suc k} p q (head , tail) =
+  head , universals-phantom p q tail
+
+universals-related-transport : ∀
+    {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
+    {Vᴵ Vᴵ′ : Term Δᴵ} {Vᴾ Vᴾ′ : Term Δᴾ}
+  → Vᴵ ≡ Vᴵ′
+  → Vᴾ ≡ Vᴾ′
+  → UniversalsRelated W p Bᴾ Bᴵ k Vᴵ Vᴾ
+  → UniversalsRelated W p Bᴾ Bᴵ k Vᴵ′ Vᴾ′
+universals-related-transport refl refl related = related
+
+universal-family-reindex : ∀
+    {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ Aᴾ′ Aᴵ′}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+    {k Vᴵ Vᴾ}
+    (p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ)
+    (q : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ′ ⊑ Aᴵ′)
+  → UniversalFamily W q Bᴾ Bᴵ k Vᴵ Vᴾ
+  → UniversalFamily W p Bᴾ Bᴵ k Vᴵ Vᴾ
+universal-family-reindex p q fam W≼W′ σ =
+  universals-phantom
+    (liftCenterBodyImprecision W≼W′ q)
+    (liftCenterBodyImprecision W≼W′ p)
+    (fam W≼W′ σ)
+
+universal-family-future : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ} {Vᴵ Vᴾ}
+    (W≼W′ : Future W W′)
+  → UniversalFamily W p Bᴾ Bᴵ k Vᴵ Vᴾ
+  → UniversalFamily W′
+      (liftCenterBodyImprecision W≼W′ p)
+      (liftPreciseBody W≼W′ Bᴾ) (liftImpreciseBody W≼W′ Bᴵ) k
+      (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
+universal-family-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
+    {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {k = k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+    W≼W′ fam {W′ = W″} W′≼W″ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ = final
+  where
+  composite = future-trans W≼W′ W′≼W″
+
+  body-eq : liftPreciseBody W′≼W″ (liftPreciseBody W≼W′ Bᴾ)
+      ≡ liftPreciseBody composite Bᴾ
+  body-eq = sym (liftPreciseBody-trans W≼W′ W′≼W″ Bᴾ)
+
+  imp-eq : liftImpreciseBody W′≼W″ (liftImpreciseBody W≼W′ Bᴵ)
+      ≡ liftImpreciseBody composite Bᴵ
+  imp-eq = sym (liftImpreciseBody-trans W≼W′ W′≼W″ Bᴵ)
+
+  σ† : UniWrapsᵇ W″ (liftPreciseBody composite Bᴾ)
+      (liftImpreciseBody composite Bᴵ) Bᴾ′ Bᴵ′
+  σ† = subst≡
+    (λ C → UniWrapsᵇ W″ (liftPreciseBody composite Bᴾ) C Bᴾ′ Bᴵ′)
+    imp-eq
+    (subst≡
+      (λ B → UniWrapsᵇ W″ B
+        (liftImpreciseBody W′≼W″ (liftImpreciseBody W≼W′ Bᴵ))
+        Bᴾ′ Bᴵ′)
+      body-eq σ)
+
+  σ-mid : UniWrapsᵇ W″ (liftPreciseBody composite Bᴾ)
+      (liftImpreciseBody W′≼W″ (liftImpreciseBody W≼W′ Bᴵ))
+      Bᴾ′ Bᴵ′
+  σ-mid = subst≡
+    (λ B → UniWrapsᵇ W″ B
+      (liftImpreciseBody W′≼W″ (liftImpreciseBody W≼W′ Bᴵ))
+      Bᴾ′ Bᴵ′)
+    body-eq σ
+
+  wrapᴾ-eq : wrapTermᴾᵇ σ† (liftPreciseTerm composite Vᴾ)
+      ≡ wrapTermᴾᵇ σ
+          (liftPreciseTerm W′≼W″ (liftPreciseTerm W≼W′ Vᴾ))
+  wrapᴾ-eq = trans
+    (wrapTermᴾᵇ-subst-imp imp-eq σ-mid
+      (liftPreciseTerm composite Vᴾ))
+    (trans
+      (wrapTermᴾᵇ-subst body-eq σ (liftPreciseTerm composite Vᴾ))
+      (cong (wrapTermᴾᵇ σ) (liftPreciseTerm-trans W≼W′ W′≼W″ Vᴾ)))
+
+  wrapᴵ-eq : wrapTermᴵᵇ σ† (liftImpreciseTerm composite Vᴵ)
+      ≡ wrapTermᴵᵇ σ
+          (liftImpreciseTerm W′≼W″ (liftImpreciseTerm W≼W′ Vᴵ))
+  wrapᴵ-eq = trans
+    (wrapTermᴵᵇ-subst-imp imp-eq σ-mid
+      (liftImpreciseTerm composite Vᴵ))
+    (trans
+      (wrapTermᴵᵇ-subst body-eq σ
+        (liftImpreciseTerm composite Vᴵ))
+      (cong (wrapTermᴵᵇ σ)
+        (liftImpreciseTerm-trans W≼W′ W′≼W″ Vᴵ)))
+
+  base : UniversalsRelated W″
+      (liftCenterBodyImprecision composite p) Bᴾ′ Bᴵ′ k
+      (wrapTermᴵᵇ σ† (liftImpreciseTerm composite Vᴵ))
+      (wrapTermᴾᵇ σ† (liftPreciseTerm composite Vᴾ))
+  base = fam composite σ†
+
+  moved : UniversalsRelated W″
+      (liftCenterBodyImprecision composite p) Bᴾ′ Bᴵ′ k
+      (wrapTermᴵᵇ σ
+        (liftImpreciseTerm W′≼W″ (liftImpreciseTerm W≼W′ Vᴵ)))
+      (wrapTermᴾᵇ σ
+        (liftPreciseTerm W′≼W″ (liftPreciseTerm W≼W′ Vᴾ)))
+  moved = universals-related-transport
+    {W = W″} {p = liftCenterBodyImprecision composite p}
+    {Bᴾ = Bᴾ′} {k = k}
+    wrapᴵ-eq wrapᴾ-eq base
+
+  final : UniversalsRelated W″
+      (liftCenterBodyImprecision W′≼W″
+        (liftCenterBodyImprecision W≼W′ p)) Bᴾ′ Bᴵ′ k
+      (wrapTermᴵᵇ σ
+        (liftImpreciseTerm W′≼W″ (liftImpreciseTerm W≼W′ Vᴵ)))
+      (wrapTermᴾᵇ σ
+        (liftPreciseTerm W′≼W″ (liftPreciseTerm W≼W′ Vᴾ)))
+  final = universals-phantom
+    (liftCenterBodyImprecision composite p)
+    (liftCenterBodyImprecision W′≼W″
+      (liftCenterBodyImprecision W≼W′ p))
+    moved
 
 universals-related-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
@@ -1550,7 +1688,9 @@ value-imprecision-paired W r
           (cong (liftCenterTy step) eqᴾ) ,
         trans (embedImprecise-lift step (`∀ Bᴵ))
           (cong (liftCenterTy step) eqᴵ) ,
-        universals-related-future {p = p} step related
+        (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σᵇ →
+          universal-family-future {p = p} step related
+            {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σᵇ)
   in value-imprecision-reindex lifted structural {suc k} refl refl
        structural-related
 value-imprecision-paired W r {p = I.⇒⊑★ p q} {k = suc k}
@@ -1743,7 +1883,9 @@ value-imprecision-precise W r
           (cong (liftCenterTy step) eqᴾ) ,
         trans (embedImprecise-lift step (`∀ Bᴵ))
           (cong (liftCenterTy step) eqᴵ) ,
-        universals-related-future {p = p} step related
+        (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σᵇ →
+          universal-family-future {p = p} step related
+            {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σᵇ)
   in value-imprecision-reindex lifted structural {suc k} refl refl
        structural-related
 value-imprecision-precise W r {p = I.⇒⊑★ p q} {k = suc k}
@@ -1935,7 +2077,9 @@ value-imprecision-aliasbind W rep
           (cong (liftCenterTy step) eqᴾ) ,
         trans (embedImprecise-lift step (`∀ Bᴵ))
           (cong (liftCenterTy step) eqᴵ) ,
-        universals-related-future {p = p} step related
+        (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σᵇ →
+          universal-family-future {p = p} step related
+            {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σᵇ)
   in value-imprecision-reindex lifted structural {suc k} refl refl
        structural-related
 value-imprecision-aliasbind W rep {p = I.⇒⊑★ p q} {k = suc k}
@@ -2126,7 +2270,9 @@ value-imprecision-imprecise {Rᴵ = Rᴵ} W
           (cong (liftCenterTy step) eqᴾ) ,
         trans (embedImprecise-lift step (`∀ Bᴵ))
           (cong (liftCenterTy step) eqᴵ) ,
-        universals-related-future {p = p} step related
+        (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σᵇ →
+          universal-family-future {p = p} step related
+            {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σᵇ)
   in value-imprecision-reindex lifted structural {suc k} refl refl
        structural-related
 value-imprecision-imprecise {Rᴵ = Rᴵ} W {p = I.⇒⊑★ p q}

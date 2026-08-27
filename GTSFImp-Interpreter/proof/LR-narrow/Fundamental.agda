@@ -19,7 +19,8 @@ import proof.DGG.CtxImp as CTI
 import proof.DGG.CastTermImprecision as CTIR
 open CTIR using (_∣_⊢²_⊑_∶_)
 open import LR-narrow.World
-open import LR-narrow.UniversalFamily using (RightUniversalFamilyKit)
+open import LR-narrow.UniversalFamily using
+  (RightUniversalFamilyKit; UniversalFamilyKitᵇ)
 open import LR-narrow.TermRelation
 open import LR-narrow.Universal
 open import LR-narrow.CastObligations using (CastValueObligations)
@@ -53,6 +54,7 @@ universal-fundamental : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     {p : Aᴾ CTI.⊑ᵂ⟨
       CTI.liftWorldBoth I.X⊑X (forgetWorld W) ⟩ Aᴵ}
     {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
+    (kit : UniversalFamilyKitᵇ)
     (liftΓ : CTI.LiftCtx I.X⊑X Γ Γᵇ)
     (vVᴾ : Value Vᴾ)
     (vVᴵ : Value Vᴵ)
@@ -63,9 +65,9 @@ universal-fundamental : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
       {p = p} {Vᴾ = Vᴾ} {Vᴵ = Vᴵ}
       (universal-body-imprecision {W = W} p) body
   → FundamentalProperty (CTIR.Λ⊑Λ² liftΓ vVᴾ vVᴵ body q)
-universal-fundamental liftΓ vVᴾ vVᴵ body q body-fundamental =
+universal-fundamental kit liftΓ vVᴾ vVᴵ body q body-fundamental =
   fundamental-proof λ k →
-    universal-compatible-from-body liftΓ vVᴾ vVᴵ body q
+    universal-compatible-from-body kit liftΓ vVᴾ vVᴵ body q
       (λ i _ → universal-body-relation body-fundamental i)
 
 right-universal-body-fundamental-from-relation : ∀
@@ -100,6 +102,7 @@ right-universal-target-cast-body-fundamental : ∀
     {Vᴾ : Term (suc Δᴾ)} {Mᴵ : Term Δᴵ}
     {μᴵ : Consistency.Env∼ Δᴵ}
     (ob : CastValueObligations)
+    (kitᵇ : UniversalFamilyKitᵇ)
     (nonvar : NonVar Aᴾ)
     (occurs : Fin.zero ∈ᵗ Aᴾ)
     (liftΓ : CTI.LiftCtxᴸ I.X⊑★ Γ Γ′)
@@ -120,11 +123,11 @@ right-universal-target-cast-body-fundamental : ∀
       {Wᵇ = CTI.liftWorldLeft I.X⊑★ (forgetWorld W)} {Γᵇ = Γ′}
       {p = r} {Vᴾ = Vᴾ} {Mᴵ = Mᴵ ⟨ cᴵ ⟩} s
       (CTIR.⊑cast² cᴵ body r)
-right-universal-target-cast-body-fundamental {r = r} ob nonvar occurs
-    liftΓ vVᴾ target⊢ cᴵ body q s body-fundamental =
+right-universal-target-cast-body-fundamental {r = r} ob kitᵇ nonvar
+    occurs liftΓ vVᴾ target⊢ cᴵ body q s body-fundamental =
   right-universal-body-fundamental-from-relation s
     (CTIR.⊑cast² cᴵ body r) vVᴾ
-    (Cast.right-cast-compatible ob cᴵ s
+    (Cast.right-cast-compatible ob kitᵇ cᴵ s
       (λ k → right-universal-compatible-from-body nonvar occurs liftΓ
         vVᴾ target⊢ body q
         (right-universal-body-relation body-fundamental k)))

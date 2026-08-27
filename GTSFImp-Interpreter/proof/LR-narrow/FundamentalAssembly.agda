@@ -47,6 +47,7 @@ open import LR-narrow.Application using (application-compatible)
 open import LR-narrow.TypeApplication using
   (type-application-compatible; right-type-application-compatible)
 open import LR-narrow.CastObligations using (CastValueObligations)
+open import LR-narrow.UniversalFamily using (UniversalFamilyKitᵇ)
 import LR-narrow.Cast as Cast
 
 ------------------------------------------------------------------------
@@ -142,6 +143,11 @@ record RemainingObligations : Set₁ where
     -- Value-level cast compatibilities reopened after the circular
     -- proofs were removed; see LR-narrow.CastObligations.
     cast-values : CastValueObligations
+
+    -- The two-sided replacement-closure kit consumed by the `∀⊑∀`
+    -- producers; constructed from the reveal development once its
+    -- inert and dynamic chain extensions land.
+    universal-familyᵇ : UniversalFamilyKitᵇ
 
     -- Milestone 1.7: symmetric universal introduction.
     universal-intro : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
@@ -456,8 +462,9 @@ primitive-case op refl refl refl refl refl refl p q r =
 
 module Assembly (obligations : RemainingObligations) where
   open RemainingObligations obligations
-  open Cast cast-values using
-    (cast-cast-compatible; right-cast-compatible; left-cast-compatible)
+  open Cast cast-values universal-familyᵇ using
+    (cast-cast-compatible; right-cast-compatible;
+     left-cast-compatible)
 
   fundamental : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
       {Wᶜ : CTI.World Δᴾ Δᴵ Δᶜ}

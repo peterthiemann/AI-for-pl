@@ -1066,7 +1066,7 @@ reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
         ⦂∀ liftPreciseBody W≼Wb B₀ᴾ [ ＇ Fin.zero ])
   core-related = universals-head {W = W} {p = p} {Bᴾ = B₀ᴾ}
     {Bᴵ = B₀ᴵ} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
-    m (s≤s (n≤1+n m)) chain
+    m (s≤s (n≤1+n m)) (chain future-refl [])
     Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
 
   weakened : ComputationsRelated Wb (FutureValueRelation s₀) (suc m)
@@ -1560,7 +1560,7 @@ conceal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
     {Bᴾ = replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ}
     {Bᴵ = replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ}
     {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
-    m (s≤s (n≤1+n m)) chain
+    m (s≤s (n≤1+n m)) (chain future-refl [])
     Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
 
   weakened : ComputationsRelated Wb (FutureValueRelation s₀) (suc m)
@@ -1837,6 +1837,29 @@ reveal-universal : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
   → ComputationsRelated W (FutureValueRelation (I.∀⊑∀ q₀)) k
       (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ B₀ᴵ 〗)
       (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B₀ᴾ 〗)
+universal-clause-family : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    {Aᴾ Aᴵ : Ty (suc Δᶜ)}
+    (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ)
+    {B₀ᴾ : Ty (suc Δᴾ)} {B₀ᴵ : Ty (suc Δᴵ)}
+    {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → embedPrecise (core W) (`∀ B₀ᴾ) ≡ `∀ Aᴾ
+  → embedImprecise (core W) (`∀ B₀ᴵ) ≡ `∀ Aᴵ
+  → ValueImprecision W (I.∀⊑∀ p₀) (suc k) Vᴵ Vᴾ
+  → UniversalFamily W p₀ B₀ᴾ B₀ᴵ (suc k) Vᴵ Vᴾ
+universal-clause-family W p₀ eqᴾ eqᴵ
+    (endpoints , Bᴾ* , Bᴵ* , embP* , embI* , fam)
+    with ty-all-injective
+           (renameᵗ-injective
+             (toRenameᵗ-injective (preciseEmbedding (core W)))
+             (trans embP* (sym eqᴾ)))
+       | ty-all-injective
+           (renameᵗ-injective
+             (toRenameᵗ-injective (impreciseEmbedding (core W)))
+             (trans embI* (sym eqᴵ)))
+universal-clause-family W p₀ eqᴾ eqᴵ
+    (endpoints , Bᴾ* , Bᴵ* , embP* , embI* , fam)
+    | refl | refl = fam
+
 reveal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
     sourceᴾ sourceᴵ targetᴾ targetᴵ
     {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related =
@@ -1853,22 +1876,136 @@ reveal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
     sourceᴾ sourceᴵ (I.∀⊑∀ q₀) targetᴾ targetᴵ endpoints
     (imprecise-value endpoints ↑ all) (precise-value endpoints ↑ all)
 
-  heads : ∀ (n : ℕ) → n ≤ k
-    → ValueImprecision W (I.∀⊑∀ p₀) n Vᴵ Vᴾ
-    → UniversalsRelated W q₀
+  targetImpᵇ : BodyImprecisionᵇ W
+      (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+  targetImpᵇ = body-imprecisionᵇ-of q₀ targetᴾ targetᴵ
+
+  fam-out : ∀ (j : ℕ) → suc j ≤ k
+    → UniversalFamily W q₀
         (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
-        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ) n
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+        (suc j)
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ B₀ᴵ 〗)
         (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B₀ᴾ 〗)
-  heads zero n≤k source-at = tt
-  heads (suc j) sj≤k source-at =
-    (λ W′ W≼W′ Sᴾ Sᴵ r t →
-      reveal-universal-head W s p₀ avoidᵇ sourceᴾ sourceᴵ
-        (outer-restrict sj≤k below) source-at W′ W≼W′ Sᴾ Sᴵ r t) ,
-    heads j (≤-trans (n≤1+n j) sj≤k)
+  fam-out j sj≤k {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+    universals-phantom
+      (liftCenterBodyImprecision W≼W′ p₀)
+      (liftCenterBodyImprecision W≼W′ q₀)
+      (ClosureProof.universals-related-transport
+        {W = W′} {p = liftCenterBodyImprecision W≼W′ p₀}
+        {Bᴾ = Bᴾ′} {k = suc j}
+        termᴵ-eq termᴾ-eq
+        (fam-in W≼W′ (w ∷ σ‡)))
+    where
+    open ClosureProof using (universals-phantom)
+
+    fam-in : UniversalFamily W p₀ B₀ᴾ B₀ᴵ (suc j) Vᴵ Vᴾ
+    fam-in = universal-clause-family W p₀ sourceᴾ sourceᴵ
       (value-imprecision-downward-to
-        {W = W} {p = I.∀⊑∀ p₀} {j = j} {k = suc j}
-        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} (n≤1+n j) source-at)
+        {W = W} {p = I.∀⊑∀ p₀} {j = suc j} {k = k}
+        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} sj≤k related)
+
+    s′ = slot-future s W≼W′
+    B₀ᴾ′ = liftPreciseBody W≼W′ B₀ᴾ
+    B₀ᴵ′ = liftImpreciseBody W≼W′ B₀ᴵ
+
+    precise-eq : liftPreciseBody W≼W′
+        (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
+        ≡ replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′
+    precise-eq = trans
+      (liftPreciseBody-replace W≼W′ (slotXᴾ s) (slotRᴾ s) B₀ᴾ)
+      (cong₂ (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R) B₀ᴾ′)
+        (sym (slot-precise-variable-lift s W≼W′))
+        (sym (slot-precise-rep-lift s W≼W′)))
+
+    imprecise-eq : liftImpreciseBody W≼W′
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+        ≡ replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) B₀ᴵ′
+    imprecise-eq = trans
+      (liftImpreciseBody-replace W≼W′ (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+      (cong₂ (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R) B₀ᴵ′)
+        (sym (slot-imprecise-variable-lift s W≼W′))
+        (sym (slot-imprecise-rep-lift s W≼W′)))
+
+    av : (j′ : BodyImprecisionᵇ W′ B₀ᴾ′ B₀ᴵ′)
+       → AliasAvoidᵖ (Fin.suc (center s′)) (bodyPᵇ j′)
+    av j′ = alias-avoid-any
+      (liftCenterBodyImprecision W≼W′ p₀) (bodyPᵇ j′)
+      (trans (cong (liftCenterBody W≼W′)
+        (sym (ty-all-injective sourceᴾ)))
+        (sym (embedPreciseBody-lift W≼W′ B₀ᴾ)))
+      (trans (cong (liftCenterBody W≼W′)
+        (sym (ty-all-injective sourceᴵ)))
+        (sym (embedImpreciseBody-lift W≼W′ B₀ᴵ)))
+      (alias-avoid-lift-body W≼W′ (center s) p₀ avoidᵇ)
+
+    w = reveal-pairedᵇ s′ B₀ᴾ′ B₀ᴵ′
+      (body-imprecisionᵇ-subst precise-eq
+        (body-imprecisionᵇ-subst-imp imprecise-eq
+          (body-imprecisionᵇ-future W≼W′ targetImpᵇ)))
+      av
+
+    σ-mid : UniWrapsᵇ W′
+        (replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′)
+        (liftImpreciseBody W≼W′
+          (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ))
+        Bᴾ′ Bᴵ′
+    σ-mid = subst≡
+      (λ B → UniWrapsᵇ W′ B
+        (liftImpreciseBody W≼W′
+          (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ))
+        Bᴾ′ Bᴵ′)
+      precise-eq σ
+
+    σ‡ : UniWrapsᵇ W′
+        (replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′)
+        (replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) B₀ᴵ′)
+        Bᴾ′ Bᴵ′
+    σ‡ = subst≡
+      (λ C → UniWrapsᵇ W′
+        (replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′)
+        C Bᴾ′ Bᴵ′)
+      imprecise-eq σ-mid
+
+    termᴾ-eq : wrapTermᴾᵇ (w ∷ σ‡) (liftPreciseTerm W≼W′ Vᴾ)
+        ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
+            (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B₀ᴾ 〗))
+    termᴾ-eq = trans
+      (wrapTermᴾᵇ-subst-imp imprecise-eq σ-mid
+        (liftPreciseTerm W≼W′ Vᴾ
+          ↑ 〖 slotXᴾ s′ , slotRᴾ s′ ↑ `∀ B₀ᴾ′ 〗))
+      (trans
+        (wrapTermᴾᵇ-subst precise-eq σ
+          (liftPreciseTerm W≼W′ Vᴾ
+            ↑ 〖 slotXᴾ s′ , slotRᴾ s′ ↑ `∀ B₀ᴾ′ 〗))
+        (cong (wrapTermᴾᵇ σ)
+          (trans
+            (cong
+              (λ T → liftPreciseTerm W≼W′ Vᴾ
+                ↑ 〖 slotXᴾ s′ , slotRᴾ s′ ↑ T 〗)
+              (sym (liftPreciseTy-universal W≼W′ B₀ᴾ)))
+            (sym (lifted-reveal-precise s W≼W′ Vᴾ (`∀ B₀ᴾ))))))
+
+    termᴵ-eq : wrapTermᴵᵇ (w ∷ σ‡) (liftImpreciseTerm W≼W′ Vᴵ)
+        ≡ wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′
+            (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ B₀ᴵ 〗))
+    termᴵ-eq = trans
+      (wrapTermᴵᵇ-subst-imp imprecise-eq σ-mid
+        (liftImpreciseTerm W≼W′ Vᴵ
+          ↑ 〖 slotXᴵ s′ , slotRᴵ s′ ↑ `∀ B₀ᴵ′ 〗))
+      (trans
+        (wrapTermᴵᵇ-subst precise-eq σ
+          (liftImpreciseTerm W≼W′ Vᴵ
+            ↑ 〖 slotXᴵ s′ , slotRᴵ s′ ↑ `∀ B₀ᴵ′ 〗))
+        (cong (wrapTermᴵᵇ σ)
+          (trans
+            (cong
+              (λ T → liftImpreciseTerm W≼W′ Vᴵ
+                ↑ 〖 slotXᴵ s′ , slotRᴵ s′ ↑ T 〗)
+              (sym (liftImpreciseTy-universal W≼W′ B₀ᴵ)))
+            (sym (lifted-reveal-imprecise s W≼W′ Vᴵ
+              (`∀ B₀ᴵ))))))
 
   at-every-index : ∀ (j : ℕ) → j ≤ k
     → FutureValueRelation (I.∀⊑∀ q₀) W future-refl j
@@ -1880,10 +2017,7 @@ reveal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
     replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ ,
     replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ ,
     targetᴾ , targetᴵ ,
-    heads (suc j) sj≤k
-      (value-imprecision-downward-to
-        {W = W} {p = I.∀⊑∀ p₀} {j = suc j} {k = k}
-        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} sj≤k related)
+    fam-out j sj≤k
 
 -- The value relation of a concealed universal value.
 
@@ -1923,21 +2057,130 @@ conceal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
     sourceᴾ sourceᴵ (I.∀⊑∀ q₀) targetᴾ targetᴵ endpoints
     (imprecise-value endpoints ↓ all) (precise-value endpoints ↓ all)
 
-  heads : ∀ (n : ℕ) → n ≤ k
-    → ValueImprecision W (I.∀⊑∀ q₀) n Vᴵ Vᴾ
-    → UniversalsRelated W p₀ B₀ᴾ B₀ᴵ n
+  sourceImpᵇ : BodyImprecisionᵇ W B₀ᴾ B₀ᴵ
+  sourceImpᵇ = body-imprecisionᵇ-of p₀ sourceᴾ sourceᴵ
+
+  fam-out : ∀ (j : ℕ) → suc j ≤ k
+    → UniversalFamily W p₀ B₀ᴾ B₀ᴵ (suc j)
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ B₀ᴵ))
         (Vᴾ ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B₀ᴾ))
-  heads zero n≤k source-at = tt
-  heads (suc j) sj≤k source-at =
-    (λ W′ W≼W′ Sᴾ Sᴵ r t →
-      conceal-universal-head W s p₀ q₀ avoidᵇ sourceᴾ sourceᴵ
-        targetᴾ targetᴵ (outer-restrict sj≤k below) source-at
-        W′ W≼W′ Sᴾ Sᴵ r t) ,
-    heads j (≤-trans (n≤1+n j) sj≤k)
+  fam-out j sj≤k {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+    universals-phantom
+      (liftCenterBodyImprecision W≼W′ q₀)
+      (liftCenterBodyImprecision W≼W′ p₀)
+      (ClosureProof.universals-related-transport
+        {W = W′} {p = liftCenterBodyImprecision W≼W′ q₀}
+        {Bᴾ = Bᴾ′} {k = suc j}
+        termᴵ-eq termᴾ-eq
+        (fam-in W≼W′ σ‡))
+    where
+    open ClosureProof using (universals-phantom)
+
+    fam-in : UniversalFamily W q₀
+        (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+        (suc j) Vᴵ Vᴾ
+    fam-in = universal-clause-family W q₀ targetᴾ targetᴵ
       (value-imprecision-downward-to
-        {W = W} {p = I.∀⊑∀ q₀} {j = j} {k = suc j}
-        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} (n≤1+n j) source-at)
+        {W = W} {p = I.∀⊑∀ q₀} {j = suc j} {k = k}
+        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} sj≤k related)
+
+    s′ = slot-future s W≼W′
+    B₀ᴾ′ = liftPreciseBody W≼W′ B₀ᴾ
+    B₀ᴵ′ = liftImpreciseBody W≼W′ B₀ᴵ
+
+    precise-eq : liftPreciseBody W≼W′
+        (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
+        ≡ replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′
+    precise-eq = trans
+      (liftPreciseBody-replace W≼W′ (slotXᴾ s) (slotRᴾ s) B₀ᴾ)
+      (cong₂ (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R) B₀ᴾ′)
+        (sym (slot-precise-variable-lift s W≼W′))
+        (sym (slot-precise-rep-lift s W≼W′)))
+
+    imprecise-eq : liftImpreciseBody W≼W′
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+        ≡ replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) B₀ᴵ′
+    imprecise-eq = trans
+      (liftImpreciseBody-replace W≼W′ (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+      (cong₂ (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R) B₀ᴵ′)
+        (sym (slot-imprecise-variable-lift s W≼W′))
+        (sym (slot-imprecise-rep-lift s W≼W′)))
+
+    av : (j′ : BodyImprecisionᵇ W′ B₀ᴾ′ B₀ᴵ′)
+       → AliasAvoidᵖ (Fin.suc (center s′)) (bodyPᵇ j′)
+    av j′ = alias-avoid-any
+      (liftCenterBodyImprecision W≼W′ p₀) (bodyPᵇ j′)
+      (trans (cong (liftCenterBody W≼W′)
+        (sym (ty-all-injective sourceᴾ)))
+        (sym (embedPreciseBody-lift W≼W′ B₀ᴾ)))
+      (trans (cong (liftCenterBody W≼W′)
+        (sym (ty-all-injective sourceᴵ)))
+        (sym (embedImpreciseBody-lift W≼W′ B₀ᴵ)))
+      (alias-avoid-lift-body W≼W′ (center s) p₀ avoidᵇ)
+
+    w = conceal-pairedᵇ s′ B₀ᴾ′ B₀ᴵ′
+      (body-imprecisionᵇ-future W≼W′ sourceImpᵇ)
+      av
+
+    σ-mid : UniWrapsᵇ W′
+        (replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′)
+        (liftImpreciseBody W≼W′
+          (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ))
+        Bᴾ′ Bᴵ′
+    σ-mid = subst≡
+      (λ C → UniWrapsᵇ W′
+        (replaceTy (Fin.suc (slotXᴾ s′)) (⇑ᵗ (slotRᴾ s′)) B₀ᴾ′)
+        C Bᴾ′ Bᴵ′)
+      (sym imprecise-eq) (w ∷ σ)
+
+    σ‡ : UniWrapsᵇ W′
+        (liftPreciseBody W≼W′
+          (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ))
+        (liftImpreciseBody W≼W′
+          (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ))
+        Bᴾ′ Bᴵ′
+    σ‡ = subst≡
+      (λ B → UniWrapsᵇ W′ B
+        (liftImpreciseBody W≼W′
+          (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ))
+        Bᴾ′ Bᴵ′)
+      (sym precise-eq) σ-mid
+
+    termᴾ-eq : wrapTermᴾᵇ σ‡ (liftPreciseTerm W≼W′ Vᴾ)
+        ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
+            (Vᴾ ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B₀ᴾ)))
+    termᴾ-eq = trans
+      (wrapTermᴾᵇ-subst (sym precise-eq) σ-mid
+        (liftPreciseTerm W≼W′ Vᴾ))
+      (trans
+        (wrapTermᴾᵇ-subst-imp (sym imprecise-eq) (w ∷ σ)
+          (liftPreciseTerm W≼W′ Vᴾ))
+        (cong (wrapTermᴾᵇ σ)
+          (trans
+            (cong
+              (λ T → liftPreciseTerm W≼W′ Vᴾ
+                ↓ makeConceal (slotXᴾ s′) (slotRᴾ s′) T)
+              (sym (liftPreciseTy-universal W≼W′ B₀ᴾ)))
+            (sym (lifted-conceal-precise s W≼W′ Vᴾ (`∀ B₀ᴾ))))))
+
+    termᴵ-eq : wrapTermᴵᵇ σ‡ (liftImpreciseTerm W≼W′ Vᴵ)
+        ≡ wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′
+            (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ B₀ᴵ)))
+    termᴵ-eq = trans
+      (wrapTermᴵᵇ-subst (sym precise-eq) σ-mid
+        (liftImpreciseTerm W≼W′ Vᴵ))
+      (trans
+        (wrapTermᴵᵇ-subst-imp (sym imprecise-eq) (w ∷ σ)
+          (liftImpreciseTerm W≼W′ Vᴵ))
+        (cong (wrapTermᴵᵇ σ)
+          (trans
+            (cong
+              (λ T → liftImpreciseTerm W≼W′ Vᴵ
+                ↓ makeConceal (slotXᴵ s′) (slotRᴵ s′) T)
+              (sym (liftImpreciseTy-universal W≼W′ B₀ᴵ)))
+            (sym (lifted-conceal-imprecise s W≼W′ Vᴵ
+              (`∀ B₀ᴵ))))))
 
   at-every-index : ∀ (j : ℕ) → j ≤ k
     → FutureValueRelation (I.∀⊑∀ p₀) W future-refl j
@@ -1947,10 +2190,7 @@ conceal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
   at-every-index (suc j) sj≤k =
     conceal-endpoints ,
     B₀ᴾ , B₀ᴵ , sourceᴾ , sourceᴵ ,
-    heads (suc j) sj≤k
-      (value-imprecision-downward-to
-        {W = W} {p = I.∀⊑∀ q₀} {j = suc j} {k = k}
-        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} sj≤k related)
+    fam-out j sj≤k
 
 ------------------------------------------------------------------------
 -- The right-universal case

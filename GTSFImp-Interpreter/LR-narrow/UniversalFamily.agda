@@ -53,3 +53,31 @@ record RightUniversalFamilyKit : Set where
       → RightUniversalFamily W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
 
 open RightUniversalFamilyKit public
+
+-- The two-sided analogues for the `∀⊑∀` clause.
+
+record UniversalData {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    {Aᴾc Aᴵc : Ty (suc Δᶜ)}
+    (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
+    (Bᴾ : Ty (suc Δᴾ)) (Bᴵ : Ty (suc Δᴵ)) (k : ℕ)
+    (Vᴵ : Term Δᴵ) (Vᴾ : Term Δᴾ) : Set where
+  constructor universal-dataᵇ
+  field
+    dataᵇ-endpoints : TypedEndpoints W (I.∀⊑∀ p₀) Vᴵ Vᴾ
+    dataᵇ-embedᴾ : embedPrecise (core W) (`∀ Bᴾ) ≡ `∀ Aᴾc
+    dataᵇ-embedᴵ : embedImprecise (core W) (`∀ Bᴵ) ≡ `∀ Aᴵc
+    dataᵇ-chain : UniversalsRelated W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
+
+open UniversalData public
+
+record UniversalFamilyKitᵇ : Set where
+  field
+    to-familyᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+        {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
+        {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+        {Aᴾc Aᴵc : Ty (suc Δᶜ)}
+        {p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc}
+      → UniversalData W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
+      → UniversalFamily W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
+
+open UniversalFamilyKitᵇ public

@@ -19,7 +19,8 @@ import proof.DGG.CtxImp as CTI
 import proof.DGG.CastTermImprecision as CTIR
 open CTIR using (_∣_⊢²_⊑_∶_)
 open import LR-narrow.World
-open import LR-narrow.UniversalFamily using (RightUniversalFamilyKit)
+open import LR-narrow.UniversalFamily using
+  (RightUniversalFamilyKit; UniversalFamilyKitᵇ)
 open import LR-narrow.TermRelation
 open import LR-narrow.Universal using
   (universal-body-imprecision; right-universal-body-imprecision)
@@ -54,6 +55,7 @@ universal-fundamental : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     {p : Aᴾ CTI.⊑ᵂ⟨
       CTI.liftWorldBoth I.X⊑X (forgetWorld W) ⟩ Aᴵ}
     {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
+    (kit : UniversalFamilyKitᵇ)
     (liftΓ : CTI.LiftCtx I.X⊑X Γ Γᵇ)
     (vVᴾ : Value Vᴾ)
     (vVᴵ : Value Vᴵ)
@@ -97,6 +99,7 @@ right-universal-target-cast-body-fundamental : ∀
     {Vᴾ : Term (suc Δᴾ)} {Mᴵ : Term Δᴵ}
     {μᴵ : Consistency.Env∼ Δᴵ}
     (ob : CastValueObligations)
+    (kitᵇ : UniversalFamilyKitᵇ)
     (nonvar : NonVar Aᴾ)
     (occurs : Fin.zero ∈ᵗ Aᴾ)
     (liftΓ : CTI.LiftCtxᴸ I.X⊑★ Γ Γ′)

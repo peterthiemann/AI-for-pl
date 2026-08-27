@@ -7,7 +7,13 @@ open import LR-narrow.CastObligations using
    open-alias;
    open-right-universal; open-universal-dynamic)
 
-module proof.LR-narrow.Cast (ob : CastValueObligations) where
+open import LR-narrow.UniversalFamily using
+  (UniversalFamilyKitᵇ; to-familyᵇ; universal-dataᵇ)
+
+module proof.LR-narrow.Cast
+  (ob : CastValueObligations)
+  (kitᵇ : UniversalFamilyKitᵇ)
+  where
 
 -- File Charter:
 --   * Proves compatibility of the symmetric and one-sided CTI casts.
@@ -5243,16 +5249,27 @@ related-value-casts {W = W}
     (imprecise-value source-endpoints 《 all 》)
     (precise-value source-endpoints 《 all 》)
   at-every-index (suc j) sj≤k =
-    casted-value-endpoints
+    casted-endpoints ,
+    Aᴾ₁ , Aᴵ₁ , refl , refl ,
+    (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σᵇ →
+      to-familyᵇ kitᵇ
+        {W = W} {Bᴾ = Aᴾ₁} {Bᴵ = Aᴵ₁} {k = suc j}
+        {p₀ = target-body}
+        (universal-dataᵇ casted-endpoints refl refl
+          (universals-related j source-at-index))
+        {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σᵇ)
+    where
+    source-at-index : ValueImprecision W source-local (suc j) Vᴵ Vᴾ
+    source-at-index = value-imprecision-downward-to sj≤k source-related
+
+    casted-endpoints : TypedEndpoints W target-local
+        (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩) (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
+    casted-endpoints = casted-value-endpoints
       {W = W} {p = source-local} refl refl
       (C.∀ᶜ cᴾ) (C.∀ᶜ cᴵ) {q = target-local} refl refl
       {k = suc j} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} source-at-index
       (imprecise-value source-endpoints 《 all 》)
-      (precise-value source-endpoints 《 all 》) ,
-    Aᴾ₁ , Aᴵ₁ , refl , refl , universals-related j source-at-index
-    where
-    source-at-index : ValueImprecision W source-local (suc j) Vᴵ Vᴾ
-    source-at-index = value-imprecision-downward-to sj≤k source-related
+      (precise-value source-endpoints 《 all 》)
 
   universals-related zero related-at-suc =
     universal-head zero related-at-suc , tt
