@@ -434,3 +434,19 @@ Do NOT revive a chain-based kit; do NOT re-tighten the `∀⊑∀` head.
   (instantiation) lemma and the occurs-vacuity argument; the full
   plan is in REPLACEMENT-CLOSURE-DESIGN.md ("Remaining for item
   2").
+
+### Step 6, item 2 — weakened avoidance landed (2026-08-27)
+
+`AliasAvoid★ᵖ` (the ★-right-exempt variant: at an alias leaf,
+`(B ≡ ★) ⊎ (c ∉ᵗ T)`) now lives beside `AliasAvoidᵖ` in
+`proof/LR-narrow/AliasAvoid.agda`, with the full transport set:
+`alias-avoid-weaken★` (strong implies weak),
+`alias-avoid★-unique`/`-any`, `alias-avoid★-subst-left`/`-rightᵉ`,
+`alias-avoid★-rename`, and the occurrence transfer
+`target-occurs-source★ᵖ` (the exempted leaves have ★ on the right,
+where nothing occurs).  The three future-lifting transports
+(`alias-avoid★-lift-center`/`-body`/`-dynamic-body`) are in
+`proof/LR-narrow/RevealLifting.agda`.  Next per the design doc's
+addendum: the weakened `replace-⊑` (★-right alias leaves reuse
+their premises unreplaced), then re-thread `ImpreciseReveal` onto
+`AliasAvoid★ᵖ`.
