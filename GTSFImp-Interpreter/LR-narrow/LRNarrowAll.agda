@@ -56,6 +56,7 @@ import proof.LR-narrow.StarNoOccurrence
 import proof.LR-narrow.KeepStepExpansion
 import proof.LR-narrow.ValueExtraction
 import proof.LR-narrow.PreciseReveal
+import proof.LR-narrow.ImpreciseReveal
 import proof.LR-narrow.UniversalReveal
 import proof.LR-narrow.ReplaceImprecision
 import proof.LR-narrow.ImprecisionSize

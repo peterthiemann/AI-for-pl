@@ -411,3 +411,26 @@ is Finding I.4 in `REPLACEMENT-CLOSURE-DESIGN.md`:
    σ with inert/dyn wrappers (surplus precise peels).
 
 Do NOT revive a chain-based kit; do NOT re-tighten the `∀⊑∀` head.
+
+### Step 6, item 2 progress (2026-08-27, second session)
+
+* `f421fdad` — imprecise-only wrapper kinds `reveal-impreciseᵇ`/
+  `conceal-impreciseᵇ` in `UniWrapᵇ` (SlotSequence).
+* `proof/LR-narrow/ImpreciseReveal.agda` (new, in All) — the full
+  imprecise-side one-sided reveal/conceal family
+  (`ImpreciseRevealAt`/`ImpreciseConcealAt` + value-level entry
+  points), total over derivations, standalone recursion by
+  `sizeᵖ`, no TERMINATING pragma.  The `∀⊑` case is threaded as
+  the `ImpreciseRightExtension` record (two value-level fields);
+  nothing consumes the mirror yet, so no deferred obligation is in
+  the theorem path.  New reusable pieces: `paired-var-right-⊑`
+  (paired-variable right inversion under avoidance),
+  `alias-holds-imp-map`, `embI-replace-eq`/`embI-replace-body-eq`,
+  `replace-right-⊑`/`replace-right-body-⊑`, `lift-center-∉ᵗ`/
+  `lift-center-body-∉ᵗ`.
+* REMAINING for item 2: the right-side `UniWraps` imprecise-only
+  kind + the right-kit chain extension discharging
+  `ImpreciseRightExtension` — needs a ⊑-substitution
+  (instantiation) lemma and the occurs-vacuity argument; the full
+  plan is in REPLACEMENT-CLOSURE-DESIGN.md ("Remaining for item
+  2").

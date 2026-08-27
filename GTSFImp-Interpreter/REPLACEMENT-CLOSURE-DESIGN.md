@@ -1082,3 +1082,83 @@ development; item 4 is the largest single proof of the plan, as
 already flagged.  Landed so far under this finding: the head
 relaxation (I.2) and the alias-bind step expansion (first half of
 item 4's toolkit).
+
+## Implementation log — the imprecise-side reveal family landed
+## (2026-08-27, Finding I item 2)
+
+`proof/LR-narrow/ImpreciseReveal.agda` states and proves the
+imprecise-side one-sided structural reveal and conceal
+(`ImpreciseRevealAt`/`ImpreciseConcealAt`): when the paired slot's
+center avoids the precise endpoint, wrapping only the imprecise
+endpoint in the slot conversion exchanges the derivation for its
+right-replaced form.  Structure of the development:
+
+* The statements take the source derivation with its
+  derivation-restricted avoidance and the center non-occurrence in
+  the LEFT endpoint, plus the caller's target derivation with the
+  replaced-embedding equation.  Every case produces the clause at
+  the canonical replaced derivation (`replace-⊑` with the left
+  endpoint fixed by `replaceTy-absent`) and reindexes, so the
+  caller's derivation is never inverted — this is what avoids the
+  cross-rule ambiguity at `∀`-typed judgments (`∀⊑∀` versus `∀⊑`
+  cannot be separated by inversion, only by uniqueness against a
+  built witness).
+* The recursion is by derivation size alone (`sizeᵖ`, preserved by
+  Kripke lifting via `lift-center-size`): the alias case unfolds to
+  its premise, the arrow case to its components, and — unlike the
+  two-sided induction — the ★-right cases are all identities, so no
+  lexicographic index component is needed.  The file is standalone:
+  it does not depend on the sized reveal induction.
+* The unseal configuration (the conversion at the slot's own
+  imprecise variable) is refuted outright by the new inversion
+  `paired-var-right-⊑`: under avoidance, a derivation whose right
+  endpoint is a paired-mode variable starts at that variable (alias
+  detours die on the avoidance, right-universal sources on their
+  non-variable body).  With the center avoiding the left endpoint,
+  each of the three candidate sources is contradictory.
+* The alias case rebuilds the holding through
+  `alias-holds-imp-map` (the imprecise-endpoint-changing variant of
+  the alias-chain accessor) with the payload recursion at the same
+  index and the strictly smaller premise; the avoidance's alias-leaf
+  component `center ∉ᵗ T` is exactly the recursion's non-occurrence
+  premise.
+* The `∀⊑∀` case conses the new `reveal-impreciseᵇ`/
+  `conceal-impreciseᵇ` wrappers onto the stored family (the
+  imprecise-only kinds added to `UniWrapᵇ`), following the paired
+  cons template with a trivial precise side.
+* The `∀⊑` case is threaded as the `ImpreciseRightExtension`
+  record: the right-universal family's `UniWraps` does not yet have
+  an imprecise-only kind, so the two value-level obligations
+  (`imprecise-right-reveal-value`/`imprecise-right-conceal-value`)
+  are premises.  Nothing in-tree consumes the mirror yet, so no
+  deferred obligation enters the theorem path.
+
+### Remaining for item 2 — the right-universal chain extension
+
+Discharging `ImpreciseRightExtension` needs, in order:
+
+1. The imprecise-only wrapper kind in the right-side `UniWraps`
+   (mirroring `reveal-imprecise`ᵇ, with `UniShape C` so the
+   conversion is value-forming), which forces new cases in the
+   right-kit's σ-induction (`UniversalFamilyKit.agda`).
+2. The new chain-extension head: the source chain's head must be
+   instantiated at the SAME `(Rᴾ, r★)` as the caller's (there is no
+   wrapper β on the precise side, so the `＇0`-instantiation trick
+   of the existing right heads is unavailable).  This needs the
+   canonical instantiated source relation, i.e. a ⊑-substitution
+   lemma (`instᵐ μ ⊢ A ⊑ ⇑B → μ ⊢ embP Rᴾ ⊑ ★ → A[embP Rᴾ] ⊑ B`
+   at the embedding level), which does not exist in-tree yet.
+3. The value-level transformation at the instantiated relation
+   splits on whether the center occurs in `embP Rᴾ`:
+   * absent — the mirror applies, but its avoidance premise must be
+     weakened at ★-right alias leaves (the r★-substituted
+     subderivations have ★ right endpoints throughout, where the
+     mirror is an identity and needs no avoidance; note
+     `replace-⊑` already routes ★-right subtrees through the
+     avoidance-free `replace-star`), so the instantiation lemma
+     must transport a correspondingly weakened predicate;
+   * present — the head is vacuous: a paired center occurring in
+     the left endpoint must occur in the right endpoint (the mirror
+     image of `target-occurs-sourceᵖ`, with the paired mode ruling
+     out the alias and dynamic leaves), and the replaced right
+     endpoint provably does not contain the center.
