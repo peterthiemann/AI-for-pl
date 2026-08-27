@@ -17,9 +17,15 @@ open import Relation.Binary.PropositionalEquality using (_≡_)
 open import Types
 open import CastTerms
 import Imprecision as I
+import Consistency as C
+import proof.DGG.CtxImp as CTI
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import LR-narrow.LogicalRelation
+open import LR-narrow.ClosingSubstitution
+open import LR-narrow.ClosingSubstitutionProperties
+open import LR-narrow.TermRelation using
+  (CompiledUniversalBodyRelation; compiledContext; forgetWorld)
 
 -- The clause data of a right-universal value with the stored family
 -- replaced by a bare instantiation chain: exactly what a producer of
@@ -54,30 +60,68 @@ record RightUniversalFamilyKit : Set where
 
 open RightUniversalFamilyKit public
 
--- The two-sided analogues for the `∀⊑∀` clause.
-
-record UniversalData {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
-    {Aᴾc Aᴵc : Ty (suc Δᶜ)}
-    (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
-    (Bᴾ : Ty (suc Δᴾ)) (Bᴵ : Ty (suc Δᴵ)) (k : ℕ)
-    (Vᴵ : Term Δᴵ) (Vᴾ : Term Δᴾ) : Set where
-  constructor universal-dataᵇ
-  field
-    dataᵇ-endpoints : TypedEndpoints W (I.∀⊑∀ p₀) Vᴵ Vᴾ
-    dataᵇ-embedᴾ : embedPrecise (core W) (`∀ Bᴾ) ≡ `∀ Aᴾc
-    dataᵇ-embedᴵ : embedImprecise (core W) (`∀ Bᴵ) ≡ `∀ Aᴵc
-    dataᵇ-chain : UniversalsRelated W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
-
-open UniversalData public
+-- The two-sided kit for the `∀⊑∀` clause.  A chain-in/family-out
+-- statement is UNPROVABLE here (Finding I in
+-- REPLACEMENT-CLOSURE-DESIGN.md): a chain undercharacterizes the
+-- value, and extending a chain across one wrapper is exactly the
+-- blocked one-sided statement.  The kit therefore states the two
+-- honest producer obligations — one per ground producer of `∀⊑∀`
+-- values — with each field's premises drawn from its use site.
 
 record UniversalFamilyKitᵇ : Set where
   field
-    to-familyᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
-        {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
-        {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-        {Aᴾc Aᴵc : Ty (suc Δᶜ)}
-        {p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc}
-      → UniversalData W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
-      → UniversalFamily W p₀ Bᴾ Bᴵ k Vᴵ Vᴾ
+    -- The `Λ` producer: the family of a closed type abstraction,
+    -- from the compiled body relation.  Mirrors
+    -- `universals-related-from-body` with the chain replaced by the
+    -- family; discharged by the same cascade as `universal-intro`
+    -- (every peel pairs with the imprecise `Λ`-β's bind, surplus
+    -- precise peels are alias binds).
+    lambda-familyᵇ : ∀ {Δᴾ Δᴵ Δᶜ Aᴾc Aᴵc}
+        {W : World Δᴾ Δᴵ Δᶜ} {k : ℕ}
+        {Γ : CTI.CtxImp (forgetWorld W)}
+        {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc}
+        {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+        {Nᴾ : Term (suc Δᴾ)} {Nᴵ : Term (suc Δᴵ)}
+      → Value Nᴾ
+      → Value Nᴵ
+      → (∀ i → i ≤ k →
+          CompiledUniversalBodyRelation {W = W} p Bᴾ Bᴵ i Γ Nᴾ Nᴵ)
+      → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+          (W≼W′ : Future W W′)
+          (γ : RelatedClosingSubstitutions W′ k
+            (liftContextImprecision W≼W′ (compiledContext W Γ)))
+          (j : ℕ)
+      → j ≤ k
+      → UniversalFamily W′ (liftCenterBodyImprecision W≼W′ p)
+          (liftPreciseBody W≼W′ Bᴾ) (liftImpreciseBody W≼W′ Bᴵ) j
+          (close (impreciseClosingSubstitution γ)
+            (liftImpreciseTerm W≼W′ (Λ Nᴵ)))
+          (close (preciseClosingSubstitution γ)
+            (liftPreciseTerm W≼W′ (Λ Nᴾ)))
+
+    -- The `∀ᶜ` cast producer: the family of a universally cast
+    -- value, from the source value's clause (which carries the
+    -- source FAMILY).  Discharged by the peel cascade of Finding I:
+    -- paired binds while both peel queues are nonempty, alias binds
+    -- for surplus precise peels (the first needs the self-alias
+    -- world class), pure cast-βs at the center, then the source
+    -- family at the composite future with the empty sequence.
+    cast-familyᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+        {Aᴾc Aᴵc Bᴾc Bᴵc : Ty (suc Δᶜ)}
+        {Aᴾ₀ Aᴾ₁ : Ty (suc Δᴾ)} {Aᴵ₀ Aᴵ₁ : Ty (suc Δᴵ)}
+        (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
+      → embedPrecise (core W) (`∀ Aᴾ₀) ≡ `∀ Aᴾc
+      → embedImprecise (core W) (`∀ Aᴵ₀) ≡ `∀ Aᴵc
+      → ∀ {μᴾ : C.Env∼ Δᴾ} (cᴾ : C.extᵐ μᴾ C.⊢ Aᴾ₀ ∼ Aᴾ₁)
+          {μᴵ : C.Env∼ Δᴵ} (cᴵ : C.extᵐ μᴵ C.⊢ Aᴵ₀ ∼ Aᴵ₁)
+          (q₀ : I.extᵐ (impEnv (core W)) I.⊢ Bᴾc ⊑ Bᴵc)
+      → embedPrecise (core W) (`∀ Aᴾ₁) ≡ `∀ Bᴾc
+      → embedImprecise (core W) (`∀ Aᴵ₁) ≡ `∀ Bᴵc
+      → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+      → ValueImprecision W (I.∀⊑∀ p₀) (suc k) Vᴵ Vᴾ
+      → TypedEndpoints W (I.∀⊑∀ q₀)
+          (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩) (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
+      → UniversalFamily W q₀ Aᴾ₁ Aᴵ₁ (suc k)
+          (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩) (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
 
 open UniversalFamilyKitᵇ public

@@ -34,7 +34,7 @@ open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 open import LR-narrow.UniversalFamily using
   (RightUniversalFamilyKit; to-family; universal-data;
-   UniversalFamilyKitᵇ; to-familyᵇ; universal-dataᵇ)
+   UniversalFamilyKitᵇ; lambda-familyᵇ)
 open import LR-narrow.Closure
 open import LR-narrow.ClosingSubstitution
 open import LR-narrow.ClosingSubstitutionProperties
@@ -870,7 +870,6 @@ universal-compatible : ∀ {Δᴾ Δᴵ Δᶜ}
     {Γ′ : CTI.CtxImp
       (CTI.liftWorldBoth I.X⊑X (forgetWorld W))}
     {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
-  → (kit : UniversalFamilyKitᵇ)
   → (liftΓ : CTI.LiftCtx I.X⊑X Γ Γ′)
   → (vVᴾ : Value Vᴾ)
   → (vVᴵ : Value Vᴵ)
@@ -891,7 +890,7 @@ universal-compatible : ∀ {Δᴾ Δᴵ Δᶜ}
             (liftContextImprecision W≼W′ (compiledContext W Γ)))
           (j : ℕ)
       → j ≤ k
-      → UniversalsRelated W′
+      → UniversalFamily W′
           (liftCenterBodyImprecision W≼W′ q-body)
           (liftPreciseBody W≼W′ Aᴾ)
           (liftImpreciseBody W≼W′ Aᴵ) j
@@ -903,7 +902,7 @@ universal-compatible : ∀ {Δᴾ Δᴵ Δᶜ}
 universal-compatible {W = W} {k = k} {Γ = Γ}
     {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
     {Vᴾ = Vᴾ} {Vᴵ = Vᴵ}
-    kit liftΓ vVᴾ vVᴵ body q universals W′ W≼W′ γ =
+    liftΓ vVᴾ vVᴵ body q families W′ W≼W′ γ =
   related-values-return (imprecise-value endpoints)
     (precise-value endpoints) related
   where
@@ -1011,16 +1010,9 @@ universal-compatible {W = W} {k = k} {Γ = Γ}
         liftPreciseBody W≼W′ Aᴾ , liftImpreciseBody W≼W′ Aᴵ ,
         precise-body-eq , imprecise-body-eq ,
         λ {_} {_} {_} {W₂} W′≼W″ {B₂} {C₂} σ →
-          to-familyᵇ kit
-            {W = W′}
-            {Bᴾ = liftPreciseBody W≼W′ Aᴾ}
-            {Bᴵ = liftImpreciseBody W≼W′ Aᴵ} {k = suc j}
-            {p₀ = liftCenterBodyImprecision W≼W′ p-body}
-            (universal-dataᵇ explicit-endpoints
-              precise-body-eq imprecise-body-eq
-              (universals p-body
-                (PI.⊑-unique q (I.∀⊑∀ p-body))
-                W′ W≼W′ γ (suc j) j≤k))
+          families p-body
+            (PI.⊑-unique q (I.∀⊑∀ p-body))
+            W′ W≼W′ γ (suc j) j≤k
             {W′ = W₂} W′≼W″ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σ)
 
 universal-compatible-from-body : ∀ {Δᴾ Δᴵ Δᶜ}
@@ -1044,10 +1036,10 @@ universal-compatible-from-body : ∀ {Δᴾ Δᴵ Δᶜ}
   → CompiledTermRelation {W = W} q k Γ (Λ Vᴾ) (Λ Vᴵ)
 universal-compatible-from-body {W = W} {p = p}
     kit liftΓ vVᴾ vVᴵ body q body-related =
-  universal-compatible kit liftΓ vVᴾ vVᴵ body q
+  universal-compatible liftΓ vVᴾ vVᴵ body q
     (λ q-body q-eq W′ W≼W′ γ j j≤k →
       subst≡
-        (λ r → UniversalsRelated W′
+        (λ r → UniversalFamily W′
           (liftCenterBodyImprecision W≼W′ r)
           (liftPreciseBody W≼W′ _)
           (liftImpreciseBody W≼W′ _) j
@@ -1056,7 +1048,7 @@ universal-compatible-from-body {W = W} {p = p}
           (close (preciseClosingSubstitution γ)
             (liftPreciseTerm W≼W′ (Λ _))))
         (PI.⊑-unique p-body q-body)
-        (universals-related-from-body {p = p-body}
+        (lambda-familyᵇ kit {p = p-body}
           vVᴾ vVᴵ body-related
           W≼W′ γ j j≤k))
   where

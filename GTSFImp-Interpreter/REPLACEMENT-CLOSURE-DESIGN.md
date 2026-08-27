@@ -941,3 +941,144 @@ real alias closure under futures (`alias-holds-lift`/`-future`,
 `liftCenterMode-alias`, and the three future-lifting lemmas'
 alias cases in `proof/LR-narrow/Closure.agda`) — the last
 `noAlias` uses outside the reveal machinery.
+
+## Finding I — the family's cast producer needs type-transparent
+## precise binds (2026-08-27)
+
+Steps 1–5 of Finding H landed: the four blocked obligations are
+family projections, `RevealObligations` is gone, and the residual
+is the deferred `universal-familyᵇ : UniversalFamilyKitᵇ` field.
+Working that residual uncovered three results, one of which
+falsifies this note's earlier claim that the cast producer's
+σ-induction is "symmetric, no gap" (step 4 of Finding H's plan and
+the `∀⊑∀` path analysis above).  Record of the analysis:
+
+### I.1  The chain-based kit is unprovable — do not revive it
+
+`to-familyᵇ : UniversalData → UniversalFamily` (chain in, family
+out) has no proof: a chain of heads only couples the two apps at a
+common world, and extending a chain across ONE wrapper is exactly
+the blocked one-sided statement.  Per-wrapper factorizations fail
+at every level (chain, continuation, value), and cons-projections
+are vacuous for bootstrapping.  The kit record's current statement
+must not survive; the deferred surface has to be reshaped to a
+producer-specific premise (the source value's FAMILY plus the
+concrete cast, or the Λ body relation).
+
+### I.2  The head's paired bound was an over-specification (fixed)
+
+Every `⦂∀` application β binds the applied type (`β-Λ`,
+`β-reveal-∀`, `β-conceal-∀`, `β-gen`; the `∀ᶜ` cast-β is pure), so
+under a wrapper stack the precise side binds `Rᴾ` at its FIRST peel
+and re-binds `＇0` at every later one, while the imprecise side
+binds only at paired wrappers (inert/dyn wrappers do not touch the
+imprecise term — `wrapTermᴵᵇ₁` is the identity there).  The old
+head demanded `PostBindValueRelation` at
+`pairedBindWorld W′ Rᴾ Rᴵ r`, i.e. the FIRST fresh center slot must
+be the paired one.  A Λ-producer can honor that (the bare imprecise
+Λ-β supplies the `Rᴵ` bind to pair with), but a cast producer under
+a σ with no paired wrapper cannot: its precise side must bind `Rᴾ`
+first with no imprecise partner, and slot modes are fixed at
+allocation, so no later reconciliation can retrofit the paired
+mode.  Since no consumer ever inspected the bound (they only thread
+the factoring), the head now carries `FutureValueRelation s`
+(commit "Relax the universal head to the future value relation").
+The right-universal head keeps its `preciseBindWorld` bound — its
+imprecise endpoint is never applied, so the one-sided bound is
+always realizable.
+
+### I.3  The remaining gap: the first peel of a paired-free σ
+
+With the relaxed head, the cast producer's schedule for a head at
+`(W′, Rᴾ, Rᴵ, r, s)` under σ is:
+
+* pair the i-th precise bind with the i-th imprecise bind while
+  both queues are nonempty (contents: `Rᴾ`/`Rᴵ` first, `＇0`/`＇0`
+  after; the `＇0 ⊑ ＇0` premises come from the top paired slot
+  through alias hops);
+* classify each surplus precise `＇0`-bind as an alias bind —
+  `related-alias-bind-step-expand` (landed) with the fresh alias
+  atom at rep `＇0`;
+* at the center, expand the pure cast-βs and appeal to the SOURCE
+  value's family (available in the `∀ᶜ` clause) at the composite
+  future with `σ = []` and the instantiation
+  `(＇0-deep , lift Rᴵ , r*)`, framing the result casts with
+  `cast-computations-related`, where `r*` walks the alias chain by
+  iterated `I.alias`.
+
+For σ with at least one paired wrapper this closes.  For σ whose
+wrappers are ALL precise-only (inert/dyn — reachable: the four
+projections cons exactly such wrappers), the FIRST precise bind has
+content `Rᴾ` (not a variable) and no imprecise partner, and the
+chain-bottom premise needs `＇slot₁ ⊑ lift Rᴵ`.  The only mode that
+can supply it is `X⊑ᵗ (embP Rᴾ)` — a SELF-ALIAS: the `alias` rule
+then discharges `＇slot₁ ⊑ embI Rᴵ` from `r` itself.  This is not a
+trick; it is the semantic content of the blocked statements: the
+instantiation seal created by a one-sided wrapper β must be
+type-transparent to the center, or the source relation cannot be
+instantiated at it.  There is no schedule that avoids it (verified
+against every alternative: transferring σ to the source value fails
+on types — inert conversions mention the wrapped body, and casts
+do not preserve variable occurrence; black-box tail reuse fails on
+sealing; pre-allocating the paired world breaks store matching).
+
+### I.4  The program this forces (in dependency order)
+
+1. **Generalize the alias atom's representative to a type.**
+   `AliasSemanticAtom`: `aliasRepName : TyVar Δᴾ` becomes
+   `aliasRep : Ty Δᴾ` (store binds `aliasRep`, `aliasRep-eq` embeds
+   it, the seal names it).  The mode `X⊑ᵗ T`, the `alias` rule, and
+   the whole `AliasAvoidᵖ` layer are already general in `T`.
+   Mechanical consumers: the weaken/shift clones in `Atoms.agda`,
+   `aliasBindCore/World` (now `aliasBindWorld W (R : Ty Δᴾ)`, the
+   variable case recovering today's behavior), `alias-holds-chain`,
+   Closure ~1306, and the `ground-imprecise-targets-agree`
+   recursion (its fuel is derivation size, not chain length — the
+   general rep only adds non-variable base cases, for which the
+   NonVar ground lemmas already exist).
+
+2. **The non-mechanical consumer: `reveal-alias`/`conceal-alias`.**
+   Today they use `alias-holds-rep` (T is a variable) and
+   `alias-premise-B-shape` (so B is a variable or ★) to make both
+   conversions identities.  With a general `T` the LEFT type is
+   still the alias variable (identity conversion, mode-disjointness
+   as today), but `B` is arbitrary, so the slot conversion acts
+   structurally on the IMPRECISE endpoint only.  Unfolding the
+   alias atom, the needed statement is an imprecise-side-only
+   reveal of the payload pair `(Vᴵ, payload)` at the premise
+   `p′ : T ⊑ B` where the center avoids `T` — the exact MIRROR of
+   `PreciseRevealAt` (center ∉ LHS instead of ∉ RHS).  This is a
+   new statement family (`TargetRevealAt`/`TargetConcealAt`-style)
+   joining the sized induction, with its own `∀⊑∀` case — which
+   needs an imprecise-only wrapper kind added to `UniWrapᵇ`
+   (`wrapTermᴾᵇ₁` identity), whose peels in producer cascades are
+   imprecise-only binds (world class: `future-imprecise` with a
+   target-style entry).
+
+3. **One-sided alias frames.**  The cascade's re-wrapping after an
+   alias peel produces precise-side conversion frames at the FRESH
+   ALIAS slot (`〖0, ⇑Rᴾ↑B〗` at slot₁).  The existing frame
+   transformers cover paired slots (`revealed-computations`) and
+   dynamic slots; alias slots need their own one-sided family.  At
+   the derivation level it is `replace-left-⊑` (the replacement
+   machinery already landed for Finding H); the computation-level
+   statement mirrors `PreciseRevealAt` with the alias slot's
+   transparency (`I.alias`) instead of `X⊑★`.
+
+4. **The cast producer's cascade** in `related-value-casts`' `∀ᶜ`
+   clause, per the schedule of I.3, using 1–3 plus
+   `related-alias-bind-step-expand` (landed) and the assembled
+   reveal entry points (`reveal-structural` etc. — RevealStructural
+   closes its own induction and does not depend on Cast, so no
+   parameter is needed).  Then reshape/delete the kit: Cast stops
+   taking `kitᵇ`; `universal-compatible` takes a family-producing
+   premise directly (its real producer is the deferred
+   `universal-intro` implementer, whose own cascade needs no
+   self-alias — the Λ-β always pairs); the `universal-familyᵇ`
+   field of `RemainingObligations` goes away.
+
+Items 2 and 3 are each comparable to the existing `PreciseReveal`
+development; item 4 is the largest single proof of the plan, as
+already flagged.  Landed so far under this finding: the head
+relaxation (I.2) and the alias-bind step expansion (first half of
+item 4's toolkit).

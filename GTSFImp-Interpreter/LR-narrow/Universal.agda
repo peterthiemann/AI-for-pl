@@ -248,7 +248,6 @@ universal-compatible : ∀ {Δᴾ Δᴵ Δᶜ}
       (CTI.liftWorldBoth I.X⊑X (forgetWorld W))}
     {Vᴾ : Term (suc Δᴾ)}
     {Vᴵ : Term (suc Δᴵ)}
-  → (kit : UniversalFamilyKitᵇ)
   → (liftΓ : CTI.LiftCtx I.X⊑X Γ Γ′)
   → (vVᴾ : Value Vᴾ)
   → (vVᴵ : Value Vᴵ)
@@ -269,7 +268,7 @@ universal-compatible : ∀ {Δᴾ Δᴵ Δᶜ}
             (liftContextImprecision W≼W′ (compiledContext W Γ)))
           (j : ℕ)
       → j ≤ k
-      → UniversalsRelated W′
+      → UniversalFamily W′
           (liftCenterBodyImprecision W≼W′ q-body)
           (liftPreciseBody W≼W′ Aᴾ)
           (liftImpreciseBody W≼W′ Aᴵ) j

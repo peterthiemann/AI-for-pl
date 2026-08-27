@@ -8,7 +8,7 @@ open import LR-narrow.CastObligations using
    open-right-universal; open-universal-dynamic)
 
 open import LR-narrow.UniversalFamily using
-  (UniversalFamilyKitᵇ; to-familyᵇ; universal-dataᵇ)
+  (UniversalFamilyKitᵇ; cast-familyᵇ)
 
 module proof.LR-narrow.Cast
   (ob : CastValueObligations)
@@ -5219,24 +5219,6 @@ related-value-casts {W = W}
   source-endpoints : TypedEndpoints W source-local Vᴵ Vᴾ
   source-endpoints = value-imprecision-endpoints source-related
 
-  universals-related : ∀ j
-    → ValueImprecision W source-local (suc j) Vᴵ Vᴾ
-    → UniversalsRelated W target-body Aᴾ₁ Aᴵ₁ (suc j)
-        (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩) (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
-
-  universal-head : ∀ j
-    → ValueImprecision W source-local (suc j) Vᴵ Vᴾ
-    → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′)
-        (W≼W′ : Future W W′) (Rᴾ : Ty Δᴾ′) (Rᴵ : Ty Δᴵ′)
-        (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
-        (s : liftPreciseBody W≼W′ Aᴾ₁ [ Rᴾ ]ᵗ
-          ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ]ᵗ)
-      → ComputationsRelated W′ (FutureValueRelation s) (suc j)
-          (liftImpreciseTerm W≼W′ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩)
-            ⦂∀ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ])
-          (liftPreciseTerm W≼W′ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
-            ⦂∀ liftPreciseBody W≼W′ Aᴾ₁ [ Rᴾ ])
-
   at-every-index : ∀ j → j ≤ k
     → FutureValueRelation target-local W future-refl j
         (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩) (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
@@ -5251,11 +5233,10 @@ related-value-casts {W = W}
     casted-endpoints ,
     Aᴾ₁ , Aᴵ₁ , refl , refl ,
     (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σᵇ →
-      to-familyᵇ kitᵇ
-        {W = W} {Bᴾ = Aᴾ₁} {Bᴵ = Aᴵ₁} {k = suc j}
-        {p₀ = target-body}
-        (universal-dataᵇ casted-endpoints refl refl
-          (universals-related j source-at-index))
+      cast-familyᵇ kitᵇ
+        {W = W} source-body refl refl cᴾ cᴵ
+        target-body refl refl
+        {k = j} source-at-index casted-endpoints
         {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σᵇ)
     where
     source-at-index : ValueImprecision W source-local (suc j) Vᴵ Vᴾ
@@ -5270,154 +5251,6 @@ related-value-casts {W = W}
       (imprecise-value source-endpoints 《 all 》)
       (precise-value source-endpoints 《 all 》)
 
-  universals-related zero related-at-suc =
-    universal-head zero related-at-suc , tt
-  universals-related (suc j) related-at-suc =
-    universal-head (suc j) related-at-suc ,
-    universals-related j
-      (value-imprecision-downward-to
-        {W = W} {p = source-local}
-        {j = suc j} {k = suc (suc j)} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-        (n≤1+n (suc j)) related-at-suc)
-
-  universal-head j related-at-suc W′ W≼W′ Rᴾ Rᴵ r s
-      = ClosureProof.computations-related-reindex s s refl refl
-          imprecise-redex-eq precise-redex-eq expanded
-    where
-    cᴾ′ = precise-universal-body-consistency-future W≼W′ cᴾ
-    cᴵ′ = imprecise-universal-body-consistency-future W≼W′ cᴵ
-
-    source-bodyᴾ-embedded = precise-body-lift-eq W≼W′ Aᴾ₀
-
-    source-bodyᴵ-embedded = imprecise-body-lift-eq W≼W′ Aᴵ₀
-
-    source-body-local′ = reindex-center-imprecision
-      (liftCenterBodyImprecision W≼W′ source-body)
-      (sym source-bodyᴾ-embedded) (sym source-bodyᴵ-embedded)
-
-    source-allᴾ-eq = trans
-      (cong (embedPrecise (core W′))
-        (sym (trans
-          (ClosureProof.precise-ground-type-eq W≼W′ (`∀ Aᴾ₀))
-          (liftPreciseTy-universal W≼W′ Aᴾ₀))))
-      (trans
-        (cong (embedPrecise (core W′))
-          (ClosureProof.precise-ground-type-eq W≼W′ (`∀ Aᴾ₀)))
-        (embedPrecise-lift W≼W′ (`∀ Aᴾ₀)))
-
-    source-allᴵ-eq = trans
-      (cong (embedImprecise (core W′))
-        (sym (trans
-          (ClosureProof.imprecise-ground-type-eq W≼W′ (`∀ Aᴵ₀))
-          (liftImpreciseTy-universal W≼W′ Aᴵ₀))))
-      (trans
-        (cong (embedImprecise (core W′))
-          (ClosureProof.imprecise-ground-type-eq W≼W′ (`∀ Aᴵ₀)))
-        (embedImprecise-lift W≼W′ (`∀ Aᴵ₀)))
-
-    source-related′ : ValueImprecision W′
-        (I.∀⊑∀ source-body-local′) (suc j)
-        (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
-    source-related′ = ClosureProof.value-imprecision-reindex
-      (I.∀⊑∀ source-body-local′)
-      (liftCenterImprecision W≼W′ source-local)
-      source-allᴾ-eq source-allᴵ-eq
-      (ClosureProof.value-imprecision-future
-        {W = W} {W′ = W′} {p = source-local} {k = suc j}
-        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} W≼W′ related-at-suc)
-
-    source-s : liftPreciseBody W≼W′ Aᴾ₀ [ Rᴾ ]ᵗ
-        ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ Aᴵ₀ [ Rᴵ ]ᵗ
-    source-s = openRelatedBodyImprecision
-      {W = W′} {Aᴾ = liftPreciseBody W≼W′ Aᴾ₀}
-      {Aᴵ = liftImpreciseBody W≼W′ Aᴵ₀}
-      {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} source-body-local′ r
-
-    source-applied-at : (n : ℕ)
-      → ValueImprecision W′ (I.∀⊑∀ source-body-local′) (suc n)
-          (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
-      → ComputationsRelated W′ (FutureValueRelation source-s) n
-        (liftImpreciseTerm W≼W′ Vᴵ
-          ⦂∀ liftImpreciseBody W≼W′ Aᴵ₀ [ Rᴵ ])
-        (liftPreciseTerm W≼W′ Vᴾ
-          ⦂∀ liftPreciseBody W≼W′ Aᴾ₀ [ Rᴾ ])
-    source-applied-at zero related-at =
-      nonvalue-computations-zero (λ ()) (λ ()) refl refl
-    source-applied-at (suc j′) related-at =
-      positive-universal-application
-      {W = W′} {Cᴾ = liftPreciseBody W≼W′ Aᴾ₀}
-      {Cᴵ = liftImpreciseBody W≼W′ Aᴵ₀}
-      {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {p = source-body-local′}
-      {r = r} {s = source-s}
-      refl refl (s≤s z≤n)
-      (value-imprecision-downward-to
-        {W = W′} {p = I.∀⊑∀ source-body-local′}
-        {j = suc j′} {k = suc (suc j′)}
-        {Vᴵ = liftImpreciseTerm W≼W′ Vᴵ}
-        {Vᴾ = liftPreciseTerm W≼W′ Vᴾ}
-        (n≤1+n (suc j′)) related-at)
-
-    source-applied : ComputationsRelated W′
-        (FutureValueRelation source-s) j
-        (liftImpreciseTerm W≼W′ Vᴵ
-          ⦂∀ liftImpreciseBody W≼W′ Aᴵ₀ [ Rᴵ ])
-        (liftPreciseTerm W≼W′ Vᴾ
-          ⦂∀ liftPreciseBody W≼W′ Aᴾ₀ [ Rᴾ ])
-    source-applied = source-applied-at j source-related′
-
-    casted = cast-computations-related
-      {R = FutureValueRelation source-s}
-      {S = FutureValueRelation s}
-      source-s refl refl (cᴾ′ [ Rᴾ ]ᶜ) (cᴵ′ [ Rᴵ ]ᶜ)
-      s refl refl j
-      (liftImpreciseTerm W≼W′ Vᴵ
-        ⦂∀ liftImpreciseBody W≼W′ Aᴵ₀ [ Rᴵ ])
-      (liftPreciseTerm W≼W′ Vᴾ
-        ⦂∀ liftPreciseBody W≼W′ Aᴾ₀ [ Rᴾ ])
-      (λ W′≼W″ sourceᴾ″ sourceᴵ″ dᴾ dᴵ targetᴾ″ targetᴵ″
-          related″ →
-        computations-related-future-compose W′≼W″ s
-          (related-value-casts
-            (liftCenterImprecision W′≼W″ source-s)
-            sourceᴾ″ sourceᴵ″ dᴾ dᴵ
-            (liftCenterImprecision W′≼W″ s)
-            targetᴾ″ targetᴵ″ related″)) source-applied
-
-    source-endpoints′ : TypedEndpoints W′
-        (I.∀⊑∀ source-body-local′)
-        (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
-    source-endpoints′ = value-imprecision-endpoints
-      {W = W′} {p = I.∀⊑∀ source-body-local′} {k = suc j}
-      {Vᴵ = liftImpreciseTerm W≼W′ Vᴵ}
-      {Vᴾ = liftPreciseTerm W≼W′ Vᴾ} source-related′
-
-    expanded : ComputationsRelated W′
-        (FutureValueRelation s) (suc j)
-        ((liftImpreciseTerm W≼W′ Vᴵ ⟨ C.∀ᶜ cᴵ′ ⟩)
-          ⦂∀ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ])
-        ((liftPreciseTerm W≼W′ Vᴾ ⟨ C.∀ᶜ cᴾ′ ⟩)
-          ⦂∀ liftPreciseBody W≼W′ Aᴾ₁ [ Rᴾ ])
-    expanded
-        with universal-cast-type-application-step-question
-          {Σ = impreciseStore (core W′)}
-          (imprecise-value source-endpoints′)
-    expanded | vVᴵ′ , imprecise-step-eq
-        with universal-cast-type-application-step-question
-          {Σ = preciseStore (core W′)}
-          (precise-value source-endpoints′)
-    expanded | vVᴵ′ , imprecise-step-eq
-      | vVᴾ′ , precise-step-eq =
-      related-pure-step-expand (λ ()) (λ ()) refl refl
-        (β-∀ vVᴵ′ refl) (β-∀ vVᴾ′ refl)
-        imprecise-step-eq precise-step-eq casted
-
-    imprecise-redex-eq = cong₂ (λ L B → L ⦂∀ B [ Rᴵ ])
-      (sym (lift-imprecise-universal-cast W≼W′ Vᴵ cᴵ))
-      refl
-
-    precise-redex-eq = cong₂ (λ L B → L ⦂∀ B [ Rᴾ ])
-      (sym (lift-precise-universal-cast W≼W′ Vᴾ cᴾ))
-      refl
 related-value-casts (I.∀⊑∀ p) sourceᴾ sourceᴵ cᴾ cᴵ q targetᴾ
     targetᴵ related =
   paired-cast-values ob (I.∀⊑∀ p)
