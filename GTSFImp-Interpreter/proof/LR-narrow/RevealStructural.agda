@@ -105,7 +105,7 @@ open import proof.LR-narrow.ReplaceImprecision using
   (replace-⊑; replace-left-⊑; replace-zero-open; open-shifted-body;
    replaceTy-nonvar; replaceTy-occurs; shift-no-zero)
 open import proof.LR-narrow.AliasAvoid using
-  (no-aliases-avoidᵖ; target-occurs-sourceᵖ; env-aliases-avoidᵖ;
+  (target-occurs-sourceᵖ; env-aliases-avoidᵖ;
    alias-avoid-subst-left; alias-avoid-subst-rightᵉ; alias-avoid-any)
 open import proof.LR-narrow.ImprecisionSize using
   (sizeᵖ; lift-center-size; size-subst-left; size-subst-right;
@@ -125,8 +125,7 @@ open RA using
 ------------------------------------------------------------------------
 
 open import proof.ImprecisionConsistency using
-  (rename-⊑; rename-star-map-ext; fin-suc-injective; ext-injective;
-   ext-no-aliases; inst-no-aliases)
+  (rename-⊑; rename-star-map-ext; fin-suc-injective; ext-injective)
 
 ------------------------------------------------------------------------
 -- No bottom-typed values
@@ -4870,10 +4869,7 @@ conceal-right-universal-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
         (subst≡
           (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
           (sym eqᴾ) p₀)
-        (no-aliases-avoidᵖ (inst-no-aliases (noAlias W))
-          (subst≡
-            (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
-            (sym eqᴾ) p₀))))
+        (alias-avoid-subst-left (sym eqᴾ) avoidᵇ)))
 
 -- The conceal dispatch when the paired center avoids the imprecise
 -- center type.
@@ -5124,10 +5120,7 @@ right-universal-general W s {B₀ᴾ = B₀ᴾ} {Bᴵ = Bᴵ}
         (subst≡
           (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
           (sym eqᴾ) p₀)
-        (no-aliases-avoidᵖ (inst-no-aliases (noAlias W))
-          (subst≡
-            (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ ⇑ᵗ Bc)
-            (sym eqᴾ) p₀))))
+        (alias-avoid-subst-left (sym eqᴾ) avoidᵇ)))
 
 ------------------------------------------------------------------------
 -- Concealing to a bottom type is impossible
@@ -5679,7 +5672,7 @@ reveal-conceal-step k n below = reveal-at , conceal-at
             (renameᵗ (extᵗ ρᴵ) B₀ᴵ)
     raw = replace-⊑ (Fin.suc (center s)) (cong I.⇑ᵛ (mode-eq s))
       rep′ base
-      (no-aliases-avoidᵖ (ext-no-aliases (noAlias W)) base)
+      (alias-avoid-any p₀ base (sym eqᴾ) (sym eqᴵ) avoidᵖ)
 
     alt-body : I.extᵐ (impEnv (core W)) I.⊢
         renameᵗ (extᵗ ρᴾ)
@@ -5986,7 +5979,7 @@ reveal-conceal-step k n below = reveal-at , conceal-at
             (renameᵗ (extᵗ ρᴵ) B₀ᴵ)
     raw = replace-⊑ (Fin.suc (center s)) (cong I.⇑ᵛ (mode-eq s))
       rep′ base
-      (no-aliases-avoidᵖ (ext-no-aliases (noAlias W)) base)
+      (alias-avoid-any p₀ base (sym eqᴾ) (sym eqᴵ) avoidᵖ)
 
     alt-body : I.extᵐ (impEnv (core W)) I.⊢
         renameᵗ (extᵗ ρᴾ)
