@@ -89,19 +89,46 @@ green and committed:
   (binder transports definitional), call sites discharged through
   the still-standing `noAlias` invariant.
 
-**REMAINING (Finding H order)**: (1) thread `AliasAvoidᵖ` through
-the sized reveal statements and give the reveal machinery real
-alias cases (identity-collapse under avoidance); (2) drop
-`World.noAlias`, add `aliasBindCore`/`aliasBindWorld` and
-`future-alias`, sweep the ~200 `Future` matchers; (3) the `∀⊑∀`
-clause becomes a wrap-closed family (consumers project `[]`; the
-four obligations become cons projections); (4) the `∀⊑∀` producers
-(`Cast`, the `RevealStructural` assemblies) build families by
-σ-induction — the flagged largest proof; (5) delete
-`RevealObligations`.  Alternative worth weighing before (1): with
-Finding H's added cost, resolution (b) of the design doc
-(substituting reveal β, which removes the alias at the source) may
-have become competitive.
+**Finding-H step (1) is DONE** (tree fully green — both projects'
+`make check`):
+
+* the two-sided sized statements (`RevealAtSized`/`ConcealAtSized`)
+  and the whole `RevealStructural` machinery take
+  `AliasAvoidᵖ (center s) p` after `p`; Kripke re-entries transport
+  it with `alias-avoid-lift-center`/`-lift-body`/
+  `-lift-dynamic-body` (in `RevealLifting`), endpoint substs with
+  `alias-avoid-subst-left/rightᵉ`, and reindexings with
+  `alias-avoid-any` (endpoint-propositional catch-all in
+  `AliasAvoid`);
+* the real two-sided alias cases (`reveal-alias`/`conceal-alias`):
+  `alias-premise-B-shape` pins the alias premise's right side to a
+  variable or ★ (via the variable-representative atom), so under
+  avoidance both replacements are identities and identity
+  reveal/conceal steps close the case; `DynamicReveal`'s alias
+  clauses are refuted by mode clash (`star-not-alias`), no world
+  invariant needed;
+* the absent/inert and dyn variants need NO avoidance (they only
+  enter the one-sided precise machinery) — their signatures stay
+  clean, so `PreciseReveal`'s wrapper constructions are untouched;
+* `UniWrap`'s `reveal-paired`/`conceal-paired` constructors carry a
+  wrap-level avoid field `(j : BodyImprecision W B C) →
+  AliasAvoidᵖ (suc (center s)) (bodyP j)` (quantified over the
+  body imprecision at the unreplaced side — `alias-avoid-unique`
+  makes one witness serve all); `extend-wrap` instantiates it at
+  the iteration's existential imprecision, and the paired-family
+  producers in `RevealStructural` discharge it by lifting their
+  own `avoidᵇ`.
+
+**REMAINING (Finding H order)**: (2) drop `World.noAlias`, add
+`aliasBindCore`/`aliasBindWorld` and `future-alias`, sweep the
+~200 `Future` matchers and convert `Cast.agda`'s remaining
+`noAlias` uses (`related-value-casts`' alias clause,
+`right-dynamic-ground-tag-…`, the `NoAliases` arguments to the
+ground-tag lemmas); (3) the `∀⊑∀` clause becomes a wrap-closed
+family (consumers project `[]`; the four obligations become cons
+projections); (4) the `∀⊑∀` producers (`Cast`, the
+`RevealStructural` assemblies) build families by σ-induction — the
+flagged largest proof; (5) delete `RevealObligations`.
 
 ## Recurring mechanical recipes (used dozens of times already)
 

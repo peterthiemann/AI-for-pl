@@ -28,7 +28,9 @@ open import Consistency using (toRenameᵗ; wk↪ᵗ)
 import Imprecision as I
 open import proof.ImprecisionConsistency using
   (toRenameᵗ-injective; ext-injective; fin-suc-injective;
-   shift-star-map; shift-alias-map)
+   shift-star-map; shift-alias-map;
+   rename-star-map-ext; rename-star-map-inst;
+   rename-alias-map-ext; rename-alias-map-inst)
 open import proof.LR-narrow.AliasAvoid using
   (AliasAvoidᵖ; alias-avoid-rename)
 open import proof.TypeInTermSubst using (toRename-wk-eq; renameᵗ-wk-eq)
@@ -375,3 +377,68 @@ alias-avoid-lift-center (future-imprecise {W′ = W₁} W≼W′) c p avoid =
     (shift-alias-map {v = I.X⊑★})
     (liftCenterImprecision W≼W′ p)
     (alias-avoid-lift-center W≼W′ c p avoid)
+
+alias-avoid-lift-body : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {Aᴾ Aᴵ : Ty (suc Δᶜ)}
+    (W≼W′ : Future W W′) (c : TyVar Δᶜ)
+    (p : I._⊢_⊑_ (I.extᵐ (impEnv (core W))) Aᴾ Aᴵ)
+  → AliasAvoidᵖ (Fin.suc c) p
+  → AliasAvoidᵖ (Fin.suc (liftCenterVariable W≼W′ c))
+      (liftCenterBodyImprecision W≼W′ p)
+alias-avoid-lift-body future-refl c p avoid = avoid
+alias-avoid-lift-body (future-paired {W′ = W₁} W≼W′ r) c p avoid =
+  alias-avoid-rename {μ′ = I.extᵐ (I.extᵐ (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑X}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑X}))
+    (liftCenterBodyImprecision W≼W′ p)
+    (alias-avoid-lift-body W≼W′ c p avoid)
+alias-avoid-lift-body (future-precise {W′ = W₁} W≼W′ r) c p avoid =
+  alias-avoid-rename {μ′ = I.extᵐ (I.instᵐ (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterBodyImprecision W≼W′ p)
+    (alias-avoid-lift-body W≼W′ c p avoid)
+alias-avoid-lift-body (future-imprecise {W′ = W₁} W≼W′) c p avoid =
+  alias-avoid-rename {μ′ = I.extᵐ (I.instᵐ (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterBodyImprecision W≼W′ p)
+    (alias-avoid-lift-body W≼W′ c p avoid)
+
+alias-avoid-lift-dynamic-body : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {Aᴾ Aᴵ : Ty (suc Δᶜ)}
+    (W≼W′ : Future W W′) (c : TyVar Δᶜ)
+    (p : I._⊢_⊑_ (I.instᵐ (impEnv (core W))) Aᴾ Aᴵ)
+  → AliasAvoidᵖ (Fin.suc c) p
+  → AliasAvoidᵖ (Fin.suc (liftCenterVariable W≼W′ c))
+      (liftCenterDynamicBodyImprecision W≼W′ p)
+alias-avoid-lift-dynamic-body future-refl c p avoid = avoid
+alias-avoid-lift-dynamic-body (future-paired {W′ = W₁} W≼W′ r)
+    c p avoid =
+  alias-avoid-rename {μ′ = I.instᵐ (I.extᵐ (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑X}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑X}))
+    (liftCenterDynamicBodyImprecision W≼W′ p)
+    (alias-avoid-lift-dynamic-body W≼W′ c p avoid)
+alias-avoid-lift-dynamic-body (future-precise {W′ = W₁} W≼W′ r)
+    c p avoid =
+  alias-avoid-rename {μ′ = I.instᵐ (I.instᵐ (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterDynamicBodyImprecision W≼W′ p)
+    (alias-avoid-lift-dynamic-body W≼W′ c p avoid)
+alias-avoid-lift-dynamic-body (future-imprecise {W′ = W₁} W≼W′)
+    c p avoid =
+  alias-avoid-rename {μ′ = I.instᵐ (I.instᵐ (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterDynamicBodyImprecision W≼W′ p)
+    (alias-avoid-lift-dynamic-body W≼W′ c p avoid)

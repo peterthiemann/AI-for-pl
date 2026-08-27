@@ -24,6 +24,7 @@ open import Conversion using (replaceTy; 〖_,_↑_〗; makeConceal)
 import Imprecision as I
 open import Consistency using (toRenameᵗ)
 open import proof.ImprecisionConsistency using (ty-all-injective)
+open import proof.LR-narrow.AliasAvoid using (AliasAvoidᵖ)
 open import LR-narrow.World
 
 ------------------------------------------------------------------------
@@ -247,12 +248,16 @@ data UniWrap {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → BodyImprecision W
         (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B)
         (replaceTy (slotXᴵ s) (slotRᴵ s) C)
+    → ((j : BodyImprecision W B C)
+        → AliasAvoidᵖ (Fin.suc (center s)) (bodyP j))
     → UniWrap W B C
         (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B)
         (replaceTy (slotXᴵ s) (slotRᴵ s) C)
   conceal-paired : (s : PairedSlot W) (B : Ty (suc Δᴾ)) (C : Ty Δᴵ)
     → UniShape C
     → BodyImprecision W B C
+    → ((j : BodyImprecision W B C)
+        → AliasAvoidᵖ (Fin.suc (center s)) (bodyP j))
     → UniWrap W
         (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B)
         (replaceTy (slotXᴵ s) (slotRᴵ s) C)
@@ -295,9 +300,9 @@ data UniWraps {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
 wrapTermᴾ₁ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     {B C B′ C′}
   → UniWrap W B C B′ C′ → Term Δᴾ → Term Δᴾ
-wrapTermᴾ₁ (reveal-paired s B C v i) V =
+wrapTermᴾ₁ (reveal-paired s B C v i av) V =
   V ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗
-wrapTermᴾ₁ (conceal-paired s B C v i) V =
+wrapTermᴾ₁ (conceal-paired s B C v i av) V =
   V ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B)
 wrapTermᴾ₁ (reveal-dyn d B C i) V =
   V ↑ 〖 dslotXᴾ d , dslotRᴾ d ↑ `∀ B 〗
@@ -315,9 +320,9 @@ wrapTermᴾ₁ (conceal-inert s B C avoid i) V =
 wrapTermᴵ₁ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     {B C B′ C′}
   → UniWrap W B C B′ C′ → Term Δᴵ → Term Δᴵ
-wrapTermᴵ₁ (reveal-paired s B C v i) V =
+wrapTermᴵ₁ (reveal-paired s B C v i av) V =
   V ↑ 〖 slotXᴵ s , slotRᴵ s ↑ C 〗
-wrapTermᴵ₁ (conceal-paired s B C v i) V =
+wrapTermᴵ₁ (conceal-paired s B C v i av) V =
   V ↓ makeConceal (slotXᴵ s) (slotRᴵ s) C
 wrapTermᴵ₁ (reveal-dyn d B C i) V = V
 wrapTermᴵ₁ (conceal-dyn d B C i) V = V

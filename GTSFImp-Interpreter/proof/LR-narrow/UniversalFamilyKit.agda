@@ -39,6 +39,7 @@ import proof.LR-narrow.PreciseReveal
 open module PreciseKit = proof.LR-narrow.PreciseReveal ob using
   (precise-reveal-endpoints; precise-conceal-endpoints)
 open import proof.LR-narrow.ImprecisionSize using (sizeᵖ)
+open import proof.LR-narrow.AliasAvoid using (AliasAvoidᵖ)
 open import proof.LR-narrow.StarNoOccurrence using (replaceTy-absent)
 
 ∉-all-inv : ∀ {Δ} {X : TyVar Δ} {A : Ty (suc Δ)}
@@ -89,6 +90,7 @@ reveal-paired-chain : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     {Ac : Ty (suc Δᶜ)} {Bc : Ty Δᶜ}
     (nonvar : NonVar Ac) (occurs : Fin.zero ∈ᵗ Ac)
     (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
+  → AliasAvoidᵖ (Fin.suc (center s)) p₀
   → (sourceᴾ : embedPrecise (core W) (`∀ B₀ᴾ) ≡ `∀ Ac)
   → (sourceᴵ : embedImprecise (core W) Bᴵ ≡ Bc)
   → ∀ {Acʳ : Ty (suc Δᶜ)} {Bcʳ : Ty Δᶜ}
@@ -100,16 +102,16 @@ reveal-paired-chain : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
       (replaceTy (slotXᴵ s) (slotRᴵ s) Bᴵ) k
       (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗)
       (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B₀ᴾ 〗)
-reveal-paired-chain W s nonvar occurs p₀ sourceᴾ sourceᴵ q₀
+reveal-paired-chain W s nonvar occurs p₀ avoidᵇ sourceᴾ sourceᴵ q₀
     {k = zero} dat = tt
-reveal-paired-chain W s nonvar occurs p₀ sourceᴾ sourceᴵ q₀
+reveal-paired-chain W s nonvar occurs p₀ avoidᵇ sourceᴾ sourceᴵ q₀
     {k = suc m} dat =
   (λ W′ W≼W′ Rᴾ r★ t →
-    reveal-right-universal-head W s nonvar occurs p₀
+    reveal-right-universal-head W s nonvar occurs p₀ avoidᵇ
       sourceᴾ sourceᴵ
       (below-all (suc m) (suc (sizeᵖ p₀))) ≤-refl dat
       W′ W≼W′ Rᴾ r★ t) ,
-  reveal-paired-chain W s nonvar occurs p₀ sourceᴾ sourceᴵ q₀
+  reveal-paired-chain W s nonvar occurs p₀ avoidᵇ sourceᴾ sourceᴵ q₀
     (data-downward dat)
 
 ------------------------------------------------------------------------
@@ -125,6 +127,7 @@ conceal-paired-chain : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
     (nonvarʳ : NonVar Acʳ) (occursʳ : Fin.zero ∈ᵗ Acʳ)
     (q₀ : I.instᵐ (impEnv (core W)) I.⊢ Acʳ ⊑ ⇑ᵗ Bcʳ)
+  → AliasAvoidᵖ (Fin.suc (center s)) p₀
   → (sourceᴾ : embedPrecise (core W) (`∀ B₀ᴾ) ≡ `∀ Ac)
   → (sourceᴵ : embedImprecise (core W) Bᴵ ≡ Bc)
   → (targetᴾ : embedPrecise (core W)
@@ -140,16 +143,16 @@ conceal-paired-chain : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
       (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ)
       (Vᴾ ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B₀ᴾ))
 conceal-paired-chain W s nonvar occurs p₀ nonvarʳ occursʳ q₀
-    sourceᴾ sourceᴵ targetᴾ targetᴵ {k = zero} dat = tt
+    avoidᵇ sourceᴾ sourceᴵ targetᴾ targetᴵ {k = zero} dat = tt
 conceal-paired-chain W s nonvar occurs p₀ nonvarʳ occursʳ q₀
-    sourceᴾ sourceᴵ targetᴾ targetᴵ {k = suc m} dat =
+    avoidᵇ sourceᴾ sourceᴵ targetᴾ targetᴵ {k = suc m} dat =
   (λ W′ W≼W′ Rᴾ r★ t →
     conceal-right-universal-head W s nonvar occurs p₀
-      nonvarʳ occursʳ q₀ sourceᴾ sourceᴵ targetᴾ targetᴵ
+      nonvarʳ occursʳ q₀ avoidᵇ sourceᴾ sourceᴵ targetᴾ targetᴵ
       (below-all (suc m) (suc (sizeᵖ p₀))) ≤-refl dat
       W′ W≼W′ Rᴾ r★ t) ,
   conceal-paired-chain W s nonvar occurs p₀ nonvarʳ occursʳ q₀
-    sourceᴾ sourceᴵ targetᴾ targetᴵ (data-downward dat)
+    avoidᵇ sourceᴾ sourceᴵ targetᴾ targetᴵ (data-downward dat)
 
 ------------------------------------------------------------------------
 -- Extending a chain by one inert reveal or conceal
@@ -308,7 +311,7 @@ extend-wrap : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     (w : UniWrap W Bᴾ Bᴵ Bᴾ′ Bᴵ′)
   → SomeData W Bᴾ Bᴵ k Vᴵ Vᴾ
   → SomeData W Bᴾ′ Bᴵ′ k (wrapTermᴵ₁ w Vᴵ) (wrapTermᴾ₁ w Vᴾ)
-extend-wrap {W = W} (reveal-paired s B C sh i) (some-data j dat) =
+extend-wrap {W = W} (reveal-paired s B C sh i av) (some-data j dat) =
   some-data i (universal-data
     (revealed-endpoints W s (I.∀⊑ (bodyNonvar j) (bodyOccurs j)
       (bodyP j)) refl refl
@@ -318,9 +321,9 @@ extend-wrap {W = W} (reveal-paired s B C sh i) (some-data j dat) =
       (precise-value (data-endpoints dat) ↑ all))
     refl refl
     (reveal-paired-chain W s (bodyNonvar j) (bodyOccurs j) (bodyP j)
-      refl refl
+      (av j) refl refl
       (bodyP i) dat))
-extend-wrap {W = W} (conceal-paired s B C sh i) (some-data j dat) =
+extend-wrap {W = W} (conceal-paired s B C sh i av) (some-data j dat) =
   some-data i (universal-data
     (concealed-endpoints W s (I.∀⊑ (bodyNonvar i) (bodyOccurs i)
       (bodyP i)) refl refl
@@ -330,7 +333,7 @@ extend-wrap {W = W} (conceal-paired s B C sh i) (some-data j dat) =
       (precise-value (data-endpoints dat) ↓ all))
     refl refl
     (conceal-paired-chain W s (bodyNonvar i) (bodyOccurs i) (bodyP i)
-      (bodyNonvar j) (bodyOccurs j) (bodyP j)
+      (bodyNonvar j) (bodyOccurs j) (bodyP j) (av i)
       refl refl refl refl
       dat))
 extend-wrap {W = W} (reveal-dyn d B C i) (some-data j dat) =

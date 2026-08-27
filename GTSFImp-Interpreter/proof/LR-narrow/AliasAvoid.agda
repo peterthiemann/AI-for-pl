@@ -29,6 +29,8 @@ open import proof.ImprecisionConsistency using
    inst-no-aliases; shift-occurs; ext-injective;
    rename-star-map-ext; rename-star-map-inst;
    rename-alias-map-ext; rename-alias-map-inst)
+open import proof.Imprecision using
+  (AliasesAvoid; ext-aliases-avoid-suc; inst-aliases-avoid-suc)
 open import proof.LR-narrow.StarNoOccurrence using (renameᵗ-∉ᵗ)
 
 ------------------------------------------------------------------------
@@ -64,6 +66,17 @@ alias-avoid-unique : ∀ {Δ} {μ : I.ImpEnv Δ} {A B : Ty Δ}
   → AliasAvoidᵖ c q
 alias-avoid-unique {c = c} p q avoid =
   subst≡ (AliasAvoidᵖ c) (PI.⊑-unique p q) avoid
+
+-- The catch-all transport: between any two derivations whose
+-- endpoints agree propositionally (uniqueness closes the gap).
+
+alias-avoid-any : ∀ {Δ} {μ : I.ImpEnv Δ} {A B A′ B′ : Ty Δ}
+    {c : TyVar Δ}
+    (p : I._⊢_⊑_ μ A B) (q : I._⊢_⊑_ μ A′ B′)
+  → A ≡ A′ → B ≡ B′
+  → AliasAvoidᵖ c p
+  → AliasAvoidᵖ c q
+alias-avoid-any p q refl refl avoid = alias-avoid-unique p q avoid
 
 ------------------------------------------------------------------------
 -- Transport along renamings
@@ -195,3 +208,51 @@ target-occurs-sourceᵖ I.bot-elim avoid (∈-all ())
 target-occurs-sourceᵖ I.bot⊑★ avoid ()
 target-occurs-sourceᵖ (I.alias eq p) (c∉T , avoid) c∈ =
   ⊥-elim (PI.∈∉-⊥ c∉T (target-occurs-sourceᵖ p avoid c∈))
+
+------------------------------------------------------------------------
+-- Environment-level avoidance restricts to every derivation
+------------------------------------------------------------------------
+
+env-aliases-avoidᵖ : ∀ {Δ} {μ : I.ImpEnv Δ} {A B : Ty Δ}
+    {c : TyVar Δ}
+  → AliasesAvoid μ c
+  → (p : I._⊢_⊑_ μ A B)
+  → AliasAvoidᵖ c p
+env-aliases-avoidᵖ avoid I.★⊑★ = tt
+env-aliases-avoidᵖ avoid I.ι⊑ι = tt
+env-aliases-avoidᵖ avoid I.X⊑X = tt
+env-aliases-avoidᵖ avoid (I.⇒⊑⇒ p q) =
+  env-aliases-avoidᵖ avoid p , env-aliases-avoidᵖ avoid q
+env-aliases-avoidᵖ avoid (I.∀⊑∀ p) =
+  env-aliases-avoidᵖ (ext-aliases-avoid-suc avoid) p
+env-aliases-avoidᵖ avoid (I.⇒⊑★ p q) =
+  env-aliases-avoidᵖ avoid p , env-aliases-avoidᵖ avoid q
+env-aliases-avoidᵖ avoid I.ι⊑★ = tt
+env-aliases-avoidᵖ avoid (I.X⊑★ eq) = tt
+env-aliases-avoidᵖ avoid (I.∀⊑ nonvar occurs p) =
+  env-aliases-avoidᵖ (inst-aliases-avoid-suc avoid) p
+env-aliases-avoidᵖ avoid I.∀★⊑★ = tt
+env-aliases-avoidᵖ avoid (I.∀⊑★ nonstar p) =
+  env-aliases-avoidᵖ (ext-aliases-avoid-suc avoid) p
+env-aliases-avoidᵖ avoid I.bot-elim = tt
+env-aliases-avoidᵖ avoid I.bot⊑★ = tt
+env-aliases-avoidᵖ avoid (I.alias {X = X} eq p) =
+  avoid X eq , env-aliases-avoidᵖ avoid p
+
+------------------------------------------------------------------------
+-- Transport along endpoint substitutions
+------------------------------------------------------------------------
+
+alias-avoid-subst-left : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {A A′ B : Ty Δ} {c : TyVar Δ}
+    (eq : A ≡ A′) {p : I._⊢_⊑_ μ A B}
+  → AliasAvoidᵖ c p
+  → AliasAvoidᵖ c (subst≡ (λ L → I._⊢_⊑_ μ L B) eq p)
+alias-avoid-subst-left refl avoid = avoid
+
+alias-avoid-subst-rightᵉ : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {A B B′ : Ty Δ} {c : TyVar Δ}
+    (eq : B ≡ B′) {p : I._⊢_⊑_ μ A B}
+  → AliasAvoidᵖ c p
+  → AliasAvoidᵖ c (subst≡ (λ R → I._⊢_⊑_ μ A R) eq p)
+alias-avoid-subst-rightᵉ refl avoid = avoid
