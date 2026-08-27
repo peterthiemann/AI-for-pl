@@ -138,6 +138,12 @@ dyn-no-paired is-dynamic ()
 
 -- Transports along a center-variable identification.
 
+-- The dynamic mode is not the alias mode.
+
+star-not-alias : ∀ {Δ} {T : Ty Δ}
+  → I.X⊑★ ≡ I.X⊑ᵗ T → ⊥
+star-not-alias ()
+
 dyn-slot-consume : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     (d : DynamicSlot W) {Z : TyVar Δᶜ} (Z-eq : Z ≡ dcenter d)
     {ℛ : PayloadRelation (core W)}
@@ -1150,7 +1156,11 @@ mutual
       related)
   dyn-reveal-go fuel j sz below W d {Bᴾ = ＇ Y} (I.alias eq p) size
       sourceᴾ q targetᴾ related | yes refl =
-    ⊥-elim (noAlias W _ eq)
+    ⊥-elim (star-not-alias (trans (sym (dmode-eq d))
+      (trans (cong (impEnv (core W))
+        (trans (sym (dynamicPreciseAligned (datom d)))
+          (var-injective sourceᴾ)))
+        eq)))
   dyn-reveal-go fuel zero sz below W d {Bᴾ = ＇ Y} (I.X⊑★ eqm) size
       sourceᴾ q targetᴾ related | yes refl =
     ClosureProof.computations-related-zero
@@ -1263,7 +1273,11 @@ mutual
       related)
   dyn-conceal-go fuel j sz below W d {Bᴾ = ＇ Y} (I.alias eq p) size
       sourceᴾ q targetᴾ related | yes refl =
-    ⊥-elim (noAlias W _ eq)
+    ⊥-elim (star-not-alias (trans (sym (dmode-eq d))
+      (trans (cong (impEnv (core W))
+        (trans (sym (dynamicPreciseAligned (datom d)))
+          (var-injective sourceᴾ)))
+        eq)))
   dyn-conceal-go fuel zero sz below W d {Bᴾ = ＇ Y} (I.X⊑★ eqm) size
       sourceᴾ q targetᴾ related | yes refl =
     ClosureProof.computations-related-zero
