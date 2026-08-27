@@ -138,6 +138,10 @@ future-trans-assoc W₀≼W₁ W₁≼W₂
     (future-precise W₂≼W₃ r★) =
   cong (λ W₀≼W₃ → future-precise W₀≼W₃ r★)
     (future-trans-assoc W₀≼W₁ W₁≼W₂ W₂≼W₃)
+future-trans-assoc W₀≼W₁ W₁≼W₂
+    (future-alias W₂≼W₃) =
+  cong (λ W₀≼W₃ → future-alias W₀≼W₃)
+    (future-trans-assoc W₀≼W₁ W₁≼W₂ W₂≼W₃)
 future-trans-assoc W₀≼W₁ W₁≼W₂ (future-imprecise W₂≼W₃) =
   cong future-imprecise
     (future-trans-assoc W₀≼W₁ W₁≼W₂ W₂≼W₃)

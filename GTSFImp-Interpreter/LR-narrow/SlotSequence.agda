@@ -150,6 +150,7 @@ shape-lift future-refl sh = sh
 shape-lift (future-paired W≼W′ related) sh =
   shape-rename Fin.suc (shape-lift W≼W′ sh)
 shape-lift (future-precise W≼W′ related) sh = shape-lift W≼W′ sh
+shape-lift (future-alias W≼W′) sh = shape-lift W≼W′ sh
 shape-lift (future-imprecise W≼W′) sh =
   shape-rename Fin.suc (shape-lift W≼W′ sh)
 

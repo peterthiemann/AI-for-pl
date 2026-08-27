@@ -176,6 +176,8 @@ lift-∉ᵗ (future-paired W≼W′ r) no-occur =
   renameᵗ-∉ᵗ Fin.suc fin-suc-injective (lift-∉ᵗ W≼W′ no-occur)
 lift-∉ᵗ (future-precise W≼W′ r) no-occur =
   renameᵗ-∉ᵗ Fin.suc fin-suc-injective (lift-∉ᵗ W≼W′ no-occur)
+lift-∉ᵗ (future-alias W≼W′) no-occur =
+  renameᵗ-∉ᵗ Fin.suc fin-suc-injective (lift-∉ᵗ W≼W′ no-occur)
 lift-∉ᵗ (future-imprecise W≼W′) no-occur = lift-∉ᵗ W≼W′ no-occur
 
 ------------------------------------------------------------------------
@@ -207,6 +209,9 @@ lift-sizeᵗ (future-paired W≼W′ r) A =
   trans (renameᵗ-sizeᵗ Fin.suc (liftPreciseTy W≼W′ A))
     (lift-sizeᵗ W≼W′ A)
 lift-sizeᵗ (future-precise W≼W′ r) A =
+  trans (renameᵗ-sizeᵗ Fin.suc (liftPreciseTy W≼W′ A))
+    (lift-sizeᵗ W≼W′ A)
+lift-sizeᵗ (future-alias W≼W′) A =
   trans (renameᵗ-sizeᵗ Fin.suc (liftPreciseTy W≼W′ A))
     (lift-sizeᵗ W≼W′ A)
 lift-sizeᵗ (future-imprecise W≼W′) A = lift-sizeᵗ W≼W′ A

@@ -179,6 +179,17 @@ liftPreciseContext-precise W≼W′ [] = refl
 liftPreciseContext-precise W≼W′ (A ∷ Γ) =
   cong₂ _∷_ refl (liftPreciseContext-precise W≼W′ Γ)
 
+liftPreciseContext-alias : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ : TyCtx}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {rep : TyVar Δᴾ′}
+    (W≼W′ : Future W W′) (Γ : TermCtx Δᴾ)
+  → liftPreciseContext (future-alias {rep = rep} W≼W′) Γ ≡
+      T.⇑ᶜ (liftPreciseContext W≼W′ Γ)
+liftPreciseContext-alias W≼W′ [] = refl
+liftPreciseContext-alias W≼W′ (A ∷ Γ) =
+  cong₂ _∷_ refl (liftPreciseContext-alias W≼W′ Γ)
+
 liftPreciseContext-imprecise : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ : TyCtx}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -213,6 +224,17 @@ liftImpreciseContext-precise : ∀
 liftImpreciseContext-precise W≼W′ [] = refl
 liftImpreciseContext-precise W≼W′ (A ∷ Γ) =
   cong₂ _∷_ refl (liftImpreciseContext-precise W≼W′ Γ)
+
+liftImpreciseContext-alias : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ : TyCtx}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {rep : TyVar Δᴾ′}
+    (W≼W′ : Future W W′) (Γ : TermCtx Δᴵ)
+  → liftImpreciseContext (future-alias {rep = rep} W≼W′) Γ ≡
+      liftImpreciseContext W≼W′ Γ
+liftImpreciseContext-alias W≼W′ [] = refl
+liftImpreciseContext-alias W≼W′ (A ∷ Γ) =
+  cong₂ _∷_ refl (liftImpreciseContext-alias W≼W′ Γ)
 
 liftImpreciseContext-imprecise : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ : TyCtx}

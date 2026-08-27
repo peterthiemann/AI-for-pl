@@ -66,6 +66,8 @@ lift-imprecise-prim (future-paired W₀≼W₁ related) op L M
     rewrite lift-imprecise-prim W₀≼W₁ op L M = refl
 lift-imprecise-prim (future-precise W₀≼W₁ r★) op L M =
   lift-imprecise-prim W₀≼W₁ op L M
+lift-imprecise-prim (future-alias W₀≼W₁) op L M =
+  lift-imprecise-prim W₀≼W₁ op L M
 lift-imprecise-prim (future-imprecise W₀≼W₁) op L M
     rewrite lift-imprecise-prim W₀≼W₁ op L M = refl
 
@@ -80,6 +82,8 @@ lift-precise-prim future-refl op L M = refl
 lift-precise-prim (future-paired W₀≼W₁ related) op L M
     rewrite lift-precise-prim W₀≼W₁ op L M = refl
 lift-precise-prim (future-precise W₀≼W₁ r★) op L M
+    rewrite lift-precise-prim W₀≼W₁ op L M = refl
+lift-precise-prim (future-alias W₀≼W₁) op L M
     rewrite lift-precise-prim W₀≼W₁ op L M = refl
 lift-precise-prim (future-imprecise W₀≼W₁) op L M =
   lift-precise-prim W₀≼W₁ op L M

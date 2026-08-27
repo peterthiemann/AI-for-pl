@@ -70,6 +70,8 @@ lift-imprecise-application (future-paired W₀≼W₁ related) L M
     rewrite lift-imprecise-application W₀≼W₁ L M = refl
 lift-imprecise-application (future-precise W₀≼W₁ r★) L M =
   lift-imprecise-application W₀≼W₁ L M
+lift-imprecise-application (future-alias W₀≼W₁) L M =
+  lift-imprecise-application W₀≼W₁ L M
 lift-imprecise-application (future-imprecise W₀≼W₁) L M
     rewrite lift-imprecise-application W₀≼W₁ L M = refl
 
@@ -84,6 +86,8 @@ lift-precise-application future-refl L M = refl
 lift-precise-application (future-paired W₀≼W₁ related) L M
     rewrite lift-precise-application W₀≼W₁ L M = refl
 lift-precise-application (future-precise W₀≼W₁ r★) L M
+    rewrite lift-precise-application W₀≼W₁ L M = refl
+lift-precise-application (future-alias W₀≼W₁) L M
     rewrite lift-precise-application W₀≼W₁ L M = refl
 lift-precise-application (future-imprecise W₀≼W₁) L M =
   lift-precise-application W₀≼W₁ L M

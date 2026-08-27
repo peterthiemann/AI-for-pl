@@ -190,6 +190,9 @@ liftPreciseTerm-reveal (future-paired W≼W′ r) V X R B
 liftPreciseTerm-reveal (future-precise W≼W′ r) V X R B
     rewrite liftPreciseTerm-reveal W≼W′ V X R B =
   shift-structural-reveal _ _ _ _
+liftPreciseTerm-reveal (future-alias W≼W′) V X R B
+    rewrite liftPreciseTerm-reveal W≼W′ V X R B =
+  shift-structural-reveal _ _ _ _
 liftPreciseTerm-reveal (future-imprecise W≼W′) V X R B =
   liftPreciseTerm-reveal W≼W′ V X R B
 
@@ -205,6 +208,8 @@ liftImpreciseTerm-reveal (future-paired W≼W′ r) V X R B
     rewrite liftImpreciseTerm-reveal W≼W′ V X R B =
   shift-structural-reveal _ _ _ _
 liftImpreciseTerm-reveal (future-precise W≼W′ r) V X R B =
+  liftImpreciseTerm-reveal W≼W′ V X R B
+liftImpreciseTerm-reveal (future-alias W≼W′) V X R B =
   liftImpreciseTerm-reveal W≼W′ V X R B
 liftImpreciseTerm-reveal (future-imprecise W≼W′) V X R B
     rewrite liftImpreciseTerm-reveal W≼W′ V X R B =
@@ -224,6 +229,9 @@ liftPreciseTerm-conceal (future-paired W≼W′ r) V X R B
 liftPreciseTerm-conceal (future-precise W≼W′ r) V X R B
     rewrite liftPreciseTerm-conceal W≼W′ V X R B =
   shift-structural-conceal _ _ _ _
+liftPreciseTerm-conceal (future-alias W≼W′) V X R B
+    rewrite liftPreciseTerm-conceal W≼W′ V X R B =
+  shift-structural-conceal _ _ _ _
 liftPreciseTerm-conceal (future-imprecise W≼W′) V X R B =
   liftPreciseTerm-conceal W≼W′ V X R B
 
@@ -239,6 +247,8 @@ liftImpreciseTerm-conceal (future-paired W≼W′ r) V X R B
     rewrite liftImpreciseTerm-conceal W≼W′ V X R B =
   shift-structural-conceal _ _ _ _
 liftImpreciseTerm-conceal (future-precise W≼W′ r) V X R B =
+  liftImpreciseTerm-conceal W≼W′ V X R B
+liftImpreciseTerm-conceal (future-alias W≼W′) V X R B =
   liftImpreciseTerm-conceal W≼W′ V X R B
 liftImpreciseTerm-conceal (future-imprecise W≼W′) V X R B
     rewrite liftImpreciseTerm-conceal W≼W′ V X R B =
@@ -261,6 +271,10 @@ liftPreciseTy-replace (future-precise W≼W′ r) X R B
     rewrite liftPreciseTy-replace W≼W′ X R B =
   shift-replace (liftPreciseVariable W≼W′ X) (liftPreciseTy W≼W′ R)
     (liftPreciseTy W≼W′ B)
+liftPreciseTy-replace (future-alias W≼W′) X R B
+    rewrite liftPreciseTy-replace W≼W′ X R B =
+  shift-replace (liftPreciseVariable W≼W′ X) (liftPreciseTy W≼W′ R)
+    (liftPreciseTy W≼W′ B)
 liftPreciseTy-replace (future-imprecise W≼W′) X R B =
   liftPreciseTy-replace W≼W′ X R B
 
@@ -276,6 +290,8 @@ liftImpreciseTy-replace (future-paired W≼W′ r) X R B
   shift-replace (liftImpreciseVariable W≼W′ X) (liftImpreciseTy W≼W′ R)
     (liftImpreciseTy W≼W′ B)
 liftImpreciseTy-replace (future-precise W≼W′ r) X R B =
+  liftImpreciseTy-replace W≼W′ X R B
+liftImpreciseTy-replace (future-alias W≼W′) X R B =
   liftImpreciseTy-replace W≼W′ X R B
 liftImpreciseTy-replace (future-imprecise W≼W′) X R B
     rewrite liftImpreciseTy-replace W≼W′ X R B =
@@ -371,6 +387,19 @@ alias-avoid-lift-center (future-precise {W′ = W₁} W≼W′ r) c p avoid =
     (shift-alias-map {v = I.X⊑★})
     (liftCenterImprecision W≼W′ p)
     (alias-avoid-lift-center W≼W′ c p avoid)
+alias-avoid-lift-center (future-alias {W′ = W₁} {rep = rep} W≼W′)
+    c p avoid =
+  alias-avoid-rename
+    {μ′ = I.extendᵐ
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (impEnv (core W₁))} Fin.suc
+    fin-suc-injective
+    (shift-star-map
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))})
+    (shift-alias-map
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))})
+    (liftCenterImprecision W≼W′ p)
+    (alias-avoid-lift-center W≼W′ c p avoid)
 alias-avoid-lift-center (future-imprecise {W′ = W₁} W≼W′) c p avoid =
   alias-avoid-rename {μ′ = I.instᵐ (impEnv (core W₁))} Fin.suc
     fin-suc-injective (shift-star-map {v = I.X⊑★})
@@ -399,6 +428,19 @@ alias-avoid-lift-body (future-precise {W′ = W₁} W≼W′ r) c p avoid =
     (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
     (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterBodyImprecision W≼W′ p)
+    (alias-avoid-lift-body W≼W′ c p avoid)
+alias-avoid-lift-body (future-alias {W′ = W₁} {rep = rep} W≼W′)
+    c p avoid =
+  alias-avoid-rename
+    {μ′ = I.extᵐ (I.extendᵐ
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-ext Fin.suc (shift-star-map
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
     (liftCenterBodyImprecision W≼W′ p)
     (alias-avoid-lift-body W≼W′ c p avoid)
 alias-avoid-lift-body (future-imprecise {W′ = W₁} W≼W′) c p avoid =
@@ -432,6 +474,19 @@ alias-avoid-lift-dynamic-body (future-precise {W′ = W₁} W≼W′ r)
     (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
     (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterDynamicBodyImprecision W≼W′ p)
+    (alias-avoid-lift-dynamic-body W≼W′ c p avoid)
+alias-avoid-lift-dynamic-body (future-alias {W′ = W₁} {rep = rep} W≼W′)
+    c p avoid =
+  alias-avoid-rename
+    {μ′ = I.instᵐ (I.extendᵐ
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (impEnv (core W₁)))}
+    (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-inst Fin.suc (shift-star-map
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
     (liftCenterDynamicBodyImprecision W≼W′ p)
     (alias-avoid-lift-dynamic-body W≼W′ c p avoid)
 alias-avoid-lift-dynamic-body (future-imprecise {W′ = W₁} W≼W′)

@@ -86,6 +86,9 @@ lift-center-size (future-paired W≼W′ r) p =
 lift-center-size (future-precise W≼W′ r) p =
   trans (rename-⊑-size Fin.suc _ _ _ (liftCenterImprecision W≼W′ p))
     (lift-center-size W≼W′ p)
+lift-center-size (future-alias W≼W′) p =
+  trans (rename-⊑-size Fin.suc _ _ _ (liftCenterImprecision W≼W′ p))
+    (lift-center-size W≼W′ p)
 lift-center-size (future-imprecise W≼W′) p =
   trans (rename-⊑-size Fin.suc _ _ _ (liftCenterImprecision W≼W′ p))
     (lift-center-size W≼W′ p)
@@ -107,6 +110,10 @@ lift-center-dynamic-body-size (future-paired W≼W′ r) p =
     (liftCenterDynamicBodyImprecision W≼W′ p))
     (lift-center-dynamic-body-size W≼W′ p)
 lift-center-dynamic-body-size (future-precise W≼W′ r) p =
+  trans (rename-⊑-size _ _ _ _
+    (liftCenterDynamicBodyImprecision W≼W′ p))
+    (lift-center-dynamic-body-size W≼W′ p)
+lift-center-dynamic-body-size (future-alias W≼W′) p =
   trans (rename-⊑-size _ _ _ _
     (liftCenterDynamicBodyImprecision W≼W′ p))
     (lift-center-dynamic-body-size W≼W′ p)

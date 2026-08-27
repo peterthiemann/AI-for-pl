@@ -38,6 +38,8 @@ future-precise-monotone (future-paired W≼W′ related) =
   ≤-trans (future-precise-monotone W≼W′) (n≤1+n _)
 future-precise-monotone (future-precise W≼W′ r★) =
   ≤-trans (future-precise-monotone W≼W′) (n≤1+n _)
+future-precise-monotone (future-alias W≼W′) =
+  ≤-trans (future-precise-monotone W≼W′) (n≤1+n _)
 future-precise-monotone (future-imprecise W≼W′) =
   future-precise-monotone W≼W′
 
@@ -49,6 +51,8 @@ future-imprecise-monotone future-refl = ≤-refl
 future-imprecise-monotone (future-paired W≼W′ related) =
   ≤-trans (future-imprecise-monotone W≼W′) (n≤1+n _)
 future-imprecise-monotone (future-precise W≼W′ r★) =
+  future-imprecise-monotone W≼W′
+future-imprecise-monotone (future-alias W≼W′) =
   future-imprecise-monotone W≼W′
 future-imprecise-monotone (future-imprecise W≼W′) =
   ≤-trans (future-imprecise-monotone W≼W′) (n≤1+n _)
@@ -67,6 +71,8 @@ future-refl-view future-refl = future-is-refl
 future-refl-view (future-paired W≼W′ related) =
   ⊥-elim (1+n≰n (future-precise-monotone W≼W′))
 future-refl-view (future-precise W≼W′ r★) =
+  ⊥-elim (1+n≰n (future-precise-monotone W≼W′))
+future-refl-view (future-alias W≼W′) =
   ⊥-elim (1+n≰n (future-precise-monotone W≼W′))
 future-refl-view (future-imprecise W≼W′) =
   ⊥-elim (1+n≰n (future-imprecise-monotone W≼W′))

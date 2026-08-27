@@ -40,9 +40,13 @@ record World (Δᴾ Δᴵ Δᶜ : TyCtx) : Set where
     core : CoreWorld Δᴾ Δᴵ Δᶜ
     semanticEntry : (Z : TyVar Δᶜ)
       → SemanticEntry core Z (impEnv core Z)
-    -- Worlds are alias-free until the alias bind expansion lands;
-    -- the reveal machinery consumes this as alias avoidance.
-    noAlias : ∀ Z {T : Ty Δᶜ} → impEnv core Z ≡ I.X⊑ᵗ T → ⊥
+    -- Alias coherence: an alias-mode center's entry is an alias
+    -- entry, so the analyses may read the representative off the
+    -- world.
+    aliasEntry : ∀ Z {T : Ty Δᶜ}
+      → (eq : impEnv core Z ≡ I.X⊑ᵗ T)
+      → IsAliasEntry
+          (subst (SemanticEntry core Z) eq (semanticEntry Z))
 
 open World public
 
@@ -58,7 +62,7 @@ pairedBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → Aᴾ ⊑ᵂ⟨ core W ⟩ Aᴵ
   → World (suc Δᴾ) (suc Δᴵ) (suc Δᶜ)
 pairedBindWorld W Aᴾ Aᴵ r =
-  world (pairedBindCore (core W) Aᴾ Aᴵ) atoms no-alias
+  world (pairedBindCore (core W) Aᴾ Aᴵ) atoms alias-entries
   where
   atoms : (Z : TyVar _)
     → SemanticEntry (pairedBindCore (core W) Aᴾ Aᴵ) Z
@@ -66,11 +70,21 @@ pairedBindWorld W Aᴾ Aᴵ r =
   atoms Fin.zero = paired-entry (fresh-semantic-atom (core W) Aᴾ Aᴵ r)
   atoms (Fin.suc Z) = weaken-entry Aᴾ Aᴵ (semanticEntry W Z)
 
-  no-alias : ∀ Z {T}
-    → impEnv (pairedBindCore (core W) Aᴾ Aᴵ) Z ≡ I.X⊑ᵗ T → ⊥
-  no-alias Fin.zero ()
-  no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
-  no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
+  alias-entries : ∀ Z {T}
+    → (eq : impEnv (pairedBindCore (core W) Aᴾ Aᴵ) Z ≡ I.X⊑ᵗ T)
+    → IsAliasEntry
+        (subst (SemanticEntry (pairedBindCore (core W) Aᴾ Aᴵ) Z) eq (atoms Z))
+  alias-entries Fin.zero ()
+  alias-entries (Fin.suc Z) eq with I.lift-alias-inv eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      with impEnv (core W) Z | mode | semanticEntry W Z
+         | aliasEntry W Z mode
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      with eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      | refl = is-alias (weaken-alias-atom Aᴾ Aᴵ a)
 
 preciseBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → (W : World Δᴾ Δᴵ Δᶜ)
@@ -78,7 +92,7 @@ preciseBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → impEnv (core W) I.⊢ embedPrecise (core W) Aᴾ ⊑ ★
   → World (suc Δᴾ) Δᴵ (suc Δᶜ)
 preciseBindWorld W Aᴾ r =
-  world (preciseBindCore (core W) Aᴾ) atoms no-alias
+  world (preciseBindCore (core W) Aᴾ) atoms alias-entries
   where
   atoms : (Z : TyVar _)
     → SemanticEntry (preciseBindCore (core W) Aᴾ) Z
@@ -87,18 +101,28 @@ preciseBindWorld W Aᴾ r =
     dynamic-entry (fresh-dynamic-semantic-atom (core W) Aᴾ r)
   atoms (Fin.suc Z) = weaken-entry-precise Aᴾ (semanticEntry W Z)
 
-  no-alias : ∀ Z {T}
-    → impEnv (preciseBindCore (core W) Aᴾ) Z ≡ I.X⊑ᵗ T → ⊥
-  no-alias Fin.zero ()
-  no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
-  no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
+  alias-entries : ∀ Z {T}
+    → (eq : impEnv (preciseBindCore (core W) Aᴾ) Z ≡ I.X⊑ᵗ T)
+    → IsAliasEntry
+        (subst (SemanticEntry (preciseBindCore (core W) Aᴾ) Z) eq (atoms Z))
+  alias-entries Fin.zero ()
+  alias-entries (Fin.suc Z) eq with I.lift-alias-inv eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      with impEnv (core W) Z | mode | semanticEntry W Z
+         | aliasEntry W Z mode
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      with eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      | refl = is-alias (weaken-alias-atom-precise Aᴾ a)
 
 impreciseBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → (W : World Δᴾ Δᴵ Δᶜ)
   → (Aᴵ : Ty Δᴵ)
   → World Δᴾ (suc Δᴵ) (suc Δᶜ)
 impreciseBindWorld W Aᴵ =
-  world (impreciseBindCore (core W) Aᴵ) atoms no-alias
+  world (impreciseBindCore (core W) Aᴵ) atoms alias-entries
   where
   atoms : (Z : TyVar _)
     → SemanticEntry (impreciseBindCore (core W) Aᴵ) Z
@@ -106,11 +130,56 @@ impreciseBindWorld W Aᴵ =
   atoms Fin.zero = target-entry (fresh-target-semantic-atom Aᴵ)
   atoms (Fin.suc Z) = weaken-entry-imprecise Aᴵ (semanticEntry W Z)
 
-  no-alias : ∀ Z {T}
-    → impEnv (impreciseBindCore (core W) Aᴵ) Z ≡ I.X⊑ᵗ T → ⊥
-  no-alias Fin.zero ()
-  no-alias (Fin.suc Z) eq with I.lift-alias-inv eq
-  no-alias (Fin.suc Z) eq | T₀ , mode , refl = noAlias W Z mode
+  alias-entries : ∀ Z {T}
+    → (eq : impEnv (impreciseBindCore (core W) Aᴵ) Z ≡ I.X⊑ᵗ T)
+    → IsAliasEntry
+        (subst (SemanticEntry (impreciseBindCore (core W) Aᴵ) Z) eq (atoms Z))
+  alias-entries Fin.zero ()
+  alias-entries (Fin.suc Z) eq with I.lift-alias-inv eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      with impEnv (core W) Z | mode | semanticEntry W Z
+         | aliasEntry W Z mode
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      with eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      | refl = is-alias (weaken-alias-atom-imprecise Aᴵ a)
+
+-- The alias bind: a precise-only binding at the representative
+-- variable whose fresh center is alias-mode.
+
+aliasBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
+  → (W : World Δᴾ Δᴵ Δᶜ)
+  → (rep : TyVar Δᴾ)
+  → World (suc Δᴾ) Δᴵ (suc Δᶜ)
+aliasBindWorld W rep =
+  world (aliasBindCore (core W) rep) atoms alias-entries
+  where
+  atoms : (Z : TyVar _)
+    → SemanticEntry (aliasBindCore (core W) rep) Z
+        (impEnv (aliasBindCore (core W) rep) Z)
+  atoms Fin.zero =
+    alias-entry (fresh-alias-semantic-atom (core W) rep)
+  atoms (Fin.suc Z) = weaken-entry-aliasbind rep (semanticEntry W Z)
+
+  alias-entries : ∀ Z {T}
+    → (eq : impEnv (aliasBindCore (core W) rep) Z ≡ I.X⊑ᵗ T)
+    → IsAliasEntry
+        (subst (SemanticEntry (aliasBindCore (core W) rep) Z)
+          eq (atoms Z))
+  alias-entries Fin.zero refl =
+    is-alias (fresh-alias-semantic-atom (core W) rep)
+  alias-entries (Fin.suc Z) eq with I.lift-alias-inv eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      with impEnv (core W) Z | mode | semanticEntry W Z
+         | aliasEntry W Z mode
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      with eq
+  alias-entries (Fin.suc Z) eq | T₀ , mode , refl
+      | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
+      | refl = is-alias (weaken-alias-atom-aliasbind rep a)
 
 data Future {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
@@ -136,6 +205,11 @@ data Future {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → Future W W′
     → Future W (impreciseBindWorld W′ Aᴵ)
 
+  future-alias : ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
+      {W′ : World Δᴾ′ Δᴵ′ Δᶜ′} {rep : TyVar Δᴾ′}
+    → Future W W′
+    → Future W (aliasBindWorld W′ rep)
+
 future-trans : ∀
     {Δᴾ₀ Δᴵ₀ Δᶜ₀ Δᴾ₁ Δᴵ₁ Δᶜ₁
      Δᴾ₂ Δᴵ₂ Δᶜ₂}
@@ -150,6 +224,8 @@ future-trans W₀≼W₁ (future-paired W₁≼W₂ related) =
   future-paired (future-trans W₀≼W₁ W₁≼W₂) related
 future-trans W₀≼W₁ (future-precise W₁≼W₂ related) =
   future-precise (future-trans W₀≼W₁ W₁≼W₂) related
+future-trans W₀≼W₁ (future-alias W₁≼W₂) =
+  future-alias (future-trans W₀≼W₁ W₁≼W₂)
 future-trans W₀≼W₁ (future-imprecise W₁≼W₂) =
   future-imprecise (future-trans W₀≼W₁ W₁≼W₂)
 
@@ -163,6 +239,8 @@ liftPreciseTy (future-paired W≼W′ related) A =
   ⇑ᵗ (liftPreciseTy W≼W′ A)
 liftPreciseTy (future-precise W≼W′ related) A =
   ⇑ᵗ (liftPreciseTy W≼W′ A)
+liftPreciseTy (future-alias W≼W′) A =
+  ⇑ᵗ (liftPreciseTy W≼W′ A)
 liftPreciseTy (future-imprecise W≼W′) A = liftPreciseTy W≼W′ A
 
 liftImpreciseTy : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -174,6 +252,8 @@ liftImpreciseTy future-refl A = A
 liftImpreciseTy (future-paired W≼W′ related) A =
   ⇑ᵗ (liftImpreciseTy W≼W′ A)
 liftImpreciseTy (future-precise W≼W′ related) A =
+  liftImpreciseTy W≼W′ A
+liftImpreciseTy (future-alias W≼W′) A =
   liftImpreciseTy W≼W′ A
 liftImpreciseTy (future-imprecise W≼W′) A =
   ⇑ᵗ (liftImpreciseTy W≼W′ A)
@@ -188,6 +268,8 @@ liftCenterTy (future-paired W≼W′ related) A =
   ⇑ᵗ (liftCenterTy W≼W′ A)
 liftCenterTy (future-precise W≼W′ related) A =
   ⇑ᵗ (liftCenterTy W≼W′ A)
+liftCenterTy (future-alias W≼W′) A =
+  ⇑ᵗ (liftCenterTy W≼W′ A)
 liftCenterTy (future-imprecise W≼W′) A =
   ⇑ᵗ (liftCenterTy W≼W′ A)
 
@@ -200,6 +282,8 @@ liftCenterVariable future-refl X = X
 liftCenterVariable (future-paired W≼W′ related) X =
   Fin.suc (liftCenterVariable W≼W′ X)
 liftCenterVariable (future-precise W≼W′ related) X =
+  Fin.suc (liftCenterVariable W≼W′ X)
+liftCenterVariable (future-alias W≼W′) X =
   Fin.suc (liftCenterVariable W≼W′ X)
 liftCenterVariable (future-imprecise W≼W′) X =
   Fin.suc (liftCenterVariable W≼W′ X)
@@ -214,6 +298,8 @@ liftCenterTy-variable (future-paired W≼W′ related) X =
   cong ⇑ᵗ (liftCenterTy-variable W≼W′ X)
 liftCenterTy-variable (future-precise W≼W′ related) X =
   cong ⇑ᵗ (liftCenterTy-variable W≼W′ X)
+liftCenterTy-variable (future-alias W≼W′) X =
+  cong ⇑ᵗ (liftCenterTy-variable W≼W′ X)
 liftCenterTy-variable (future-imprecise W≼W′) X =
   cong ⇑ᵗ (liftCenterTy-variable W≼W′ X)
 
@@ -227,6 +313,8 @@ liftCenterMode-star (future-paired W≼W′ related) X eq =
   cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
 liftCenterMode-star (future-precise W≼W′ related) X eq =
   cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
+liftCenterMode-star (future-alias W≼W′) X eq =
+  cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
 liftCenterMode-star (future-imprecise W≼W′) X eq =
   cong I.⇑ᵛ (liftCenterMode-star W≼W′ X eq)
 
@@ -239,6 +327,8 @@ liftCenterMode-paired future-refl X eq = eq
 liftCenterMode-paired (future-paired W≼W′ related) X eq =
   cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
 liftCenterMode-paired (future-precise W≼W′ related) X eq =
+  cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
+liftCenterMode-paired (future-alias W≼W′) X eq =
   cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
 liftCenterMode-paired (future-imprecise W≼W′) X eq =
   cong I.⇑ᵛ (liftCenterMode-paired W≼W′ X eq)
@@ -254,6 +344,8 @@ liftCenterMode-alias (future-paired W≼W′ related) X eq =
   cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
 liftCenterMode-alias (future-precise W≼W′ related) X eq =
   cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
+liftCenterMode-alias (future-alias W≼W′) X eq =
+  cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
 liftCenterMode-alias (future-imprecise W≼W′) X eq =
   cong I.⇑ᵛ (liftCenterMode-alias W≼W′ X eq)
 
@@ -267,6 +359,8 @@ liftPreciseTerm (future-paired W≼W′ related) M =
   ⇑ᵗᵐ (liftPreciseTerm W≼W′ M)
 liftPreciseTerm (future-precise W≼W′ related) M =
   ⇑ᵗᵐ (liftPreciseTerm W≼W′ M)
+liftPreciseTerm (future-alias W≼W′) M =
+  ⇑ᵗᵐ (liftPreciseTerm W≼W′ M)
 liftPreciseTerm (future-imprecise W≼W′) M = liftPreciseTerm W≼W′ M
 
 liftImpreciseTerm : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -278,6 +372,8 @@ liftImpreciseTerm future-refl M = M
 liftImpreciseTerm (future-paired W≼W′ related) M =
   ⇑ᵗᵐ (liftImpreciseTerm W≼W′ M)
 liftImpreciseTerm (future-precise W≼W′ related) M =
+  liftImpreciseTerm W≼W′ M
+liftImpreciseTerm (future-alias W≼W′) M =
   liftImpreciseTerm W≼W′ M
 liftImpreciseTerm (future-imprecise W≼W′) M =
   ⇑ᵗᵐ (liftImpreciseTerm W≼W′ M)
@@ -292,6 +388,8 @@ liftPreciseBodyTerm (future-paired W≼W′ related) M =
   renameᵗᵐ (keep wk↪ᵗ) (liftPreciseBodyTerm W≼W′ M)
 liftPreciseBodyTerm (future-precise W≼W′ related) M =
   renameᵗᵐ (keep wk↪ᵗ) (liftPreciseBodyTerm W≼W′ M)
+liftPreciseBodyTerm (future-alias W≼W′) M =
+  renameᵗᵐ (keep wk↪ᵗ) (liftPreciseBodyTerm W≼W′ M)
 liftPreciseBodyTerm (future-imprecise W≼W′) M =
   liftPreciseBodyTerm W≼W′ M
 
@@ -304,6 +402,8 @@ liftImpreciseBodyTerm future-refl M = M
 liftImpreciseBodyTerm (future-paired W≼W′ related) M =
   renameᵗᵐ (keep wk↪ᵗ) (liftImpreciseBodyTerm W≼W′ M)
 liftImpreciseBodyTerm (future-precise W≼W′ related) M =
+  liftImpreciseBodyTerm W≼W′ M
+liftImpreciseBodyTerm (future-alias W≼W′) M =
   liftImpreciseBodyTerm W≼W′ M
 liftImpreciseBodyTerm (future-imprecise W≼W′) M =
   renameᵗᵐ (keep wk↪ᵗ) (liftImpreciseBodyTerm W≼W′ M)
@@ -318,6 +418,8 @@ liftPreciseTerm-universal (future-paired W≼W′ related) N
     rewrite liftPreciseTerm-universal W≼W′ N = refl
 liftPreciseTerm-universal (future-precise W≼W′ related) N
     rewrite liftPreciseTerm-universal W≼W′ N = refl
+liftPreciseTerm-universal (future-alias W≼W′) N
+    rewrite liftPreciseTerm-universal W≼W′ N = refl
 liftPreciseTerm-universal (future-imprecise W≼W′) N =
   liftPreciseTerm-universal W≼W′ N
 
@@ -331,6 +433,8 @@ liftImpreciseTerm-universal future-refl N = refl
 liftImpreciseTerm-universal (future-paired W≼W′ related) N
     rewrite liftImpreciseTerm-universal W≼W′ N = refl
 liftImpreciseTerm-universal (future-precise W≼W′ related) N =
+  liftImpreciseTerm-universal W≼W′ N
+liftImpreciseTerm-universal (future-alias W≼W′) N =
   liftImpreciseTerm-universal W≼W′ N
 liftImpreciseTerm-universal (future-imprecise W≼W′) N
     rewrite liftImpreciseTerm-universal W≼W′ N = refl
@@ -348,6 +452,9 @@ liftPreciseBodyTerm-value (future-paired W≼W′ related) vV =
 liftPreciseBodyTerm-value (future-precise W≼W′ related) vV =
   renameᵗᵐ-preserves-Value (keep wk↪ᵗ)
     (liftPreciseBodyTerm-value W≼W′ vV)
+liftPreciseBodyTerm-value (future-alias W≼W′) vV =
+  renameᵗᵐ-preserves-Value (keep wk↪ᵗ)
+    (liftPreciseBodyTerm-value W≼W′ vV)
 liftPreciseBodyTerm-value (future-imprecise W≼W′) vV =
   liftPreciseBodyTerm-value W≼W′ vV
 
@@ -363,6 +470,8 @@ liftImpreciseBodyTerm-value (future-paired W≼W′ related) vV =
     (liftImpreciseBodyTerm-value W≼W′ vV)
 liftImpreciseBodyTerm-value (future-precise W≼W′ related) vV =
   liftImpreciseBodyTerm-value W≼W′ vV
+liftImpreciseBodyTerm-value (future-alias W≼W′) vV =
+  liftImpreciseBodyTerm-value W≼W′ vV
 liftImpreciseBodyTerm-value (future-imprecise W≼W′) vV =
   renameᵗᵐ-preserves-Value (keep wk↪ᵗ)
     (liftImpreciseBodyTerm-value W≼W′ vV)
@@ -377,6 +486,8 @@ liftPreciseTerm-lambda (future-paired W≼W′ related) N
     rewrite liftPreciseTerm-lambda W≼W′ N = refl
 liftPreciseTerm-lambda (future-precise W≼W′ related) N
     rewrite liftPreciseTerm-lambda W≼W′ N = refl
+liftPreciseTerm-lambda (future-alias W≼W′) N
+    rewrite liftPreciseTerm-lambda W≼W′ N = refl
 liftPreciseTerm-lambda (future-imprecise W≼W′) N =
   liftPreciseTerm-lambda W≼W′ N
 
@@ -389,6 +500,8 @@ liftImpreciseTerm-lambda future-refl N = refl
 liftImpreciseTerm-lambda (future-paired W≼W′ related) N
     rewrite liftImpreciseTerm-lambda W≼W′ N = refl
 liftImpreciseTerm-lambda (future-precise W≼W′ related) N =
+  liftImpreciseTerm-lambda W≼W′ N
+liftImpreciseTerm-lambda (future-alias W≼W′) N =
   liftImpreciseTerm-lambda W≼W′ N
 liftImpreciseTerm-lambda (future-imprecise W≼W′) N
     rewrite liftImpreciseTerm-lambda W≼W′ N = refl
@@ -403,6 +516,8 @@ liftPreciseTerm-variable (future-paired W≼W′ related) x
     rewrite liftPreciseTerm-variable W≼W′ x = refl
 liftPreciseTerm-variable (future-precise W≼W′ related) x
     rewrite liftPreciseTerm-variable W≼W′ x = refl
+liftPreciseTerm-variable (future-alias W≼W′) x
+    rewrite liftPreciseTerm-variable W≼W′ x = refl
 liftPreciseTerm-variable (future-imprecise W≼W′) x =
   liftPreciseTerm-variable W≼W′ x
 
@@ -415,6 +530,8 @@ liftImpreciseTerm-variable future-refl x = refl
 liftImpreciseTerm-variable (future-paired W≼W′ related) x
     rewrite liftImpreciseTerm-variable W≼W′ x = refl
 liftImpreciseTerm-variable (future-precise W≼W′ related) x =
+  liftImpreciseTerm-variable W≼W′ x
+liftImpreciseTerm-variable (future-alias W≼W′) x =
   liftImpreciseTerm-variable W≼W′ x
 liftImpreciseTerm-variable (future-imprecise W≼W′) x
     rewrite liftImpreciseTerm-variable W≼W′ x = refl
@@ -429,6 +546,8 @@ liftPreciseTerm-constant (future-paired W≼W′ related) κ
     rewrite liftPreciseTerm-constant W≼W′ κ = refl
 liftPreciseTerm-constant (future-precise W≼W′ related) κ
     rewrite liftPreciseTerm-constant W≼W′ κ = refl
+liftPreciseTerm-constant (future-alias W≼W′) κ
+    rewrite liftPreciseTerm-constant W≼W′ κ = refl
 liftPreciseTerm-constant (future-imprecise W≼W′) κ =
   liftPreciseTerm-constant W≼W′ κ
 
@@ -441,6 +560,8 @@ liftImpreciseTerm-constant future-refl κ = refl
 liftImpreciseTerm-constant (future-paired W≼W′ related) κ
     rewrite liftImpreciseTerm-constant W≼W′ κ = refl
 liftImpreciseTerm-constant (future-precise W≼W′ related) κ =
+  liftImpreciseTerm-constant W≼W′ κ
+liftImpreciseTerm-constant (future-alias W≼W′) κ =
   liftImpreciseTerm-constant W≼W′ κ
 liftImpreciseTerm-constant (future-imprecise W≼W′) κ
     rewrite liftImpreciseTerm-constant W≼W′ κ = refl
@@ -457,7 +578,11 @@ liftPreciseTy-constant (future-paired W≼W′ related) (κ𝔹 b)
     rewrite liftPreciseTy-constant W≼W′ (κ𝔹 b) = refl
 liftPreciseTy-constant (future-precise W≼W′ related) (κℕ n)
     rewrite liftPreciseTy-constant W≼W′ (κℕ n) = refl
+liftPreciseTy-constant (future-alias W≼W′) (κℕ n)
+    rewrite liftPreciseTy-constant W≼W′ (κℕ n) = refl
 liftPreciseTy-constant (future-precise W≼W′ related) (κ𝔹 b)
+    rewrite liftPreciseTy-constant W≼W′ (κ𝔹 b) = refl
+liftPreciseTy-constant (future-alias W≼W′) (κ𝔹 b)
     rewrite liftPreciseTy-constant W≼W′ (κ𝔹 b) = refl
 liftPreciseTy-constant (future-imprecise W≼W′) κ =
   liftPreciseTy-constant W≼W′ κ
@@ -473,6 +598,8 @@ liftImpreciseTy-constant (future-paired W≼W′ related) (κℕ n)
 liftImpreciseTy-constant (future-paired W≼W′ related) (κ𝔹 b)
     rewrite liftImpreciseTy-constant W≼W′ (κ𝔹 b) = refl
 liftImpreciseTy-constant (future-precise W≼W′ related) κ =
+  liftImpreciseTy-constant W≼W′ κ
+liftImpreciseTy-constant (future-alias W≼W′) κ =
   liftImpreciseTy-constant W≼W′ κ
 liftImpreciseTy-constant (future-imprecise W≼W′) (κℕ n)
     rewrite liftImpreciseTy-constant W≼W′ (κℕ n) = refl
@@ -491,7 +618,11 @@ liftCenterTy-constant (future-paired W≼W′ related) (κ𝔹 b)
     rewrite liftCenterTy-constant W≼W′ (κ𝔹 b) = refl
 liftCenterTy-constant (future-precise W≼W′ related) (κℕ n)
     rewrite liftCenterTy-constant W≼W′ (κℕ n) = refl
+liftCenterTy-constant (future-alias W≼W′) (κℕ n)
+    rewrite liftCenterTy-constant W≼W′ (κℕ n) = refl
 liftCenterTy-constant (future-precise W≼W′ related) (κ𝔹 b)
+    rewrite liftCenterTy-constant W≼W′ (κ𝔹 b) = refl
+liftCenterTy-constant (future-alias W≼W′) (κ𝔹 b)
     rewrite liftCenterTy-constant W≼W′ (κ𝔹 b) = refl
 liftCenterTy-constant (future-imprecise W≼W′) (κℕ n)
     rewrite liftCenterTy-constant W≼W′ (κℕ n) = refl
@@ -507,6 +638,8 @@ liftCenterTy-star (future-paired W≼W′ related)
     rewrite liftCenterTy-star W≼W′ = refl
 liftCenterTy-star (future-precise W≼W′ related)
     rewrite liftCenterTy-star W≼W′ = refl
+liftCenterTy-star (future-alias W≼W′)
+    rewrite liftCenterTy-star W≼W′ = refl
 liftCenterTy-star (future-imprecise W≼W′)
     rewrite liftCenterTy-star W≼W′ = refl
 
@@ -521,6 +654,8 @@ liftCenterTy-arrow (future-paired W≼W′ related) A B
     rewrite liftCenterTy-arrow W≼W′ A B = refl
 liftCenterTy-arrow (future-precise W≼W′ related) A B
     rewrite liftCenterTy-arrow W≼W′ A B = refl
+liftCenterTy-arrow (future-alias W≼W′) A B
+    rewrite liftCenterTy-arrow W≼W′ A B = refl
 liftCenterTy-arrow (future-imprecise W≼W′) A B
     rewrite liftCenterTy-arrow W≼W′ A B = refl
 
@@ -534,6 +669,8 @@ liftPreciseBody (future-paired W≼W′ related) A =
   renameᵗ (extᵗ Fin.suc) (liftPreciseBody W≼W′ A)
 liftPreciseBody (future-precise W≼W′ related) A =
   renameᵗ (extᵗ Fin.suc) (liftPreciseBody W≼W′ A)
+liftPreciseBody (future-alias W≼W′) A =
+  renameᵗ (extᵗ Fin.suc) (liftPreciseBody W≼W′ A)
 liftPreciseBody (future-imprecise W≼W′) A = liftPreciseBody W≼W′ A
 
 liftImpreciseBody : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -545,6 +682,8 @@ liftImpreciseBody future-refl A = A
 liftImpreciseBody (future-paired W≼W′ related) A =
   renameᵗ (extᵗ Fin.suc) (liftImpreciseBody W≼W′ A)
 liftImpreciseBody (future-precise W≼W′ related) A =
+  liftImpreciseBody W≼W′ A
+liftImpreciseBody (future-alias W≼W′) A =
   liftImpreciseBody W≼W′ A
 liftImpreciseBody (future-imprecise W≼W′) A =
   renameᵗ (extᵗ Fin.suc) (liftImpreciseBody W≼W′ A)
@@ -558,6 +697,8 @@ liftCenterBody future-refl A = A
 liftCenterBody (future-paired W≼W′ related) A =
   renameᵗ (extᵗ Fin.suc) (liftCenterBody W≼W′ A)
 liftCenterBody (future-precise W≼W′ related) A =
+  renameᵗ (extᵗ Fin.suc) (liftCenterBody W≼W′ A)
+liftCenterBody (future-alias W≼W′) A =
   renameᵗ (extᵗ Fin.suc) (liftCenterBody W≼W′ A)
 liftCenterBody (future-imprecise W≼W′) A =
   renameᵗ (extᵗ Fin.suc) (liftCenterBody W≼W′ A)
@@ -575,6 +716,10 @@ liftCenterBody-shift (future-paired W₀≼W₁ related) A =
     (liftCenterBody-shift W₀≼W₁ A))
     (renameᵗ-shift Fin.suc (liftCenterTy W₀≼W₁ A))
 liftCenterBody-shift (future-precise W₀≼W₁ related) A =
+  trans (cong (renameᵗ (extᵗ Fin.suc))
+    (liftCenterBody-shift W₀≼W₁ A))
+    (renameᵗ-shift Fin.suc (liftCenterTy W₀≼W₁ A))
+liftCenterBody-shift (future-alias W₀≼W₁) A =
   trans (cong (renameᵗ (extᵗ Fin.suc))
     (liftCenterBody-shift W₀≼W₁ A))
     (renameᵗ-shift Fin.suc (liftCenterTy W₀≼W₁ A))
@@ -596,6 +741,8 @@ liftCenterBody-nonvar (future-paired W₀≼W₁ related) nonvar =
   renameNonVar (extᵗ Fin.suc) (liftCenterBody-nonvar W₀≼W₁ nonvar)
 liftCenterBody-nonvar (future-precise W₀≼W₁ related) nonvar =
   renameNonVar (extᵗ Fin.suc) (liftCenterBody-nonvar W₀≼W₁ nonvar)
+liftCenterBody-nonvar (future-alias W₀≼W₁) nonvar =
+  renameNonVar (extᵗ Fin.suc) (liftCenterBody-nonvar W₀≼W₁ nonvar)
 liftCenterBody-nonvar (future-imprecise W₀≼W₁) nonvar =
   renameNonVar (extᵗ Fin.suc) (liftCenterBody-nonvar W₀≼W₁ nonvar)
 
@@ -614,6 +761,9 @@ liftCenterBody-occurs (future-paired W₀≼W₁ related) occurs =
 liftCenterBody-occurs (future-precise W₀≼W₁ related) occurs =
   rename-occurs (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (liftCenterBody-occurs W₀≼W₁ occurs)
+liftCenterBody-occurs (future-alias W₀≼W₁) occurs =
+  rename-occurs (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (liftCenterBody-occurs W₀≼W₁ occurs)
 liftCenterBody-occurs (future-imprecise W₀≼W₁) occurs =
   rename-occurs (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (liftCenterBody-occurs W₀≼W₁ occurs)
@@ -628,6 +778,8 @@ liftPreciseTy-universal (future-paired W≼W′ related) A
     rewrite liftPreciseTy-universal W≼W′ A = refl
 liftPreciseTy-universal (future-precise W≼W′ related) A
     rewrite liftPreciseTy-universal W≼W′ A = refl
+liftPreciseTy-universal (future-alias W≼W′) A
+    rewrite liftPreciseTy-universal W≼W′ A = refl
 liftPreciseTy-universal (future-imprecise W≼W′) A =
   liftPreciseTy-universal W≼W′ A
 
@@ -641,6 +793,8 @@ liftImpreciseTy-universal (future-paired W≼W′ related) A
     rewrite liftImpreciseTy-universal W≼W′ A = refl
 liftImpreciseTy-universal (future-precise W≼W′ related) A =
   liftImpreciseTy-universal W≼W′ A
+liftImpreciseTy-universal (future-alias W≼W′) A =
+  liftImpreciseTy-universal W≼W′ A
 liftImpreciseTy-universal (future-imprecise W≼W′) A
     rewrite liftImpreciseTy-universal W≼W′ A = refl
 
@@ -653,6 +807,8 @@ liftCenterTy-universal future-refl A = refl
 liftCenterTy-universal (future-paired W≼W′ related) A
     rewrite liftCenterTy-universal W≼W′ A = refl
 liftCenterTy-universal (future-precise W≼W′ related) A
+    rewrite liftCenterTy-universal W≼W′ A = refl
+liftCenterTy-universal (future-alias W≼W′) A
     rewrite liftCenterTy-universal W≼W′ A = refl
 liftCenterTy-universal (future-imprecise W≼W′) A
     rewrite liftCenterTy-universal W≼W′ A = refl
@@ -669,6 +825,9 @@ liftCenterImprecision (future-paired W≼W′ related) Aᴾ⊑Aᴵ =
   shift-⊑ I.X⊑X (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterImprecision (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
   shift-⊑ I.X⊑★ (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
+liftCenterImprecision (future-alias {W′ = Wₐ} {rep = rep} W≼W′) Aᴾ⊑Aᴵ =
+  shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core Wₐ) (＇ rep))))
+    (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterImprecision (future-imprecise W≼W′) Aᴾ⊑Aᴵ =
   shift-⊑ I.X⊑★ (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 
@@ -688,6 +847,11 @@ liftCenterBodyImprecision
     (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑X}))
     (liftCenterBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterBodyImprecision (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
+  rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
+liftCenterBodyImprecision (future-alias W≼W′) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-ext Fin.suc (shift-star-map {v = I.X⊑★}))
     (rename-alias-map-ext Fin.suc (shift-alias-map {v = I.X⊑★}))
@@ -715,6 +879,12 @@ liftCenterDynamicBodyImprecision
     (liftCenterDynamicBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterDynamicBodyImprecision
     (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
+  rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
+    (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
+    (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
+    (liftCenterDynamicBodyImprecision W≼W′ Aᴾ⊑Aᴵ)
+liftCenterDynamicBodyImprecision
+    (future-alias W≼W′) Aᴾ⊑Aᴵ =
   rename-⊑ (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-inst Fin.suc (shift-star-map {v = I.X⊑★}))
     (rename-alias-map-inst Fin.suc (shift-alias-map {v = I.X⊑★}))
@@ -837,6 +1007,11 @@ embedPrecise-lift
       (liftPreciseTy W≼W′ A))
     (cong ⇑ᵗ (embedPrecise-lift W≼W′ A))
 embedPrecise-lift
+    (future-alias {W′ = W′} W≼W′) A =
+  trans (embed-keep-shift (preciseEmbedding (core W′))
+      (liftPreciseTy W≼W′ A))
+    (cong ⇑ᵗ (embedPrecise-lift W≼W′ A))
+embedPrecise-lift
     (future-imprecise {W′ = W′} W≼W′) A =
   trans (renameᵗ-skip-eq (preciseEmbedding (core W′))
       (liftPreciseTy W≼W′ A))
@@ -856,6 +1031,11 @@ embedImprecise-lift
 
 embedImprecise-lift
     (future-precise {W′ = W′} W≼W′ related) A =
+  trans (renameᵗ-skip-eq (impreciseEmbedding (core W′))
+      (liftImpreciseTy W≼W′ A))
+    (cong ⇑ᵗ (embedImprecise-lift W≼W′ A))
+embedImprecise-lift
+    (future-alias {W′ = W′} W≼W′) A =
   trans (renameᵗ-skip-eq (impreciseEmbedding (core W′))
       (liftImpreciseTy W≼W′ A))
     (cong ⇑ᵗ (embedImprecise-lift W≼W′ A))
@@ -902,6 +1082,23 @@ precise-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
       (sym (renameᵗ-skip-eq (impreciseEmbedding (core W)) Aᴵ))
       (shift-⊑ I.X⊑★ p))
 
+alias-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
+    {rep : TyVar Δᴾ}
+  → Aᴾ ⊑ᵂ⟨ core W ⟩ Aᴵ
+  → ⇑ᵗ Aᴾ ⊑ᵂ⟨ core (aliasBindWorld W rep) ⟩ Aᴵ
+alias-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
+    {rep = rep} p =
+  subst
+    (λ L → impEnv (aliasBindCore (core W) rep) I.⊢ L ⊑
+      embedImprecise (aliasBindCore (core W) rep) Aᴵ)
+    (sym (embed-keep-shift (preciseEmbedding (core W)) Aᴾ))
+    (subst
+      (λ R → impEnv (aliasBindCore (core W) rep) I.⊢
+        ⇑ᵗ (embedPrecise (core W) Aᴾ) ⊑ R)
+      (sym (renameᵗ-skip-eq (impreciseEmbedding (core W)) Aᴵ))
+      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W) (＇ rep)))) p))
+
 imprecise-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᴾ} {Aᴵ Bᴵ : Ty Δᴵ}
   → Aᴾ ⊑ᵂ⟨ core W ⟩ Aᴵ
@@ -938,6 +1135,11 @@ liftLocalImprecision
     {Aᴾ = liftPreciseTy W≼W′ _} {Aᴵ = liftImpreciseTy W≼W′ _}
     {Bᴾ = Bᴾ} related (liftLocalImprecision W≼W′ p)
 liftLocalImprecision
+    (future-alias {W′ = W′} {rep = rep} W≼W′) p =
+  alias-local-imprecision {W = W′}
+    {Aᴾ = liftPreciseTy W≼W′ _} {Aᴵ = liftImpreciseTy W≼W′ _}
+    {rep = rep} (liftLocalImprecision W≼W′ p)
+liftLocalImprecision
     (future-imprecise {W′ = W′} {Aᴵ = Bᴵ} W≼W′) p =
   imprecise-local-imprecision {W = W′}
     {Aᴾ = liftPreciseTy W≼W′ _} {Aᴵ = liftImpreciseTy W≼W′ _}
@@ -951,6 +1153,8 @@ liftImpreciseTy-star future-refl = refl
 liftImpreciseTy-star (future-paired W≼W′ related)
     rewrite liftImpreciseTy-star W≼W′ = refl
 liftImpreciseTy-star (future-precise W≼W′ related) =
+  liftImpreciseTy-star W≼W′
+liftImpreciseTy-star (future-alias W≼W′) =
   liftImpreciseTy-star W≼W′
 liftImpreciseTy-star (future-imprecise W≼W′)
     rewrite liftImpreciseTy-star W≼W′ = refl
@@ -988,6 +1192,8 @@ liftCenterVariable-trans W₀≼W₁
   cong Fin.suc (liftCenterVariable-trans W₀≼W₁ W₁≼W₂ X)
 liftCenterVariable-trans W₀≼W₁ (future-precise W₁≼W₂ related) X =
   cong Fin.suc (liftCenterVariable-trans W₀≼W₁ W₁≼W₂ X)
+liftCenterVariable-trans W₀≼W₁ (future-alias W₁≼W₂) X =
+  cong Fin.suc (liftCenterVariable-trans W₀≼W₁ W₁≼W₂ X)
 liftCenterVariable-trans W₀≼W₁ (future-imprecise W₁≼W₂) X =
   cong Fin.suc (liftCenterVariable-trans W₀≼W₁ W₁≼W₂ X)
 
@@ -1005,6 +1211,8 @@ liftPreciseTy-trans W₀≼W₁ future-refl A = refl
 liftPreciseTy-trans W₀≼W₁ (future-paired W₁≼W₂ related) A =
   cong ⇑ᵗ (liftPreciseTy-trans W₀≼W₁ W₁≼W₂ A)
 liftPreciseTy-trans W₀≼W₁ (future-precise W₁≼W₂ related) A =
+  cong ⇑ᵗ (liftPreciseTy-trans W₀≼W₁ W₁≼W₂ A)
+liftPreciseTy-trans W₀≼W₁ (future-alias W₁≼W₂) A =
   cong ⇑ᵗ (liftPreciseTy-trans W₀≼W₁ W₁≼W₂ A)
 liftPreciseTy-trans W₀≼W₁ (future-imprecise W₁≼W₂) A =
   liftPreciseTy-trans W₀≼W₁ W₁≼W₂ A
@@ -1024,6 +1232,8 @@ liftImpreciseTy-trans W₀≼W₁ (future-paired W₁≼W₂ related) A =
   cong ⇑ᵗ (liftImpreciseTy-trans W₀≼W₁ W₁≼W₂ A)
 liftImpreciseTy-trans W₀≼W₁ (future-precise W₁≼W₂ related) A =
   liftImpreciseTy-trans W₀≼W₁ W₁≼W₂ A
+liftImpreciseTy-trans W₀≼W₁ (future-alias W₁≼W₂) A =
+  liftImpreciseTy-trans W₀≼W₁ W₁≼W₂ A
 liftImpreciseTy-trans W₀≼W₁ (future-imprecise W₁≼W₂) A =
   cong ⇑ᵗ (liftImpreciseTy-trans W₀≼W₁ W₁≼W₂ A)
 
@@ -1041,6 +1251,8 @@ liftCenterTy-trans W₀≼W₁ future-refl A = refl
 liftCenterTy-trans W₀≼W₁ (future-paired W₁≼W₂ related) A =
   cong ⇑ᵗ (liftCenterTy-trans W₀≼W₁ W₁≼W₂ A)
 liftCenterTy-trans W₀≼W₁ (future-precise W₁≼W₂ related) A =
+  cong ⇑ᵗ (liftCenterTy-trans W₀≼W₁ W₁≼W₂ A)
+liftCenterTy-trans W₀≼W₁ (future-alias W₁≼W₂) A =
   cong ⇑ᵗ (liftCenterTy-trans W₀≼W₁ W₁≼W₂ A)
 liftCenterTy-trans W₀≼W₁ (future-imprecise W₁≼W₂) A =
   cong ⇑ᵗ (liftCenterTy-trans W₀≼W₁ W₁≼W₂ A)
@@ -1060,6 +1272,8 @@ liftPreciseTerm-trans W₀≼W₁ (future-paired W₁≼W₂ related) M =
   cong ⇑ᵗᵐ (liftPreciseTerm-trans W₀≼W₁ W₁≼W₂ M)
 liftPreciseTerm-trans W₀≼W₁ (future-precise W₁≼W₂ related) M =
   cong ⇑ᵗᵐ (liftPreciseTerm-trans W₀≼W₁ W₁≼W₂ M)
+liftPreciseTerm-trans W₀≼W₁ (future-alias W₁≼W₂) M =
+  cong ⇑ᵗᵐ (liftPreciseTerm-trans W₀≼W₁ W₁≼W₂ M)
 liftPreciseTerm-trans W₀≼W₁ (future-imprecise W₁≼W₂) M =
   liftPreciseTerm-trans W₀≼W₁ W₁≼W₂ M
 
@@ -1078,6 +1292,8 @@ liftImpreciseTerm-trans W₀≼W₁
     (future-paired W₁≼W₂ related) M =
   cong ⇑ᵗᵐ (liftImpreciseTerm-trans W₀≼W₁ W₁≼W₂ M)
 liftImpreciseTerm-trans W₀≼W₁ (future-precise W₁≼W₂ related) M =
+  liftImpreciseTerm-trans W₀≼W₁ W₁≼W₂ M
+liftImpreciseTerm-trans W₀≼W₁ (future-alias W₁≼W₂) M =
   liftImpreciseTerm-trans W₀≼W₁ W₁≼W₂ M
 liftImpreciseTerm-trans W₀≼W₁ (future-imprecise W₁≼W₂) M =
   cong ⇑ᵗᵐ (liftImpreciseTerm-trans W₀≼W₁ W₁≼W₂ M)
@@ -1100,6 +1316,10 @@ liftPreciseBodyTerm-trans W₀≼W₁
     (liftPreciseBodyTerm-trans W₀≼W₁ W₁≼W₂ M)
 liftPreciseBodyTerm-trans W₀≼W₁
     (future-precise W₁≼W₂ related) M =
+  cong (renameᵗᵐ (keep wk↪ᵗ))
+    (liftPreciseBodyTerm-trans W₀≼W₁ W₁≼W₂ M)
+liftPreciseBodyTerm-trans W₀≼W₁
+    (future-alias W₁≼W₂) M =
   cong (renameᵗᵐ (keep wk↪ᵗ))
     (liftPreciseBodyTerm-trans W₀≼W₁ W₁≼W₂ M)
 liftPreciseBodyTerm-trans W₀≼W₁
@@ -1126,6 +1346,9 @@ liftImpreciseBodyTerm-trans W₀≼W₁
     (future-precise W₁≼W₂ related) M =
   liftImpreciseBodyTerm-trans W₀≼W₁ W₁≼W₂ M
 liftImpreciseBodyTerm-trans W₀≼W₁
+    (future-alias W₁≼W₂) M =
+  liftImpreciseBodyTerm-trans W₀≼W₁ W₁≼W₂ M
+liftImpreciseBodyTerm-trans W₀≼W₁
     (future-imprecise W₁≼W₂) M =
   cong (renameᵗᵐ (keep wk↪ᵗ))
     (liftImpreciseBodyTerm-trans W₀≼W₁ W₁≼W₂ M)
@@ -1145,6 +1368,9 @@ liftPreciseBody-trans W₀≼W₁ (future-paired W₁≼W₂ related) A =
   cong (renameᵗ (extᵗ Fin.suc))
     (liftPreciseBody-trans W₀≼W₁ W₁≼W₂ A)
 liftPreciseBody-trans W₀≼W₁ (future-precise W₁≼W₂ related) A =
+  cong (renameᵗ (extᵗ Fin.suc))
+    (liftPreciseBody-trans W₀≼W₁ W₁≼W₂ A)
+liftPreciseBody-trans W₀≼W₁ (future-alias W₁≼W₂) A =
   cong (renameᵗ (extᵗ Fin.suc))
     (liftPreciseBody-trans W₀≼W₁ W₁≼W₂ A)
 liftPreciseBody-trans W₀≼W₁ (future-imprecise W₁≼W₂) A =
@@ -1167,6 +1393,8 @@ liftImpreciseBody-trans W₀≼W₁
     (liftImpreciseBody-trans W₀≼W₁ W₁≼W₂ A)
 liftImpreciseBody-trans W₀≼W₁ (future-precise W₁≼W₂ related) A =
   liftImpreciseBody-trans W₀≼W₁ W₁≼W₂ A
+liftImpreciseBody-trans W₀≼W₁ (future-alias W₁≼W₂) A =
+  liftImpreciseBody-trans W₀≼W₁ W₁≼W₂ A
 liftImpreciseBody-trans W₀≼W₁ (future-imprecise W₁≼W₂) A =
   cong (renameᵗ (extᵗ Fin.suc))
     (liftImpreciseBody-trans W₀≼W₁ W₁≼W₂ A)
@@ -1188,6 +1416,9 @@ liftCenterBody-trans W₀≼W₁ (future-paired W₁≼W₂ related) A =
 liftCenterBody-trans W₀≼W₁ (future-precise W₁≼W₂ related) A =
   cong (renameᵗ (extᵗ Fin.suc))
     (liftCenterBody-trans W₀≼W₁ W₁≼W₂ A)
+liftCenterBody-trans W₀≼W₁ (future-alias W₁≼W₂) A =
+  cong (renameᵗ (extᵗ Fin.suc))
+    (liftCenterBody-trans W₀≼W₁ W₁≼W₂ A)
 liftCenterBody-trans W₀≼W₁ (future-imprecise W₁≼W₂) A =
   cong (renameᵗ (extᵗ Fin.suc))
     (liftCenterBody-trans W₀≼W₁ W₁≼W₂ A)
@@ -1206,6 +1437,8 @@ liftPreciseVariable (future-paired W≼W′ related) X =
   Fin.suc (liftPreciseVariable W≼W′ X)
 liftPreciseVariable (future-precise W≼W′ related) X =
   Fin.suc (liftPreciseVariable W≼W′ X)
+liftPreciseVariable (future-alias W≼W′) X =
+  Fin.suc (liftPreciseVariable W≼W′ X)
 liftPreciseVariable (future-imprecise W≼W′) X =
   liftPreciseVariable W≼W′ X
 
@@ -1217,6 +1450,8 @@ liftPreciseTy-variable future-refl X = refl
 liftPreciseTy-variable (future-paired W≼W′ related) X =
   cong ⇑ᵗ (liftPreciseTy-variable W≼W′ X)
 liftPreciseTy-variable (future-precise W≼W′ related) X =
+  cong ⇑ᵗ (liftPreciseTy-variable W≼W′ X)
+liftPreciseTy-variable (future-alias W≼W′) X =
   cong ⇑ᵗ (liftPreciseTy-variable W≼W′ X)
 liftPreciseTy-variable (future-imprecise W≼W′) X =
   liftPreciseTy-variable W≼W′ X
@@ -1230,6 +1465,8 @@ liftImpreciseVariable future-refl X = X
 liftImpreciseVariable (future-paired W≼W′ related) X =
   Fin.suc (liftImpreciseVariable W≼W′ X)
 liftImpreciseVariable (future-precise W≼W′ related) X =
+  liftImpreciseVariable W≼W′ X
+liftImpreciseVariable (future-alias W≼W′) X =
   liftImpreciseVariable W≼W′ X
 liftImpreciseVariable (future-imprecise W≼W′) X =
   Fin.suc (liftImpreciseVariable W≼W′ X)
@@ -1256,6 +1493,9 @@ liftPreciseTerm-sealed (future-paired W≼W′ related) U X R
 liftPreciseTerm-sealed (future-precise W≼W′ related) U X R
     rewrite liftPreciseTerm-sealed W≼W′ U X R =
   shift-sealed _ _ _
+liftPreciseTerm-sealed (future-alias W≼W′) U X R
+    rewrite liftPreciseTerm-sealed W≼W′ U X R =
+  shift-sealed _ _ _
 liftPreciseTerm-sealed (future-imprecise W≼W′) U X R =
   liftPreciseTerm-sealed W≼W′ U X R
 
@@ -1271,6 +1511,8 @@ liftImpreciseTerm-sealed (future-paired W≼W′ related) U X R
     rewrite liftImpreciseTerm-sealed W≼W′ U X R =
   shift-sealed _ _ _
 liftImpreciseTerm-sealed (future-precise W≼W′ related) U X R =
+  liftImpreciseTerm-sealed W≼W′ U X R
+liftImpreciseTerm-sealed (future-alias W≼W′) U X R =
   liftImpreciseTerm-sealed W≼W′ U X R
 liftImpreciseTerm-sealed (future-imprecise W≼W′) U X R
     rewrite liftImpreciseTerm-sealed W≼W′ U X R =
@@ -1359,6 +1601,24 @@ entry-lift-precise W≼W′ r lift-target = lift-target
 entry-lift-precise W≼W′ r (lift-alias eqᴾ repᴾ) =
   lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
 
+entry-lift-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (W≼W′ : Future W W′)
+    {rep : TyVar Δᴾ′}
+    {Z : TyVar Δᶜ} {mode mode′}
+    {e : SemanticEntry (core W) Z mode}
+    {e′ : SemanticEntry (core W′) (liftCenterVariable W≼W′ Z) mode′}
+  → EntryLift W≼W′ e e′
+  → EntryLift (future-alias {rep = rep} W≼W′) e
+      (weaken-entry-aliasbind rep e′)
+entry-lift-aliasbind W≼W′ (lift-paired eqᴾ eqᴵ repᴾ repᴵ) =
+  lift-paired (cong Fin.suc eqᴾ) eqᴵ (cong ⇑ᵗ repᴾ) repᴵ
+entry-lift-aliasbind W≼W′ (lift-dynamic eqᴾ repᴾ) =
+  lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
+entry-lift-aliasbind W≼W′ lift-target = lift-target
+entry-lift-aliasbind W≼W′ (lift-alias eqᴾ repᴾ) =
+  lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
+
 entry-lift-imprecise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
     (W≼W′ : Future W W′)
@@ -1398,6 +1658,8 @@ entry-future (future-paired W≼W′ r) Z =
   entry-lift-paired W≼W′ r (entry-future W≼W′ Z)
 entry-future (future-precise W≼W′ r) Z =
   entry-lift-precise W≼W′ r (entry-future W≼W′ Z)
+entry-future (future-alias W≼W′) Z =
+  entry-lift-aliasbind W≼W′ (entry-future W≼W′ Z)
 entry-future (future-imprecise W≼W′) Z =
   entry-lift-imprecise W≼W′ (entry-future W≼W′ Z)
 
@@ -1416,6 +1678,7 @@ afterPrecise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δ₀}
 afterPrecise future-refl ρ = ρ
 afterPrecise (future-paired W≼W′ r) ρ = skip (afterPrecise W≼W′ ρ)
 afterPrecise (future-precise W≼W′ r) ρ = skip (afterPrecise W≼W′ ρ)
+afterPrecise (future-alias W≼W′) ρ = skip (afterPrecise W≼W′ ρ)
 afterPrecise (future-imprecise W≼W′) ρ = afterPrecise W≼W′ ρ
 
 afterImprecise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δ₀}
@@ -1424,6 +1687,7 @@ afterImprecise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δ₀}
 afterImprecise future-refl ρ = ρ
 afterImprecise (future-paired W≼W′ r) ρ = skip (afterImprecise W≼W′ ρ)
 afterImprecise (future-precise W≼W′ r) ρ = afterImprecise W≼W′ ρ
+afterImprecise (future-alias W≼W′) ρ = afterImprecise W≼W′ ρ
 afterImprecise (future-imprecise W≼W′) ρ = skip (afterImprecise W≼W′ ρ)
 
 afterCenter : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δ₀}
@@ -1432,4 +1696,5 @@ afterCenter : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δ₀}
 afterCenter future-refl π = π
 afterCenter (future-paired W≼W′ r) π = skip (afterCenter W≼W′ π)
 afterCenter (future-precise W≼W′ r) π = skip (afterCenter W≼W′ π)
+afterCenter (future-alias W≼W′) π = skip (afterCenter W≼W′ π)
 afterCenter (future-imprecise W≼W′) π = skip (afterCenter W≼W′ π)

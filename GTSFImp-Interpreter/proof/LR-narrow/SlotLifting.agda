@@ -120,6 +120,8 @@ liftPreciseTy-arrow (future-paired W≼W′ r) A B
     rewrite liftPreciseTy-arrow W≼W′ A B = refl
 liftPreciseTy-arrow (future-precise W≼W′ r) A B
     rewrite liftPreciseTy-arrow W≼W′ A B = refl
+liftPreciseTy-arrow (future-alias W≼W′) A B
+    rewrite liftPreciseTy-arrow W≼W′ A B = refl
 liftPreciseTy-arrow (future-imprecise W≼W′) A B =
   liftPreciseTy-arrow W≼W′ A B
 
@@ -132,6 +134,8 @@ liftImpreciseTy-arrow future-refl A B = refl
 liftImpreciseTy-arrow (future-paired W≼W′ r) A B
     rewrite liftImpreciseTy-arrow W≼W′ A B = refl
 liftImpreciseTy-arrow (future-precise W≼W′ r) A B =
+  liftImpreciseTy-arrow W≼W′ A B
+liftImpreciseTy-arrow (future-alias W≼W′) A B =
   liftImpreciseTy-arrow W≼W′ A B
 liftImpreciseTy-arrow (future-imprecise W≼W′) A B
     rewrite liftImpreciseTy-arrow W≼W′ A B = refl

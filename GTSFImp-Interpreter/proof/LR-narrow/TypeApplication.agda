@@ -89,6 +89,8 @@ lift-imprecise-type-application
     (renameᵗ-wk-eq (liftImpreciseTy W₀≼W₁ A))
 lift-imprecise-type-application (future-precise W₀≼W₁ r★) L B A =
   lift-imprecise-type-application W₀≼W₁ L B A
+lift-imprecise-type-application (future-alias W₀≼W₁) L B A =
+  lift-imprecise-type-application W₀≼W₁ L B A
 lift-imprecise-type-application
     (future-imprecise W₀≼W₁) L B A
     rewrite lift-imprecise-type-application W₀≼W₁ L B A =
@@ -125,6 +127,14 @@ lift-precise-type-application
     (renameᵗ-cong (liftPreciseBody W₀≼W₁ B)
       toRename-keep-wk-eq)
     (renameᵗ-wk-eq (liftPreciseTy W₀≼W₁ A))
+lift-precise-type-application
+    (future-alias W₀≼W₁) L B A
+    rewrite lift-precise-type-application W₀≼W₁ L B A =
+  cong₂ (λ C R → ⇑ᵗᵐ (liftPreciseTerm W₀≼W₁ L)
+    ⦂∀ C [ R ])
+    (renameᵗ-cong (liftPreciseBody W₀≼W₁ B)
+      toRename-keep-wk-eq)
+    (renameᵗ-wk-eq (liftPreciseTy W₀≼W₁ A))
 lift-precise-type-application (future-imprecise W₀≼W₁) L B A =
   lift-precise-type-application W₀≼W₁ L B A
 
@@ -145,6 +155,8 @@ lift-imprecise-open (future-paired W₀≼W₁ related) B A =
       (liftImpreciseBody W₀≼W₁ B)
       (liftImpreciseTy W₀≼W₁ A))
 lift-imprecise-open (future-precise W₀≼W₁ r★) B A =
+  lift-imprecise-open W₀≼W₁ B A
+lift-imprecise-open (future-alias W₀≼W₁) B A =
   lift-imprecise-open W₀≼W₁ B A
 lift-imprecise-open (future-imprecise W₀≼W₁) B A =
   trans (cong (renameᵗ Fin.suc)
@@ -169,6 +181,12 @@ lift-precise-open (future-paired W₀≼W₁ related) B A =
       (liftPreciseBody W₀≼W₁ B)
       (liftPreciseTy W₀≼W₁ A))
 lift-precise-open (future-precise W₀≼W₁ r★) B A =
+  trans (cong (renameᵗ Fin.suc)
+    (lift-precise-open W₀≼W₁ B A))
+    (rename-openᵗ Fin.suc
+      (liftPreciseBody W₀≼W₁ B)
+      (liftPreciseTy W₀≼W₁ A))
+lift-precise-open (future-alias W₀≼W₁) B A =
   trans (cong (renameᵗ Fin.suc)
     (lift-precise-open W₀≼W₁ B A))
     (rename-openᵗ Fin.suc

@@ -10,7 +10,8 @@ module proof.LR-narrow.AliasWorld where
 
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Product using (_,_; proj₁; proj₂)
-open import Relation.Binary.PropositionalEquality using (_≡_; refl)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; refl; subst)
 
 open import Types
 open import CastTerms using (Term)
@@ -26,7 +27,10 @@ world-alias-atom : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (Z : TyVar Δᶜ) {T : Ty Δᶜ}
   → impEnv (core W) Z ≡ I.X⊑ᵗ T
   → AliasSemanticAtom (core W) Z T
-world-alias-atom W Z eq = ⊥-elim (noAlias W Z eq)
+world-alias-atom W Z eq
+    with subst (SemanticEntry (core W) Z) eq (semanticEntry W Z)
+       | aliasEntry W Z eq
+world-alias-atom W Z eq | .(alias-entry a) | is-alias a = a
 
 -- No embedded imprecise type reaches an alias-mode center: the
 -- alias atom's occupant refutation applies to the inverted variable.
@@ -66,10 +70,25 @@ alias-holds-chain (alias-entry a) refl f
 -- An alias-mode center's entry is an alias entry, so the paired
 -- slot predicate cannot hold there.
 
+paired-holds-subst : ∀ {Δᴾ Δᴵ Δᶜ} {Wc : CoreWorld Δᴾ Δᴵ Δᶜ}
+    {Z : TyVar Δᶜ} {mode mode′ : I.VarImp Δᶜ}
+    (eq : mode ≡ mode′)
+    {entry : SemanticEntry Wc Z mode}
+    {ℛ : PayloadRelation Wc}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → PairedAtomHolds ℛ entry Vᴵ Vᴾ
+  → PairedAtomHolds ℛ (subst (SemanticEntry Wc Z) eq entry) Vᴵ Vᴾ
+paired-holds-subst refl h = h
+
 alias-mode-no-paired-holds : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     {Z : TyVar Δᶜ} {T : Ty Δᶜ} {ℛ : PayloadRelation (core W)}
     {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
   → impEnv (core W) Z ≡ I.X⊑ᵗ T
   → PairedAtomHolds ℛ (semanticEntry W Z) Vᴵ Vᴾ
   → ⊥
-alias-mode-no-paired-holds W {Z = Z} eq holds = noAlias W Z eq
+alias-mode-no-paired-holds W {Z = Z} eq holds
+    with subst (SemanticEntry (core W) Z) eq (semanticEntry W Z)
+       | aliasEntry W Z eq
+       | paired-holds-subst eq holds
+alias-mode-no-paired-holds W {Z = Z} eq holds
+    | .(alias-entry a) | is-alias a | ()

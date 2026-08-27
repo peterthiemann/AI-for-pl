@@ -65,6 +65,21 @@ preciseBindCore W Aᴾ =
     (I.instᵐ (impEnv W)) (store-bind (preciseStore W) Aᴾ)
     (impreciseStore W)
 
+-- The alias bind: a precise-only binding whose bound type is the
+-- representative variable and whose fresh center mode records the
+-- representative's embedding.  Embeddings and stores match the
+-- precise bind, so its shift lemmas transfer definitionally.
+
+aliasBindCore : ∀ {Δᴾ Δᴵ Δᶜ}
+  → CoreWorld Δᴾ Δᴵ Δᶜ
+  → TyVar Δᴾ
+  → CoreWorld (suc Δᴾ) Δᴵ (suc Δᶜ)
+aliasBindCore W rep =
+  core-world (keep (preciseEmbedding W)) (skip (impreciseEmbedding W))
+    (I.extendᵐ (I.X⊑ᵗ (⇑ᵗ (embedPrecise W (＇ rep)))) (impEnv W))
+    (store-bind (preciseStore W) (＇ rep))
+    (impreciseStore W)
+
 impreciseBindCore : ∀ {Δᴾ Δᴵ Δᶜ}
   → CoreWorld Δᴾ Δᴵ Δᶜ
   → Ty Δᴵ

@@ -148,6 +148,10 @@ liftPreciseBody-replace (future-precise W≼W′ r) X R B
     rewrite liftPreciseBody-replace W≼W′ X R B =
   shift-body-replace (liftPreciseVariable W≼W′ X)
     (liftPreciseTy W≼W′ R) (liftPreciseBody W≼W′ B)
+liftPreciseBody-replace (future-alias W≼W′) X R B
+    rewrite liftPreciseBody-replace W≼W′ X R B =
+  shift-body-replace (liftPreciseVariable W≼W′ X)
+    (liftPreciseTy W≼W′ R) (liftPreciseBody W≼W′ B)
 liftPreciseBody-replace (future-imprecise W≼W′) X R B =
   liftPreciseBody-replace W≼W′ X R B
 
@@ -163,6 +167,8 @@ liftImpreciseBody-replace (future-paired W≼W′ r) X R B
   shift-body-replace (liftImpreciseVariable W≼W′ X)
     (liftImpreciseTy W≼W′ R) (liftImpreciseBody W≼W′ B)
 liftImpreciseBody-replace (future-precise W≼W′ r) X R B =
+  liftImpreciseBody-replace W≼W′ X R B
+liftImpreciseBody-replace (future-alias W≼W′) X R B =
   liftImpreciseBody-replace W≼W′ X R B
 liftImpreciseBody-replace (future-imprecise W≼W′) X R B
     rewrite liftImpreciseBody-replace W≼W′ X R B =

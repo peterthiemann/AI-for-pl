@@ -2058,6 +2058,8 @@ precise-consistency-future
   C.renameᵐᶜ C.wk↪ᵗ (precise-consistency-future W≼W′ c)
 precise-consistency-future (future-precise W≼W′ r★) c =
   C.renameᵐᶜ C.wk↪ᵗ (precise-consistency-future W≼W′ c)
+precise-consistency-future (future-alias W≼W′) c =
+  C.renameᵐᶜ C.wk↪ᵗ (precise-consistency-future W≼W′ c)
 precise-consistency-future (future-imprecise W≼W′) c =
   precise-consistency-future W≼W′ c
 
@@ -2075,6 +2077,8 @@ imprecise-consistency-future
     (future-paired W≼W′ related) c =
   C.renameᵐᶜ C.wk↪ᵗ (imprecise-consistency-future W≼W′ c)
 imprecise-consistency-future (future-precise W≼W′ r★) c =
+  imprecise-consistency-future W≼W′ c
+imprecise-consistency-future (future-alias W≼W′) c =
   imprecise-consistency-future W≼W′ c
 imprecise-consistency-future (future-imprecise W≼W′) c =
   C.renameᵐᶜ C.wk↪ᵗ (imprecise-consistency-future W≼W′ c)
@@ -2159,6 +2163,23 @@ precise-universal-body-consistency-future {μ = μ}
         (C.renameEnv∼-preserves C.wk↪ᵗ
           (ClosureProof.precise-consistency-env-future W≼W′ μ) X)))
     (precise-universal-body-consistency-future W≼W′ c)
+precise-universal-body-consistency-future {μ = μ}
+    (future-alias W≼W′) c =
+  C.rename∼
+    {μ = C.extᵐ
+      (ClosureProof.precise-consistency-env-future W≼W′ μ)}
+    {μ′ = C.extᵐ
+      (C.renameEnv∼ C.wk↪ᵗ
+        (ClosureProof.precise-consistency-env-future W≼W′ μ))}
+    (extᵗ Fin.suc)
+    (C.extᵐ-rename Fin.suc
+      (λ X → trans
+        (cong (C.renameEnv∼ C.wk↪ᵗ
+          (ClosureProof.precise-consistency-env-future W≼W′ μ))
+          (sym (toRename-wk-eq X)))
+        (C.renameEnv∼-preserves C.wk↪ᵗ
+          (ClosureProof.precise-consistency-env-future W≼W′ μ) X)))
+    (precise-universal-body-consistency-future W≼W′ c)
 precise-universal-body-consistency-future
     (future-imprecise W≼W′) c =
   precise-universal-body-consistency-future W≼W′ c
@@ -2191,6 +2212,9 @@ imprecise-universal-body-consistency-future {μ = μ}
     (imprecise-universal-body-consistency-future W≼W′ c)
 imprecise-universal-body-consistency-future
     (future-precise W≼W′ r★) c =
+  imprecise-universal-body-consistency-future W≼W′ c
+imprecise-universal-body-consistency-future
+    (future-alias W≼W′) c =
   imprecise-universal-body-consistency-future W≼W′ c
 imprecise-universal-body-consistency-future {μ = μ}
     (future-imprecise W≼W′) c =
@@ -2228,6 +2252,10 @@ lift-precise-universal-cast (future-precise W≼W′ r★) M c
     rewrite lift-precise-universal-cast W≼W′ M c =
   rename-universal-cast-wk (liftPreciseTerm W≼W′ M)
     (precise-universal-body-consistency-future W≼W′ c)
+lift-precise-universal-cast (future-alias W≼W′) M c
+    rewrite lift-precise-universal-cast W≼W′ M c =
+  rename-universal-cast-wk (liftPreciseTerm W≼W′ M)
+    (precise-universal-body-consistency-future W≼W′ c)
 lift-precise-universal-cast (future-imprecise W≼W′) M c =
   lift-precise-universal-cast W≼W′ M c
 
@@ -2248,6 +2276,8 @@ lift-imprecise-universal-cast
     (imprecise-universal-body-consistency-future W≼W′ c)
 lift-imprecise-universal-cast (future-precise W≼W′ r★) M c =
   lift-imprecise-universal-cast W≼W′ M c
+lift-imprecise-universal-cast (future-alias W≼W′) M c =
+  lift-imprecise-universal-cast W≼W′ M c
 lift-imprecise-universal-cast (future-imprecise W≼W′) M c
     rewrite lift-imprecise-universal-cast W≼W′ M c =
   rename-universal-cast-wk (liftImpreciseTerm W≼W′ M)
@@ -2265,6 +2295,8 @@ precise-ground-type-arrow (future-paired W≼W′ related) A B
     rewrite precise-ground-type-arrow W≼W′ A B = refl
 precise-ground-type-arrow (future-precise W≼W′ r★) A B
     rewrite precise-ground-type-arrow W≼W′ A B = refl
+precise-ground-type-arrow (future-alias W≼W′) A B
+    rewrite precise-ground-type-arrow W≼W′ A B = refl
 precise-ground-type-arrow (future-imprecise W≼W′) A B =
   precise-ground-type-arrow W≼W′ A B
 
@@ -2279,6 +2311,8 @@ imprecise-ground-type-arrow future-refl A B = refl
 imprecise-ground-type-arrow (future-paired W≼W′ related) A B
     rewrite imprecise-ground-type-arrow W≼W′ A B = refl
 imprecise-ground-type-arrow (future-precise W≼W′ r★) A B =
+  imprecise-ground-type-arrow W≼W′ A B
+imprecise-ground-type-arrow (future-alias W≼W′) A B =
   imprecise-ground-type-arrow W≼W′ A B
 imprecise-ground-type-arrow (future-imprecise W≼W′) A B
     rewrite imprecise-ground-type-arrow W≼W′ A B = refl
@@ -2319,6 +2353,19 @@ precise-function-domain-future
       (C.renameEnv∼-preserves C.wk↪ᵗ
         (ClosureProof.precise-consistency-env-future W≼W′ μ) X))
     (precise-function-domain-future W≼W′ c)
+precise-function-domain-future
+    (future-alias W≼W′) {μ = μ} c =
+  C.rename∼
+    {μ = C.flipᵐ
+      (ClosureProof.precise-consistency-env-future W≼W′ μ)}
+    {μ′ = C.flipᵐ
+      (C.renameEnv∼ C.wk↪ᵗ
+        (ClosureProof.precise-consistency-env-future W≼W′ μ))}
+    (C.toRenameᵗ C.wk↪ᵗ)
+    (λ X → cong C.flipVar∼
+      (C.renameEnv∼-preserves C.wk↪ᵗ
+        (ClosureProof.precise-consistency-env-future W≼W′ μ) X))
+    (precise-function-domain-future W≼W′ c)
 precise-function-domain-future (future-imprecise W≼W′) c =
   precise-function-domain-future W≼W′ c
 
@@ -2346,6 +2393,8 @@ imprecise-function-domain-future
         (ClosureProof.imprecise-consistency-env-future W≼W′ μ) X))
     (imprecise-function-domain-future W≼W′ c)
 imprecise-function-domain-future (future-precise W≼W′ r★) c =
+  imprecise-function-domain-future W≼W′ c
+imprecise-function-domain-future (future-alias W≼W′) c =
   imprecise-function-domain-future W≼W′ c
 imprecise-function-domain-future
     (future-imprecise W≼W′) {μ = μ} c =
@@ -2405,6 +2454,8 @@ lift-precise-cast (future-paired W≼W′ related) M c
     rewrite lift-precise-cast W≼W′ M c = refl
 lift-precise-cast (future-precise W≼W′ r★) M c
     rewrite lift-precise-cast W≼W′ M c = refl
+lift-precise-cast (future-alias W≼W′) M c
+    rewrite lift-precise-cast W≼W′ M c = refl
 lift-precise-cast (future-imprecise W≼W′) M c =
   lift-precise-cast W≼W′ M c
 
@@ -2420,6 +2471,8 @@ lift-imprecise-cast future-refl M c = refl
 lift-imprecise-cast (future-paired W≼W′ related) M c
     rewrite lift-imprecise-cast W≼W′ M c = refl
 lift-imprecise-cast (future-precise W≼W′ r★) M c =
+  lift-imprecise-cast W≼W′ M c
+lift-imprecise-cast (future-alias W≼W′) M c =
   lift-imprecise-cast W≼W′ M c
 lift-imprecise-cast (future-imprecise W≼W′) M c
     rewrite lift-imprecise-cast W≼W′ M c = refl
@@ -2438,6 +2491,8 @@ lift-precise-function-cast (future-paired W≼W′ related) M c d
     rewrite lift-precise-function-cast W≼W′ M c d = refl
 lift-precise-function-cast (future-precise W≼W′ r★) M c d
     rewrite lift-precise-function-cast W≼W′ M c d = refl
+lift-precise-function-cast (future-alias W≼W′) M c d
+    rewrite lift-precise-function-cast W≼W′ M c d = refl
 lift-precise-function-cast (future-imprecise W≼W′) M c d =
   lift-precise-function-cast W≼W′ M c d
 
@@ -2454,6 +2509,8 @@ lift-imprecise-function-cast future-refl M c d = refl
 lift-imprecise-function-cast (future-paired W≼W′ related) M c d
     rewrite lift-imprecise-function-cast W≼W′ M c d = refl
 lift-imprecise-function-cast (future-precise W≼W′ r★) M c d =
+  lift-imprecise-function-cast W≼W′ M c d
+lift-imprecise-function-cast (future-alias W≼W′) M c d =
   lift-imprecise-function-cast W≼W′ M c d
 lift-imprecise-function-cast (future-imprecise W≼W′) M c d
     rewrite lift-imprecise-function-cast W≼W′ M c d = refl

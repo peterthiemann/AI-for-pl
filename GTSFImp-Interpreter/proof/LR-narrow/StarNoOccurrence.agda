@@ -18,7 +18,7 @@ open import Data.Fin.Properties using (_≟_)
 
 open import Types
 open import LR-narrow.World using
-  (World; Future; future-refl; future-paired; future-precise;
+  (World; Future; future-refl; future-paired; future-precise; future-alias;
    future-imprecise; liftCenterTy; liftCenterVariable)
 open import Conversion using (replaceTy)
 open import proof.ImprecisionConsistency using
@@ -171,6 +171,8 @@ liftCenter-∉ᵗ future-refl avoid = avoid
 liftCenter-∉ᵗ (future-paired W≼W′ related) avoid =
   renameᵗ-∉ᵗ Fin.suc fin-suc-injective (liftCenter-∉ᵗ W≼W′ avoid)
 liftCenter-∉ᵗ (future-precise W≼W′ related) avoid =
+  renameᵗ-∉ᵗ Fin.suc fin-suc-injective (liftCenter-∉ᵗ W≼W′ avoid)
+liftCenter-∉ᵗ (future-alias W≼W′) avoid =
   renameᵗ-∉ᵗ Fin.suc fin-suc-injective (liftCenter-∉ᵗ W≼W′ avoid)
 liftCenter-∉ᵗ (future-imprecise W≼W′) avoid =
   renameᵗ-∉ᵗ Fin.suc fin-suc-injective (liftCenter-∉ᵗ W≼W′ avoid)

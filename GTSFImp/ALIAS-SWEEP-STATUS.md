@@ -119,14 +119,47 @@ green and committed:
   producers in `RevealStructural` discharge it by lifting their
   own `avoidᵇ`.
 
-**REMAINING (Finding H order)**: (2) drop `World.noAlias`, add
-`aliasBindCore`/`aliasBindWorld` and `future-alias`, sweep the
-~200 `Future` matchers and convert `Cast.agda`'s remaining
-`noAlias` uses (`related-value-casts`' alias clause,
-`right-dynamic-ground-tag-…`, the `NoAliases` arguments to the
-ground-tag lemmas); (3) the `∀⊑∀` clause becomes a wrap-closed
-family (consumers project `[]`; the four obligations become cons
-projections); (4) the `∀⊑∀` producers (`Cast`, the
+**Finding-H step (2) is DONE** (tree fully green — both projects'
+`make check`):
+
+* the cast machinery is alias-general: the variable-source lemmas
+  take dynamic-mode premises, the alias chain through a dynamic
+  ground tag recurses structurally on the derivation
+  (`right-dynamic-ground-tag-value-at` rebuilds the alias slot at
+  the injected payload via `alias-holds-chain`), the payload
+  tag-agreement lemmas route variable grounds through the
+  derivation-chase `ground-imprecise-targets-agree` (fuel on
+  `sizeᵖ`) plus `grounds-consistent-equal`, and the remaining
+  μ-level ground lemmas weaken alias-freeness to non-variable
+  sources (`ground-targets-unique⊑-nonvar` upstream);
+* `related-value-casts`' alias clause delegates to the
+  `paired-cast-values` obligation through a new `open-alias` case
+  of `OpenPairedCastCase` — the same open-cases regime as the
+  dynamic variable and universal sources;
+* `World.noAlias` is GONE.  The `World` record instead carries
+  `aliasEntry` (an alias-mode center's entry is an alias entry,
+  `IsAliasEntry` on the mode-subst entry); the three bind builders
+  discharge it by the entry-weakening with-dance and
+  `aliasBindWorld` by construction; `proof/LR-narrow/AliasWorld`'s
+  accessors (`world-alias-atom`, `alias-mode-no-paired-holds`,
+  `alias-holds-chain`, `alias-no-imprecise-target`) are real;
+* `aliasBindCore` (embeddings/stores mirror `preciseBindCore`,
+  fresh mode `X⊑ᵗ (⇑ᵗ (embP (＇ rep)))`, bound type `＇ rep`),
+  the `-aliasbind` weaken-atom family, the fresh alias atom
+  (rep-eq holds by computation), `future-alias`, and
+  `aliasBindWorld` are in; every `Future` matcher across the LR
+  gained the alias case (mirroring `future-precise`, with the
+  alias mode at each `shift-⊑`/`shift-star-map`/`shift-alias-map`
+  site and `entry-lift-aliasbind`/`alias-local-imprecision`/
+  `liftPreciseContext-alias` analogues);
+* `value-imprecision-aliasbind` in `proof/LR-narrow/Closure.agda`
+  mirrors the three existing per-step closure lemmas, including
+  their documented `TERMINATING` pragma (allocation-order
+  well-foundedness — the one inherited pragma of the sweep).
+
+**REMAINING (Finding H order)**: (3) the `∀⊑∀` clause becomes a
+wrap-closed family (consumers project `[]`; the four obligations
+become cons projections); (4) the `∀⊑∀` producers (`Cast`, the
 `RevealStructural` assemblies) build families by σ-induction — the
 flagged largest proof; (5) delete `RevealObligations`.
 

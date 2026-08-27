@@ -39,6 +39,11 @@ insert-after-future ins (future-paired {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} W≼W′ r) =
   shiftBoth-insert I.X⊑X Aᴾ Aᴵ (insert-after-future ins W≼W′)
 insert-after-future ins (future-precise {Aᴾ = Aᴾ} W≼W′ r) =
   shiftLeft-insert I.X⊑★ Aᴾ (insert-after-future ins W≼W′)
+insert-after-future ins
+    (future-alias {W′ = W₁} {rep = rep} W≼W′) =
+  shiftLeft-insert
+    (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))) (＇ rep)
+    (insert-after-future ins W≼W′)
 insert-after-future ins (future-imprecise {Aᴵ = Aᴵ} W≼W′) =
   shiftRight-insert Aᴵ (insert-after-future ins W≼W′)
 
@@ -62,6 +67,9 @@ liftPreciseTerm-after (future-paired W≼W′ r) ρ M
 liftPreciseTerm-after (future-precise W≼W′ r) ρ M
     rewrite liftPreciseTerm-after W≼W′ ρ M =
   renameᵗᵐ-shift (shift-base _) M
+liftPreciseTerm-after (future-alias W≼W′) ρ M
+    rewrite liftPreciseTerm-after W≼W′ ρ M =
+  renameᵗᵐ-shift (shift-base _) M
 liftPreciseTerm-after (future-imprecise W≼W′) ρ M =
   liftPreciseTerm-after W≼W′ ρ M
 
@@ -75,6 +83,8 @@ liftImpreciseTerm-after (future-paired W≼W′ r) ρ M
     rewrite liftImpreciseTerm-after W≼W′ ρ M =
   renameᵗᵐ-shift (shift-base _) M
 liftImpreciseTerm-after (future-precise W≼W′ r) ρ M =
+  liftImpreciseTerm-after W≼W′ ρ M
+liftImpreciseTerm-after (future-alias W≼W′) ρ M =
   liftImpreciseTerm-after W≼W′ ρ M
 liftImpreciseTerm-after (future-imprecise W≼W′) ρ M
     rewrite liftImpreciseTerm-after W≼W′ ρ M =
@@ -92,6 +102,9 @@ liftPreciseBodyTerm-after (future-paired W≼W′ r) ρ M
 liftPreciseBodyTerm-after (future-precise W≼W′ r) ρ M
     rewrite liftPreciseBodyTerm-after W≼W′ ρ M =
   renameᵗᵐ-shift (shift-under (shift-base _)) M
+liftPreciseBodyTerm-after (future-alias W≼W′) ρ M
+    rewrite liftPreciseBodyTerm-after W≼W′ ρ M =
+  renameᵗᵐ-shift (shift-under (shift-base _)) M
 liftPreciseBodyTerm-after (future-imprecise W≼W′) ρ M =
   liftPreciseBodyTerm-after W≼W′ ρ M
 
@@ -105,6 +118,8 @@ liftImpreciseBodyTerm-after (future-paired W≼W′ r) ρ M
     rewrite liftImpreciseBodyTerm-after W≼W′ ρ M =
   renameᵗᵐ-shift (shift-under (shift-base _)) M
 liftImpreciseBodyTerm-after (future-precise W≼W′ r) ρ M =
+  liftImpreciseBodyTerm-after W≼W′ ρ M
+liftImpreciseBodyTerm-after (future-alias W≼W′) ρ M =
   liftImpreciseBodyTerm-after W≼W′ ρ M
 liftImpreciseBodyTerm-after (future-imprecise W≼W′) ρ M
     rewrite liftImpreciseBodyTerm-after W≼W′ ρ M =
@@ -120,6 +135,8 @@ liftPreciseTy-after (future-paired W≼W′ r) ρ A
     rewrite liftPreciseTy-after W≼W′ ρ A = shift-type _ A
 liftPreciseTy-after (future-precise W≼W′ r) ρ A
     rewrite liftPreciseTy-after W≼W′ ρ A = shift-type _ A
+liftPreciseTy-after (future-alias W≼W′) ρ A
+    rewrite liftPreciseTy-after W≼W′ ρ A = shift-type _ A
 liftPreciseTy-after (future-imprecise W≼W′) ρ A =
   liftPreciseTy-after W≼W′ ρ A
 
@@ -133,6 +150,8 @@ liftImpreciseTy-after (future-paired W≼W′ r) ρ A
     rewrite liftImpreciseTy-after W≼W′ ρ A = shift-type _ A
 liftImpreciseTy-after (future-precise W≼W′ r) ρ A =
   liftImpreciseTy-after W≼W′ ρ A
+liftImpreciseTy-after (future-alias W≼W′) ρ A =
+  liftImpreciseTy-after W≼W′ ρ A
 liftImpreciseTy-after (future-imprecise W≼W′) ρ A
     rewrite liftImpreciseTy-after W≼W′ ρ A = shift-type _ A
 
@@ -145,6 +164,8 @@ liftCenterTy-after future-refl π A = refl
 liftCenterTy-after (future-paired W≼W′ r) π A
     rewrite liftCenterTy-after W≼W′ π A = shift-type _ A
 liftCenterTy-after (future-precise W≼W′ r) π A
+    rewrite liftCenterTy-after W≼W′ π A = shift-type _ A
+liftCenterTy-after (future-alias W≼W′) π A
     rewrite liftCenterTy-after W≼W′ π A = shift-type _ A
 liftCenterTy-after (future-imprecise W≼W′) π A
     rewrite liftCenterTy-after W≼W′ π A = shift-type _ A
