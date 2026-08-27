@@ -1403,3 +1403,59 @@ weakened by `alias-avoid-weaken★` and the exemption taken on the
 now compatible with general representatives.  The remaining
 consumers of variable-ness are the tag-coherence layer above and
 the mechanical record sweep, both gated on the J.2 decision.
+
+### J.4  Correction: the counterexample does not exist (2026-08-27)
+
+J.2 claimed the ambiguity reaches a term pair and forced a design
+decision.  That conclusion was WRONG, and the two lemmas that
+settle it are now proved.
+
+**What survives of J.1.**  The type-level fork is real, and is now
+checked concretely: with `T = ∀(＇0 ⇒ ＇0)` recorded at an alias
+mode, both `＇X ⊑ ★ ⇒ ★` (by `alias` + `∀⊑`, the binder
+star-discharged) and `＇X ⊑ T` (by `alias` + `∀⊑∀`) are derivable,
+as is `＇X ⊑ ★`.  So `⊑` is genuinely not shape-functional at an
+alias variable with a general representative.
+
+**Why that does not reach a program pair.**  A runtime tag check
+compares GROUNDS, never arbitrary targets, and two facts pin those
+down:
+
+* `proof/LR-narrow/GroundReading.agda` — `ground-readings-unique`:
+  two derivations from one source to images of imprecise grounds
+  reach the same type.  The `∀⊑`/`∀⊑∀` fork dies here, because a
+  `∀`-ground's body is `★` and `star-no-occurrence` then forbids the
+  binder from occurring, contradicting `∀⊑`'s occurrence premise.
+  The side condition is exactly the alias slots' target
+  non-occupancy (`NoAliasImage`).
+* `proof/LR-narrow/ConsistencyAvoid.agda` — `avoid-target` /
+  `avoid-source`: at a variable whose CONSISTENCY mode is paired
+  (`X∼X`), avoidance travels across `∼` in both directions.  This is
+  the consistency-side twin of `star-no-occurrence`.
+
+The second lemma kills J.2's program pair directly
+(`paired-fork-excluded`): to project at the `∀★` ground and land on
+a `∀` type, the cast needs `∀★ ∼ ∀D₀`, i.e. `★ ∼ D₀` under a
+`∀ᶜ` binder — which `extᵐ` gives the PAIRED consistency mode, so
+`D₀` cannot mention the bound variable.  But the `∀⊑∀` reading of
+the same pair transports `0 ∈ A₀` into `D₀`
+(`source-occurs-target`, the binder being paired on the `⊑` side
+too).  The two requirements are contradictory, so no cast pair can
+hold the two readings apart.  In the concrete instance the two
+lemmas agree with the syntax: `∀★ ∼ T` is underivable, so the
+imprecise program of J.2 cannot be written at all.
+
+**Consequence for the plan.**  `related-value-casts` needs NO new
+premise, and none of the four options listed in J.2 is required —
+that list is withdrawn.  What remains before item 1's record flip:
+
+1. Rewrite the three call sites of `ground-imprecise-targets-agree`
+   (`proof/LR-narrow/Cast.agda`) onto ground-level agreement, using
+   `ground-readings-unique` plus the projection cast's own
+   consistency, which the call sites already carry.
+2. Two routes to a `∀`-shaped projection target are not covered by
+   `paired-fork-excluded` and need the same treatment: the `gen_`
+   constructor (whose binder mode is `★∼X`, not paired) and
+   `bot-intro`.  Both put the bound variable back in scope, so each
+   needs its own argument or a refutation from the `⊑` side.
+3. Then the mechanical record sweep of I.4 item 1.

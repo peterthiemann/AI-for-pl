@@ -545,3 +545,25 @@ becomes false, and a term-related program pair exists whose
 imprecise ★-projection blames while the precise one succeeds —
 the ★-projection coherence (and the DGG argument through it) needs
 a design decision before item 1 can complete.
+
+Step 6, item 1 — Finding J corrected; the blocker is gone
+(2026-08-27).  Two new proved modules in GTSFImp-Interpreter:
+
+* `proof/LR-narrow/GroundReading.agda` — `ground-readings-unique`:
+  ground readings of a type are unique, for GENERAL alias
+  representatives.  Replaces the false-for-general-reps target-level
+  agreement lemma.
+* `proof/LR-narrow/ConsistencyAvoid.agda` — `avoid-target` /
+  `avoid-source`: a paired consistency binder cannot be crossed by
+  ★, the consistency twin of `star-no-occurrence`; and
+  `paired-fork-excluded`, which refutes the Finding J program pair.
+
+Net: the ★-projection coherence does NOT need a new premise, and
+the design decision demanded by the earlier Finding J writeup is
+withdrawn (see J.4 in REPLACEMENT-CLOSURE-DESIGN.md).  Remaining
+before the record flip: rewrite the three
+`ground-imprecise-targets-agree` call sites in
+`proof/LR-narrow/Cast.agda` onto ground-level agreement, and cover
+the `gen_` and `bot-intro` routes to a ∀-shaped projection target
+(their binder modes are not paired, so `paired-fork-excluded` does
+not apply to them).
