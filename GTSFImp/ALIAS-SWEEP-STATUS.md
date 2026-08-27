@@ -370,3 +370,44 @@ The fix (three parts, all in-tree, no new obligations):
    alias-chain instantiation, framed by `cast-computations-related`.
    Then delete `UniversalFamilyKitᵇ`, its module params, and the
    `universal-familyᵇ` field.
+
+### Step 6 progress (2026-08-27, commits 7c5ecbc6..389d5164)
+
+Landed, green, pushed:
+
+* `7c5ecbc6` — the `∀⊑∀` head relaxed to `FutureValueRelation s`
+  (Finding I.2).  Producers weaken; the six `TypeApplication`
+  consumers, the reveal producers, Closure transports, Universal,
+  and Cast's `universal-head` all re-plumbed.  The right-universal
+  head keeps its realizable one-sided bound.
+* `c5f15e05` — `related-alias-bind-step-expand` +
+  `paired-returns-alias-bind-step` + `alias-step` in
+  `proof/LR-narrow/BindStepExpansion.agda` (mirrors the precise
+  variant over `aliasBindWorld`; the step binds `＇ rep`).
+* `389d5164` — `UniversalFamilyKitᵇ` reshaped from the UNPROVABLE
+  chain-in/family-out statement to the two honest producer
+  obligations `lambda-familyᵇ` and `cast-familyᵇ`;
+  `universal-compatible` takes the family callback directly;
+  Cast's `∀ᶜ` clause passes its concrete source data; the dead
+  chain builders in the `∀ᶜ` where-block were deleted
+  (`UniversalData`/`universal-dataᵇ` are gone).
+
+REMAINING to discharge the (now true) kit fields — the full program
+is Finding I.4 in `REPLACEMENT-CLOSURE-DESIGN.md`:
+
+1. Generalize `AliasSemanticAtom`'s representative to a `Ty Δᴾ`
+   (self-alias binds).  Mechanical everywhere EXCEPT
+   `reveal-alias`/`conceal-alias`, which lose `alias-holds-rep`
+   (rep-is-a-variable) and need item 2.
+2. New sized statement family: the imprecise-side-only reveal (the
+   mirror of `PreciseRevealAt`, center ∉ LHS), plus the
+   imprecise-only wrapper kind in `UniWrapᵇ` it forces.
+3. New one-sided frame transformers at alias slots (the cascade's
+   residual conversions after an alias peel); derivation level is
+   the landed `replace-left-⊑`.
+4. The two producer cascades (`cast-familyᵇ` per the peel schedule;
+   `lambda-familyᵇ` likewise but with every first peel paired
+   against the Λ-β).  Note: even the Λ cascade needs items 1–3 for
+   σ with inert/dyn wrappers (surplus precise peels).
+
+Do NOT revive a chain-based kit; do NOT re-tighten the `∀⊑∀` head.
