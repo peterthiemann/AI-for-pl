@@ -1129,9 +1129,17 @@ alias-holds-lift {W′ = W′} W≼W′ f
     (alias-holds Uᴾ refl related) =
   alias-holds (liftPreciseTerm W≼W′ Uᴾ)
     (trans (liftPreciseTerm-sealed W≼W′ Uᴾ _ _)
-      (sym (cong₂
-        (λ Y T′ → liftPreciseTerm W≼W′ Uᴾ ↓ Conversion.seal Y T′)
-        eqᴾ repᴾ)))
+      (trans
+        (cong
+          (λ T′ → liftPreciseTerm W≼W′ Uᴾ
+            ↓ Conversion.seal
+                (liftPreciseVariable W≼W′ (aliasPreciseVariable a))
+                T′)
+          (liftPreciseTy-variable W≼W′ (aliasRepName a)))
+        (sym (cong₂
+          (λ Y n → liftPreciseTerm W≼W′ Uᴾ
+            ↓ Conversion.seal Y (＇ n))
+          eqᴾ repᴾ))))
     (f related)
 
 alias-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}

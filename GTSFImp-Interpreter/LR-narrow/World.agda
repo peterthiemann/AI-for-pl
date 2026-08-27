@@ -1209,6 +1209,18 @@ liftPreciseVariable (future-precise W≼W′ related) X =
 liftPreciseVariable (future-imprecise W≼W′) X =
   liftPreciseVariable W≼W′ X
 
+liftPreciseTy-variable : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (W≼W′ : Future W W′) (X : TyVar Δᴾ)
+  → liftPreciseTy W≼W′ (＇ X) ≡ ＇ liftPreciseVariable W≼W′ X
+liftPreciseTy-variable future-refl X = refl
+liftPreciseTy-variable (future-paired W≼W′ related) X =
+  cong ⇑ᵗ (liftPreciseTy-variable W≼W′ X)
+liftPreciseTy-variable (future-precise W≼W′ related) X =
+  cong ⇑ᵗ (liftPreciseTy-variable W≼W′ X)
+liftPreciseTy-variable (future-imprecise W≼W′) X =
+  liftPreciseTy-variable W≼W′ X
+
 liftImpreciseVariable : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
   → Future W W′
@@ -1305,7 +1317,8 @@ data EntryLift {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
         (liftCenterVariable W≼W′ Z) T′}
     → aliasPreciseVariable a′
         ≡ liftPreciseVariable W≼W′ (aliasPreciseVariable a)
-    → aliasRep a′ ≡ liftPreciseTy W≼W′ (aliasRep a)
+    → aliasRepName a′
+        ≡ liftPreciseVariable W≼W′ (aliasRepName a)
     → EntryLift W≼W′ (alias-entry a) (alias-entry a′)
 
 -- Extending an entry lift by one further binding.
@@ -1326,7 +1339,7 @@ entry-lift-paired W≼W′ r (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 entry-lift-paired W≼W′ r lift-target = lift-target
 entry-lift-paired W≼W′ r (lift-alias eqᴾ repᴾ) =
-  lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
+  lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
 
 entry-lift-precise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1344,7 +1357,7 @@ entry-lift-precise W≼W′ r (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 entry-lift-precise W≼W′ r lift-target = lift-target
 entry-lift-precise W≼W′ r (lift-alias eqᴾ repᴾ) =
-  lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
+  lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
 
 entry-lift-imprecise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}

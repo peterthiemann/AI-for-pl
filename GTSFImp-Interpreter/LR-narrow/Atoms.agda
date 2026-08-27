@@ -128,7 +128,11 @@ open TargetSemanticAtom public
 -- recorded in the mode: the center variable unfolds to the embedding
 -- of the bound representation type.  Unlike the dynamic slot it
 -- carries no imprecision derivation — the `alias` rule supplies the
--- premise at each use.
+-- premise at each use.  The representative is always a VARIABLE (the
+-- operational alias binds the fresh name of the preceding
+-- allocation), which pins the alias premise's right-hand side to a
+-- variable or ★ and lets the reveal machinery treat alias slots by
+-- identity conversions.
 
 record AliasSemanticAtom {Δᴾ Δᴵ Δᶜ}
     (W : CoreWorld Δᴾ Δᴵ Δᶜ) (Z : TyVar Δᶜ) (T : Ty Δᶜ) : Set where
@@ -140,10 +144,11 @@ record AliasSemanticAtom {Δᴾ Δᴵ Δᶜ}
     aliasNoTargetOccupant :
       (Σ[ Y ∈ TyVar Δᴵ ]
         toRenameᵗ (impreciseEmbedding W) Y ≡ Z) → ⊥
-    aliasRep : Ty Δᴾ
-    aliasRep-eq : embedPrecise W aliasRep ≡ T
+    aliasRepName : TyVar Δᴾ
+    aliasRep-eq : embedPrecise W (＇ aliasRepName) ≡ T
     aliasFresh : ∀ {Y : TyVar Δᶜ} → Y ∈ᵗ T → Z Fin.< Y
-    aliasBound : preciseStore W ∋ aliasPreciseVariable ⦂ aliasRep
+    aliasBound :
+      preciseStore W ∋ aliasPreciseVariable ⦂ ＇ aliasRepName
 
 open AliasSemanticAtom public
 
@@ -217,7 +222,8 @@ record AliasHolds {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
   field
     aliasSealed : Term Δᴾ
     alias-sealed-shape :
-      Vᴾ ≡ aliasSealed ↓ seal (aliasPreciseVariable a) (aliasRep a)
+      Vᴾ ≡ aliasSealed
+        ↓ seal (aliasPreciseVariable a) (＇ aliasRepName a)
     alias-payload-related : ℛ p Vᴵ aliasSealed
 
 open AliasHolds public
@@ -621,8 +627,9 @@ weaken-alias-atom {W = W} {Z = Z} {T = T} Aᴾ Aᴵ a =
   alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (⇑ᵗ (aliasRep a))
-    (trans (embedPrecise-paired-shift W Aᴾ Aᴵ (aliasRep a))
+    (Fin.suc (aliasRepName a))
+    (trans
+      (embedPrecise-paired-shift W Aᴾ Aᴵ (＇ aliasRepName a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (S-bind∋ (aliasBound a) refl)
@@ -648,8 +655,8 @@ weaken-alias-atom-precise {W = W} {Z = Z} {T = T} Aᴾ a =
   alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (⇑ᵗ (aliasRep a))
-    (trans (embedPrecise-precise-shift W Aᴾ (aliasRep a))
+    (Fin.suc (aliasRepName a))
+    (trans (embedPrecise-precise-shift W Aᴾ (＇ aliasRepName a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (S-bind∋ (aliasBound a) refl)
@@ -674,8 +681,9 @@ weaken-alias-atom-imprecise {W = W} {Z = Z} {T = T} Aᴵ a =
   alias-semantic-atom (aliasPreciseVariable a)
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (aliasRep a)
-    (trans (embedPrecise-imprecise-shift W Aᴵ (aliasRep a))
+    (aliasRepName a)
+    (trans
+      (embedPrecise-imprecise-shift W Aᴵ (＇ aliasRepName a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (aliasBound a)
