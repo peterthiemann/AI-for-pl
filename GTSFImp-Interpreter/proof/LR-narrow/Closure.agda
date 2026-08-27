@@ -817,7 +817,7 @@ universals-related-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
                 (liftPreciseBody W≼W′ Bᴾ) [ Rᴾ ]ᵗ
                 ⊑ᵂ⟨ core K ⟩ R)
               (sym imprecise-result-trans) s)
-      in computations-related-post-bind-reindex
+      in computations-related-reindex
           s-composite s
           (cong (embedPrecise (core K)) precise-result-trans)
           (cong (embedImprecise (core K)) imprecise-result-trans)

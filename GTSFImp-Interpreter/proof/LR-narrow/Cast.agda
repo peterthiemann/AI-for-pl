@@ -5231,12 +5231,11 @@ related-value-casts {W = W}
         (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
         (s : liftPreciseBody W≼W′ Aᴾ₁ [ Rᴾ ]ᵗ
           ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ]ᵗ)
-      → let step = future-paired (future-refl {W = W′}) r
-        in ComputationsRelated W′ (PostBindValueRelation step s) (suc j)
-            (liftImpreciseTerm W≼W′ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩)
-              ⦂∀ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ])
-            (liftPreciseTerm W≼W′ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
-              ⦂∀ liftPreciseBody W≼W′ Aᴾ₁ [ Rᴾ ])
+      → ComputationsRelated W′ (FutureValueRelation s) (suc j)
+          (liftImpreciseTerm W≼W′ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩)
+            ⦂∀ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ])
+          (liftPreciseTerm W≼W′ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
+            ⦂∀ liftPreciseBody W≼W′ Aᴾ₁ [ Rᴾ ])
 
   at-every-index : ∀ j → j ≤ k
     → FutureValueRelation target-local W future-refl j
@@ -5282,11 +5281,9 @@ related-value-casts {W = W}
         (n≤1+n (suc j)) related-at-suc)
 
   universal-head j related-at-suc W′ W≼W′ Rᴾ Rᴵ r s
-      = ClosureProof.computations-related-post-bind-reindex s s refl refl
+      = ClosureProof.computations-related-reindex s s refl refl
           imprecise-redex-eq precise-redex-eq expanded
     where
-    step = future-paired (future-refl {W = W′}) r
-
     cᴾ′ = precise-universal-body-consistency-future W≼W′ cᴾ
     cᴵ′ = imprecise-universal-body-consistency-future W≼W′ cᴵ
 
@@ -5339,7 +5336,7 @@ related-value-casts {W = W}
     source-applied-at : (n : ℕ)
       → ValueImprecision W′ (I.∀⊑∀ source-body-local′) (suc n)
           (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
-      → ComputationsRelated W′ (PostBindValueRelation step source-s) n
+      → ComputationsRelated W′ (FutureValueRelation source-s) n
         (liftImpreciseTerm W≼W′ Vᴵ
           ⦂∀ liftImpreciseBody W≼W′ Aᴵ₀ [ Rᴵ ])
         (liftPreciseTerm W≼W′ Vᴾ
@@ -5361,7 +5358,7 @@ related-value-casts {W = W}
         (n≤1+n (suc j′)) related-at)
 
     source-applied : ComputationsRelated W′
-        (PostBindValueRelation step source-s) j
+        (FutureValueRelation source-s) j
         (liftImpreciseTerm W≼W′ Vᴵ
           ⦂∀ liftImpreciseBody W≼W′ Aᴵ₀ [ Rᴵ ])
         (liftPreciseTerm W≼W′ Vᴾ
@@ -5369,8 +5366,8 @@ related-value-casts {W = W}
     source-applied = source-applied-at j source-related′
 
     casted = cast-computations-related
-      {R = PostBindValueRelation step source-s}
-      {S = PostBindValueRelation step s}
+      {R = FutureValueRelation source-s}
+      {S = FutureValueRelation s}
       source-s refl refl (cᴾ′ [ Rᴾ ]ᶜ) (cᴵ′ [ Rᴵ ]ᶜ)
       s refl refl j
       (liftImpreciseTerm W≼W′ Vᴵ
@@ -5378,9 +5375,8 @@ related-value-casts {W = W}
       (liftPreciseTerm W≼W′ Vᴾ
         ⦂∀ liftPreciseBody W≼W′ Aᴾ₀ [ Rᴾ ])
       (λ W′≼W″ sourceᴾ″ sourceᴵ″ dᴾ dᴵ targetᴾ″ targetᴵ″
-          (bound≼W″ , factor , related″) →
-        computations-related-post-bind-compose
-          step W′≼W″ bound≼W″ factor s
+          related″ →
+        computations-related-future-compose W′≼W″ s
           (related-value-casts
             (liftCenterImprecision W′≼W″ source-s)
             sourceᴾ″ sourceᴵ″ dᴾ dᴵ
@@ -5396,7 +5392,7 @@ related-value-casts {W = W}
       {Vᴾ = liftPreciseTerm W≼W′ Vᴾ} source-related′
 
     expanded : ComputationsRelated W′
-        (PostBindValueRelation step s) (suc j)
+        (FutureValueRelation s) (suc j)
         ((liftImpreciseTerm W≼W′ Vᴵ ⟨ C.∀ᶜ cᴵ′ ⟩)
           ⦂∀ liftImpreciseBody W≼W′ Aᴵ₁ [ Rᴵ ])
         ((liftPreciseTerm W≼W′ Vᴾ ⟨ C.∀ᶜ cᴾ′ ⟩)

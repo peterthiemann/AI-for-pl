@@ -46,6 +46,7 @@ open import LR-narrow.TypeBetaExpansion using
    related-precise-type-beta-expand)
 import proof.LR-narrow.Closure as ClosureProof
 import proof.LR-narrow.ClosingSubstitution as ClosingProof
+open import proof.LR-narrow.UniversalReveal using (post-bind-weaken)
 
 universal-body-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -185,10 +186,8 @@ universals-related-from-body {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
         ⊑ᵂ⟨ core W″ ⟩
           liftImpreciseBody W′≼W″
             (liftImpreciseBody W≼W′ Bᴵ) [ Rᴵ ]ᵗ)
-    → let tested = pairedBindWorld W″ Rᴾ Rᴵ r
-          test-step = future-paired (future-refl {W = W″}) r
-      in ComputationsRelated W″
-          (PostBindValueRelation test-step s) (suc j)
+    → ComputationsRelated W″
+          (FutureValueRelation s) (suc j)
           (liftImpreciseTerm W′≼W″
             (close (impreciseClosingSubstitution γ)
               (liftImpreciseTerm W≼W′ (Λ Nᴵ)))
@@ -200,11 +199,12 @@ universals-related-from-body {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
             ⦂∀ liftPreciseBody W′≼W″
               (liftPreciseBody W≼W′ Bᴾ) [ Rᴾ ])
   head W″ W′≼W″ Rᴾ Rᴵ r s =
-    ClosureProof.computations-related-post-bind-reindex
+    ClosureProof.computations-related-reindex
       s-composite s
       (cong (embedPrecise (core W″)) precise-result-trans)
       (cong (embedImprecise (core W″)) imprecise-result-trans)
-      imprecise-redex-eq precise-redex-eq canonical
+      imprecise-redex-eq precise-redex-eq
+      (post-bind-weaken test-step s-composite canonical)
     where
     test-step = paired-step W″ r
     tested = pairedBindWorld W″ Rᴾ Rᴵ r

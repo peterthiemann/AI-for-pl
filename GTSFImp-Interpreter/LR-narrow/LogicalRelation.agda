@@ -351,14 +351,12 @@ mutual
         (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
         (s : liftPreciseBody W≼W′ Bᴾ [ Rᴾ ]ᵗ
           ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ Bᴵ [ Rᴵ ]ᵗ)
-      → let bound = pairedBindWorld W′ Rᴾ Rᴵ r
-            W′≼B = future-paired (future-refl {W = W′}) r
-        in ComputationsRelated W′
-            (PostBindValueRelation W′≼B s) (suc k)
-            (liftImpreciseTerm W≼W′ Vᴵ
-              ⦂∀ liftImpreciseBody W≼W′ Bᴵ [ Rᴵ ])
-            (liftPreciseTerm W≼W′ Vᴾ
-              ⦂∀ liftPreciseBody W≼W′ Bᴾ [ Rᴾ ]))
+      → ComputationsRelated W′
+          (FutureValueRelation s) (suc k)
+          (liftImpreciseTerm W≼W′ Vᴵ
+            ⦂∀ liftImpreciseBody W≼W′ Bᴵ [ Rᴵ ])
+          (liftPreciseTerm W≼W′ Vᴾ
+            ⦂∀ liftPreciseBody W≼W′ Bᴾ [ Rᴾ ]))
     × UniversalsRelated W p Bᴾ Bᴵ k Vᴵ Vᴾ
 
   RightUniversalsRelated : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}

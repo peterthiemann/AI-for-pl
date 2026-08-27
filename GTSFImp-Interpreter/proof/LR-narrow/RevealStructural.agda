@@ -1057,25 +1057,15 @@ reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
   r₀ : (＇ Fin.zero) ⊑ᵂ⟨ core Wb ⟩ (＇ Fin.zero)
   r₀ = I.X⊑X
 
-  core-related : ComputationsRelated Wb
-      (PostBindValueRelation
-        (future-paired (future-refl {W = Wb}) r₀) s₀) (suc m)
-      (liftImpreciseTerm W≼Wb Vᴵ
-        ⦂∀ liftImpreciseBody W≼Wb B₀ᴵ [ ＇ Fin.zero ])
-      (liftPreciseTerm W≼Wb Vᴾ
-        ⦂∀ liftPreciseBody W≼Wb B₀ᴾ [ ＇ Fin.zero ])
-  core-related = universals-head {W = W} {p = p} {Bᴾ = B₀ᴾ}
-    {Bᴵ = B₀ᴵ} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
-    m (s≤s (n≤1+n m)) (chain future-refl [])
-    Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
-
   weakened : ComputationsRelated Wb (FutureValueRelation s₀) (suc m)
       (liftImpreciseTerm W≼Wb Vᴵ
         ⦂∀ liftImpreciseBody W≼Wb B₀ᴵ [ ＇ Fin.zero ])
       (liftPreciseTerm W≼Wb Vᴾ
         ⦂∀ liftPreciseBody W≼Wb B₀ᴾ [ ＇ Fin.zero ])
-  weakened = post-bind-weaken
-    (future-paired (future-refl {W = Wb}) r₀) s₀ core-related
+  weakened = universals-head {W = W} {p = p} {Bᴾ = B₀ᴾ}
+    {Bᴵ = B₀ᴵ} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
+    m (s≤s (n≤1+n m)) (chain future-refl [])
+    Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
 
   reindexed : ComputationsRelated Wb (FutureValueRelation t₀) (suc m)
       (liftImpreciseTerm W≼Wb Vᴵ
@@ -1267,8 +1257,7 @@ reveal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
             (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
             [ Sᴵ ]ᵗ)
   → ComputationsRelated W′
-      (PostBindValueRelation
-        (future-paired (future-refl {W = W′}) r) t) (suc k)
+      (FutureValueRelation t) (suc k)
       (liftImpreciseTerm W≼W′
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ B₀ᴵ 〗)
         ⦂∀ liftImpreciseBody W≼W′
@@ -1280,7 +1269,7 @@ reveal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
 reveal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p avoidᵇ
     sourceᴾ sourceᴵ
     {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t =
-  ClosureProof.computations-related-post-bind-reindex t t
+  ClosureProof.computations-related-reindex t t
     refl refl (sym imprecise-redex-eq) (sym precise-redex-eq)
     stepped
   where
@@ -1337,8 +1326,7 @@ reveal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p avoidᵇ
             | imprecise-body-eq = refl
 
   stepped : ComputationsRelated W′
-      (PostBindValueRelation
-        (future-paired (future-refl {W = W′}) r) t) (suc k)
+      (FutureValueRelation t) (suc k)
       ((Vᴵ′ ↑ `∀↑ cᴵ) ⦂∀ replaceTy (Fin.suc Xᴵ′) (⇑ᵗ Rᴵ′) B₀ᴵ′ [ Sᴵ ])
       ((Vᴾ′ ↑ `∀↑ cᴾ) ⦂∀ replaceTy (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′) B₀ᴾ′ [ Sᴾ ])
   stepped
@@ -1354,10 +1342,11 @@ reveal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p avoidᵇ
     vVᴵ′ = ClosureProof.imprecise-value-future W≼W′
       (imprecise-value endpoints)
   stepped | vVᴵ″ , step-eqᴵ | vVᴾ″ , step-eqᴾ =
-    related-paired-bind-step-expand (λ ()) (λ ()) refl refl
-      (β-reveal-∀ vVᴵ″) (β-reveal-∀ vVᴾ″) step-eqᴵ step-eqᴾ
-      (reveal-universal-inner W s p avoidᵇ sourceᴾ sourceᴵ below
-        related W′ W≼W′ Sᴾ Sᴵ r t)
+    post-bind-weaken (future-paired (future-refl {W = W′}) r) t
+      (related-paired-bind-step-expand (λ ()) (λ ()) refl refl
+        (β-reveal-∀ vVᴵ″) (β-reveal-∀ vVᴾ″) step-eqᴵ step-eqᴾ
+        (reveal-universal-inner W s p avoidᵇ sourceᴾ sourceᴵ below
+          related W′ W≼W′ Sᴾ Sᴵ r t))
 
 -- The residual of a concealed type application: the replaced source
 -- universal is instantiated at the freshly allocated paired name, the
@@ -1549,27 +1538,17 @@ conceal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
   r₀ : (＇ Fin.zero) ⊑ᵂ⟨ core Wb ⟩ (＇ Fin.zero)
   r₀ = I.X⊑X
 
-  core-related : ComputationsRelated Wb
-      (PostBindValueRelation
-        (future-paired (future-refl {W = Wb}) r₀) s₀) (suc m)
-      (liftImpreciseTerm W≼Wb Vᴵ
-        ⦂∀ renameᵗ (extᵗ Fin.suc) Lᴵ [ ＇ Fin.zero ])
-      (liftPreciseTerm W≼Wb Vᴾ
-        ⦂∀ renameᵗ (extᵗ Fin.suc) Lᴾ [ ＇ Fin.zero ])
-  core-related = universals-head {W = W} {p = q₀}
-    {Bᴾ = replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ}
-    {Bᴵ = replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ}
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
-    m (s≤s (n≤1+n m)) (chain future-refl [])
-    Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
-
   weakened : ComputationsRelated Wb (FutureValueRelation s₀) (suc m)
       (liftImpreciseTerm W≼Wb Vᴵ
         ⦂∀ renameᵗ (extᵗ Fin.suc) Lᴵ [ ＇ Fin.zero ])
       (liftPreciseTerm W≼Wb Vᴾ
         ⦂∀ renameᵗ (extᵗ Fin.suc) Lᴾ [ ＇ Fin.zero ])
-  weakened = post-bind-weaken
-    (future-paired (future-refl {W = Wb}) r₀) s₀ core-related
+  weakened = universals-head {W = W} {p = q₀}
+    {Bᴾ = replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ}
+    {Bᴵ = replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ}
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
+    m (s≤s (n≤1+n m)) (chain future-refl [])
+    Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
 
   body-eq-P : Lᴾ ≡ replaceTy (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′) B₀ᴾ′
   body-eq-P = trans
@@ -1747,8 +1726,7 @@ conceal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
       (t : liftPreciseBody W≼W′ B₀ᴾ [ Sᴾ ]ᵗ
         ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ B₀ᴵ [ Sᴵ ]ᵗ)
   → ComputationsRelated W′
-      (PostBindValueRelation
-        (future-paired (future-refl {W = W′}) r) t) (suc k)
+      (FutureValueRelation t) (suc k)
       (liftImpreciseTerm W≼W′
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ B₀ᴵ))
         ⦂∀ liftImpreciseBody W≼W′ B₀ᴵ [ Sᴵ ])
@@ -1758,7 +1736,7 @@ conceal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
 conceal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p q₀ avoidᵇ
     sourceᴾ sourceᴵ targetᴾ targetᴵ
     {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t =
-  ClosureProof.computations-related-post-bind-reindex t t
+  ClosureProof.computations-related-reindex t t
     refl refl (sym imprecise-redex-eq) (sym precise-redex-eq)
     stepped
   where
@@ -1793,8 +1771,7 @@ conceal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p q₀ avoid�
             | liftImpreciseTy-universal W≼W′ B₀ᴵ = refl
 
   stepped : ComputationsRelated W′
-      (PostBindValueRelation
-        (future-paired (future-refl {W = W′}) r) t) (suc k)
+      (FutureValueRelation t) (suc k)
       ((Vᴵ′ ↓ `∀↓ dᴵ) ⦂∀ B₀ᴵ′ [ Sᴵ ])
       ((Vᴾ′ ↓ `∀↓ dᴾ) ⦂∀ B₀ᴾ′ [ Sᴾ ])
   stepped
@@ -1810,10 +1787,11 @@ conceal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p q₀ avoid�
     vVᴵ′ = ClosureProof.imprecise-value-future W≼W′
       (imprecise-value endpoints)
   stepped | vVᴵ″ , step-eqᴵ | vVᴾ″ , step-eqᴾ =
-    related-paired-bind-step-expand (λ ()) (λ ()) refl refl
-      (β-conceal-∀ vVᴵ″) (β-conceal-∀ vVᴾ″) step-eqᴵ step-eqᴾ
-      (conceal-universal-inner W s p q₀ avoidᵇ sourceᴾ sourceᴵ
-        targetᴾ targetᴵ below related W′ W≼W′ Sᴾ Sᴵ r t)
+    post-bind-weaken (future-paired (future-refl {W = W′}) r) t
+      (related-paired-bind-step-expand (λ ()) (λ ()) refl refl
+        (β-conceal-∀ vVᴵ″) (β-conceal-∀ vVᴾ″) step-eqᴵ step-eqᴾ
+        (conceal-universal-inner W s p q₀ avoidᵇ sourceᴾ sourceᴵ
+          targetᴾ targetᴵ below related W′ W≼W′ Sᴾ Sᴵ r t))
 
 -- The value relation of a revealed universal value.
 

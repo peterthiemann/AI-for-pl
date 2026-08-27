@@ -1262,8 +1262,7 @@ positive-universal-application : ∀
   → embedImprecise (core W) (`∀ Cᴵ) ≡ `∀ Pᴵ
   → suc zero ≤ k
   → ValueImprecision W (I.∀⊑∀ p) k Vᴵ Vᴾ
-  → let step = future-paired (future-refl {W = W}) r
-    in ComputationsRelated W (PostBindValueRelation step s) k
+  → ComputationsRelated W (FutureValueRelation s) k
       (Vᴵ ⦂∀ Cᴵ [ Rᴵ ]) (Vᴾ ⦂∀ Cᴾ [ Rᴾ ])
 positive-universal-application {k = zero} Cᴾ-eq Cᴵ-eq () related
 positive-universal-application {W = W} {Cᴾ = Cᴾ} {Cᴵ = Cᴵ}
@@ -1327,13 +1326,11 @@ positive-lifted-universal-application : ∀
   → suc zero ≤ k
   → ValueImprecision W₁
       (liftCenterImprecision W₀≼W₁ (I.∀⊑∀ p)) k Vᴵ Vᴾ
-  → let r′ = liftLocalImprecision W₀≼W₁ r
-        s′ = ClosureProof.local-imprecision-reindex {W = W₁}
+  → let s′ = ClosureProof.local-imprecision-reindex {W = W₁}
           (liftLocalImprecision W₀≼W₁ s)
           (sym (lift-precise-open W₀≼W₁ Cᴾ Rᴾ))
           (sym (lift-imprecise-open W₀≼W₁ Cᴵ Rᴵ))
-        step = future-paired (future-refl {W = W₁}) r′
-    in ComputationsRelated W₁ (PostBindValueRelation step s′) k
+    in ComputationsRelated W₁ (FutureValueRelation s′) k
       (Vᴵ ⦂∀ liftImpreciseBody W₀≼W₁ Cᴵ
         [ liftImpreciseTy W₀≼W₁ Rᴵ ])
       (Vᴾ ⦂∀ liftPreciseBody W₀≼W₁ Cᴾ
@@ -1367,8 +1364,7 @@ positive-lifted-universal-application {W₀ = W₀} {W₁ = W₁}
 
 reindex-lifted-type-call : ∀
     {Δᴾ₀ Δᴵ₀ Δᶜ₀ Δᴾ₁ Δᴵ₁ Δᶜ₁
-     Δᴾ₂ Δᴵ₂ Δᶜ₂
-     Δᴾᵇ Δᴵᵇ Δᶜᵇ}
+     Δᴾ₂ Δᴵ₂ Δᶜ₂}
     {W₀ : World Δᴾ₀ Δᴵ₀ Δᶜ₀}
     {W₁ : World Δᴾ₁ Δᴵ₁ Δᶜ₁}
     {W₂ : World Δᴾ₂ Δᴵ₂ Δᶜ₂}
@@ -1378,7 +1374,6 @@ reindex-lifted-type-call : ∀
     {Dᴾ : Ty (suc Δᴾ₂)} {Dᴵ : Ty (suc Δᴵ₂)}
     {Sᴾ : Ty Δᴾ₂} {Sᴵ : Ty Δᴵ₂}
     {Vᴾ : Term Δᴾ₂} {Vᴵ : Term Δᴵ₂}
-    {bound : World Δᴾᵇ Δᴵᵇ Δᶜᵇ} {step : Future W₂ bound}
     {k : ℕ}
   → (W₀≼W₁ : Future W₀ W₁)
   → (W₁≼W₂ : Future W₁ W₂)
@@ -1390,7 +1385,7 @@ reindex-lifted-type-call : ∀
   → Sᴵ ≡ liftImpreciseTy W₁≼W₂
       (liftImpreciseTy W₀≼W₁ Rᴵ)
   → ComputationsRelated W₂
-      (PostBindValueRelation step
+      (FutureValueRelation
         (ClosureProof.local-imprecision-reindex {W = W₂}
           (liftLocalImprecision (future-trans W₀≼W₁ W₁≼W₂) s)
           (sym (lift-precise-open
@@ -1402,7 +1397,7 @@ reindex-lifted-type-call : ∀
       (Vᴾ ⦂∀ liftPreciseBody (future-trans W₀≼W₁ W₁≼W₂) Cᴾ
         [ liftPreciseTy (future-trans W₀≼W₁ W₁≼W₂) Rᴾ ])
   → ComputationsRelated W₂
-      (PostBindValueRelation step
+      (FutureValueRelation
         (liftCenterImprecision W₁≼W₂
           (liftCenterImprecision W₀≼W₁ s))) k
       (Vᴵ ⦂∀ Dᴵ [ Sᴵ ]) (Vᴾ ⦂∀ Dᴾ [ Sᴾ ])
@@ -1411,7 +1406,7 @@ reindex-lifted-type-call {W₀ = W₀} {W₂ = W₂}
     {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {s = s} {Vᴾ = Vᴾ} {Vᴵ = Vᴵ}
     W₀≼W₁ W₁≼W₂ bodyEqᴾ bodyEqᴵ
     argumentEqᴾ argumentEqᴵ related =
-  ClosureProof.computations-related-post-bind-reindex
+  ClosureProof.computations-related-reindex
     local-result sequential-result
     preciseResultEq impreciseResultEq
     impreciseTermEq preciseTermEq related
@@ -1483,11 +1478,8 @@ related-type-call-after-function : ∀
   → ValueImprecision W₂
       (liftCenterImprecision W₁≼W₂
         (liftCenterImprecision W₀≼W₁ (I.∀⊑∀ p))) k Vᴵ Vᴾ
-  → let composite = future-trans W₀≼W₁ W₁≼W₂
-        r′ = liftLocalImprecision composite r
-        step = future-paired (future-refl {W = W₂}) r′
-    in ComputationsRelated W₂
-      (PostBindValueRelation step
+  → ComputationsRelated W₂
+      (FutureValueRelation
         (liftCenterImprecision W₁≼W₂
           (liftCenterImprecision W₀≼W₁ s))) k
       (Vᴵ ⦂∀ Dᴵ [ Sᴵ ]) (Vᴾ ⦂∀ Dᴾ [ Sᴾ ])
@@ -1497,7 +1489,7 @@ related-type-call-after-function {W₀ = W₀} {W₁ = W₁} {W₂ = W₂}
     {Sᴾ = Sᴾ} {Sᴵ = Sᴵ} {Vᴾ = Vᴾ} {Vᴵ = Vᴵ} {k = k}
     W₀≼W₁ W₁≼W₂ bodyEqᴾ bodyEqᴵ argumentEqᴾ argumentEqᴵ
     positive functionRelated =
-  reindex-lifted-type-call {step = step} {k = k}
+  reindex-lifted-type-call {k = k}
     W₀≼W₁ W₁≼W₂
     bodyEqᴾ bodyEqᴵ argumentEqᴾ argumentEqᴵ localCall
   where
@@ -1511,9 +1503,6 @@ related-type-call-after-function {W₀ = W₀} {W₁ = W₁} {W₂ = W₂}
       (embedPrecise (core W₀) (`∀ Cᴾ)))
     (liftCenterTy-trans W₀≼W₁ W₁≼W₂
       (embedImprecise (core W₀) (`∀ Cᴵ))) functionRelated
-
-  step = future-paired (future-refl {W = W₂})
-    (liftLocalImprecision composite r)
 
   localCall = positive-lifted-universal-application
     {W₀ = W₀} {W₁ = W₂} {Cᴾ = Cᴾ} {Cᴵ = Cᴵ}
@@ -1728,7 +1717,7 @@ assemble-right-type-application-pair {W₀ = W₀} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
     (value-index-reindex indexEq callValueRelated)
 
 assemble-type-application-pair : ∀
-    {Δᴾ₀ Δᴵ₀ Δᶜ₀ Δᶜ₁ Δᴾᵇ Δᴵᵇ Δᶜᵇ}
+    {Δᴾ₀ Δᴵ₀ Δᶜ₀ Δᶜ₁}
     {W₀ : World Δᴾ₀ Δᴵ₀ Δᶜ₀}
     {Aᴾ Aᴵ : Ty Δᶜ₀}
     {q : impEnv (core W₀) I.⊢ Aᴾ ⊑ Aᴵ}
@@ -1747,7 +1736,6 @@ assemble-type-application-pair : ∀
         [ E.changes functionResultᴵ ▶ᵗ Rᴵ ])}
     {W₁ : World (E.Δ′ functionResultᴾ)
       (E.Δ′ functionResultᴵ) Δᶜ₁}
-    {bound : World Δᴾᵇ Δᴵᵇ Δᶜᵇ}
     {j k : ℕ}
   → (W₀≼W₁ : Future W₀ W₁)
   → impreciseStore (core W₁) ≡
@@ -1758,9 +1746,8 @@ assemble-type-application-pair : ∀
       liftImpreciseTerm W₀≼W₁ M)
   → (∀ M → E.changes functionResultᴾ ▶ᵀ M ≡
       liftPreciseTerm W₀≼W₁ M)
-  → (step : Future W₁ bound)
   → PairedReturns W₁
-      (PostBindValueRelation step
+      (FutureValueRelation
         (liftCenterImprecision W₀≼W₁ q)) j
       callResultᴵ callResultᴾ
   → j ≡ k
@@ -1773,10 +1760,9 @@ assemble-type-application-pair {W₀ = W₀} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
     {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {Rᴾ = Rᴾ} {Rᴵ = Rᴵ}
     {callResultᴾ = callResultᴾ} {callResultᴵ = callResultᴵ}
     W₀≼W₁ functionStoreᴵ functionStoreᴾ
-    functionTermsᴵ functionTermsᴾ step
+    functionTermsᴵ functionTermsᴾ
     (paired-returns W₂ W₁≼W₂ callStoreᴵ callStoreᴾ
-      callTermsᴵ callTermsᴾ
-      (bound≼W₂ , factors , callValueRelated)) indexEq =
+      callTermsᴵ callTermsᴾ callValueRelated) indexEq =
   paired-returns W₂ W₀≼W₂ impreciseStoreEq preciseStoreEq
     impreciseTermsEq preciseTermsEq finalValueRelated
   where
@@ -2067,7 +2053,7 @@ type-application-compatible {W = W} {Γ = Γ}
       {functionResultᴵ = functionResult}
       {callResultᴾ = preciseCallResult} {callResultᴵ = callResult}
       W′≼W₁ functionStoreᴵ functionStoreᴾ
-      functionTermsᴵ functionTermsᴾ _
+      functionTermsᴵ functionTermsᴾ
       (paired-returns W₂ W₁≼W₂ callStoreᴵ callStoreᴾ
         callTermsᴵ callTermsᴾ callValueRelated) indexEq
 
@@ -2201,7 +2187,7 @@ type-application-compatible {W = W} {Γ = Γ}
       {functionResultᴵ = functionResult}
       {callResultᴾ = preciseCallResult} {callResultᴵ = callResult}
       W′≼W₁ functionStoreᴵ functionStoreᴾ
-      functionTermsᴵ functionTermsᴾ _
+      functionTermsᴵ functionTermsᴾ
       (paired-returns W₂ W₁≼W₂ callStoreᴵ callStoreᴾ
         callTermsᴵ callTermsᴾ callValueRelated) indexEq
 

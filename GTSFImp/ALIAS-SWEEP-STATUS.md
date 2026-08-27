@@ -312,3 +312,61 @@ catch-all `_` cases, no new TERMINATING pragmas, ≤ 80 columns,
 approved `ImpEnvMono`-record strengthening reaches it via imports),
 commit each green milestone with an imperative message, push to
 `peterthiemann` (pushes to `origin` 403).
+
+## Step 6 — Finding I and the in-tree family plan (2026-08-27)
+
+Step 5 landed (`629a6b00`): the four obligations are family
+projections and `RevealObligations` is gone.  The residual is the
+`universal-familyᵇ : UniversalFamilyKitᵇ` field of
+`RemainingObligations`.  Analysis results, in order:
+
+* The chain-based kit (`to-familyᵇ : UniversalData → UniversalFamily`)
+  is UNPROVABLE: a chain undercharacterizes the value, and no
+  per-wrapper factorization exists at any level.  Do not revive it.
+* The only live in-tree kit consumer is `related-value-casts`' `∀ᶜ`
+  clause.  The assembly's `Λ⊑Λ²` case routes through the deferred
+  `universal-intro`, and `universal-fundamental` has no in-tree
+  consumer, so the Λ-producer path stays deferred.
+* Every `⦂∀`-application β (`β-Λ`, `β-reveal-∀`, `β-conceal-∀`,
+  `β-gen`) BINDS the applied type; the `∀ᶜ` cast-β is PURE.  Peeling a
+  wrapper stack therefore binds `Rᴾ` once and then re-binds `＇0`
+  (alias binds) on the precise side; the imprecise side binds only at
+  paired wrappers (inert/dyn wrappers do not touch the imprecise term).
+* Finding I: `UniversalsRelated`'s head fixes the post-bind world to
+  `pairedBindWorld W′ Rᴾ Rᴵ r`, i.e. the FIRST fresh center slot must
+  be the paired slot.  A Λ-producer can honor that (the imprecise Λ-β
+  supplies the paired bind), but the `∀ᶜ` producer under a σ with NO
+  imprecise-side wrappers cannot: its precise side must bind `Rᴾ`
+  first (one-sided), slot modes are fixed at allocation, and no world
+  class exists for a one-sided bind of an arbitrary type against an
+  arbitrary imprecise counterpart.  This is the original blocked-⋆
+  gap resurfacing at the producer; the design doc's "symmetric, no
+  gap" claim for plan (b) was wrong.
+
+The fix (three parts, all in-tree, no new obligations):
+
+1. Relax the `∀⊑∀` head: replace
+   `PostBindValueRelation (future-paired future-refl r) s` by
+   `FutureValueRelation s` in `UniversalsRelated` (LogicalRelation).
+   Producers weaken (`post-bind-weaken` exists); consumers only ever
+   thread the factoring, never inspect the bound.  Leave
+   `RightUniversalsRelated` alone (its one-sided bound is realizable).
+2. Generalize `AliasSemanticAtom`: `aliasRepName : TyVar Δᴾ` becomes
+   `aliasRep : Ty Δᴾ` (store binds `aliasRep`, `aliasRep-eq` embeds
+   it).  Mode `X⊑ᵗ T` and the GTSFImp `alias` rule are already
+   general.  A "self-alias" bind of `Rᴾ` at mode
+   `X⊑ᵗ (embP Rᴾ)` then lets `r : Rᴾ ⊑ᵂ Rᴵ` itself discharge the
+   alias premise (`＇0 ⊑ Rᴵ` via one `I.alias` hop) — the missing
+   world class.  External field uses are tiny: Closure ~1306,
+   AliasWorld `alias-holds-chain`, Cast ~489.
+3. Build the `∀ᶜ` family directly in `proof/LR-narrow/Cast.agda`
+   (import the assembled `reveal-structural`/`conceal-structural`/
+   one-sided entry points — RevealStructural closes its own induction
+   and does not depend on Cast): per wrapper, paired-expand when both
+   sides' next steps bind, else the NEW `related-alias-bind-step-expand`
+   (BindStepExpansion, mirrors the precise variant with
+   `aliasBindWorld W R`); at the center, pure cast-βs + the SOURCE
+   family's head at the composite future with `σ = []` and the
+   alias-chain instantiation, framed by `cast-computations-related`.
+   Then delete `UniversalFamilyKitᵇ`, its module params, and the
+   `universal-familyᵇ` field.

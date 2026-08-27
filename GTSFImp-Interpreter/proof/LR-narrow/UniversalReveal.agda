@@ -199,7 +199,7 @@ universals-head : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ} {W : World Δᴾ Δᴵ Δᶜ
       (s : liftPreciseBody W≼W′ Bᴾ [ Rᴾ ]ᵗ
         ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ Bᴵ [ Rᴵ ]ᵗ)
   → ComputationsRelated W′
-      (PostBindValueRelation (future-paired (future-refl {W = W′}) r) s)
+      (FutureValueRelation s)
       (suc m)
       (liftImpreciseTerm W≼W′ Vᴵ ⦂∀ liftImpreciseBody W≼W′ Bᴵ [ Rᴵ ])
       (liftPreciseTerm W≼W′ Vᴾ ⦂∀ liftPreciseBody W≼W′ Bᴾ [ Rᴾ ])

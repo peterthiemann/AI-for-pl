@@ -3,7 +3,7 @@ module proof.LR-narrow.UniversalInstantiation where
 -- File Charter:
 --   * Eliminates the positive-index head of UniversalsRelated.
 --   * Observes type application in the current, pre-allocation world.
---   * Exposes that successful returns factor through the chosen extension.
+--   * Relates returned values at the instantiated-body imprecision.
 --   * Returns the endpoint body witnesses stored in ValueImprecision.
 
 open import Data.Nat using (ℕ; zero; suc)
@@ -32,11 +32,9 @@ related-universal-instantiation : ∀
       (embedPrecise (core W) (`∀ Bᴾ) ≡ `∀ Aᴾ)
       × (embedImprecise (core W) (`∀ Bᴵ) ≡ `∀ Aᴵ)
       × ((s : Bᴾ [ Rᴾ ]ᵗ ⊑ᵂ⟨ core W ⟩ Bᴵ [ Rᴵ ]ᵗ)
-        → let bound = pairedBindWorld W Rᴾ Rᴵ r
-              step = future-paired (future-refl {W = W}) r
-          in ComputationsRelated W (PostBindValueRelation step s)
-               (suc k) (Vᴵ ⦂∀ Bᴵ [ Rᴵ ])
-                 (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
+        → ComputationsRelated W (FutureValueRelation s)
+            (suc k) (Vᴵ ⦂∀ Bᴵ [ Rᴵ ])
+              (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
 related-universal-instantiation {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W}
     {r = r}
     (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
