@@ -450,3 +450,20 @@ where nothing occurs).  The three future-lifting transports
 addendum: the weakened `replace-⊑` (★-right alias leaves reuse
 their premises unreplaced), then re-thread `ImpreciseReveal` onto
 `AliasAvoid★ᵖ`.
+
+### Step 6, item 2 — weakened replacement landed (2026-08-27)
+
+`replace★-⊑` and `replace-alias-not-self★` now sit beside their
+strong versions in `proof/LR-narrow/ReplaceImprecision.agda`,
+taking `AliasAvoid★ᵖ`.  All clauses mirror `replace-⊑`; the one new
+case is the exempted alias leaf (`inj₁ refl`), where the ★ right
+endpoint is fixed by the replacement, the alias variable is
+mode-disjoint from the slot, and the leaf is rebuilt VERBATIM —
+`I.alias eq {notSelf} p` — reusing the unreplaced premise and the
+original notSelf witness.  Next per the design doc's addendum:
+re-thread `ImpreciseReveal` from `AliasAvoidᵖ`/`replace-⊑` onto
+`AliasAvoid★ᵖ`/`replace★-⊑` (mechanical: the mirror's alias case
+extracts the ∉-component at UniShape types, where the ★ branch is
+refuted by the embedding equation; `paired-var-right-⊑` gets the
+same split, with the ★ branch refuted by its variable right
+endpoint).
