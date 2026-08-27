@@ -438,6 +438,24 @@ data UniWrapᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → slotXᴾ s ∉ᵗ `∀ B
     → BodyImprecisionᵇ W B C
     → UniWrapᵇ W B C B C
+  reveal-impreciseᵇ : (s : PairedSlot W)
+      (B : Ty (suc Δᴾ)) (C : Ty (suc Δᴵ))
+    → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
+    → BodyImprecisionᵇ W B
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+    → ((j : BodyImprecisionᵇ W B C)
+        → AliasAvoidᵖ (Fin.suc (center s)) (bodyPᵇ j))
+    → UniWrapᵇ W B C B
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+  conceal-impreciseᵇ : (s : PairedSlot W)
+      (B : Ty (suc Δᴾ)) (C : Ty (suc Δᴵ))
+    → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
+    → BodyImprecisionᵇ W B C
+    → ((j : BodyImprecisionᵇ W B C)
+        → AliasAvoidᵖ (Fin.suc (center s)) (bodyPᵇ j))
+    → UniWrapᵇ W B
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+        B C
 
 data UniWrapsᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     Ty (suc Δᴾ) → Ty (suc Δᴵ) → Ty (suc Δᴾ) → Ty (suc Δᴵ)
@@ -462,6 +480,8 @@ wrapTermᴾᵇ₁ (reveal-inertᵇ s B C avoid i) V =
   V ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗
 wrapTermᴾᵇ₁ (conceal-inertᵇ s B C avoid i) V =
   V ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B)
+wrapTermᴾᵇ₁ (reveal-impreciseᵇ s B C no-occur i av) V = V
+wrapTermᴾᵇ₁ (conceal-impreciseᵇ s B C no-occur i av) V = V
 
 wrapTermᴵᵇ₁ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     {B C B′ C′}
@@ -474,6 +494,10 @@ wrapTermᴵᵇ₁ (reveal-dynᵇ d B C i) V = V
 wrapTermᴵᵇ₁ (conceal-dynᵇ d B C i) V = V
 wrapTermᴵᵇ₁ (reveal-inertᵇ s B C avoid i) V = V
 wrapTermᴵᵇ₁ (conceal-inertᵇ s B C avoid i) V = V
+wrapTermᴵᵇ₁ (reveal-impreciseᵇ s B C no-occur i av) V =
+  V ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ C 〗
+wrapTermᴵᵇ₁ (conceal-impreciseᵇ s B C no-occur i av) V =
+  V ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ C)
 
 wrapTermᴾᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ} {B C B′ C′}
   → UniWrapsᵇ W B C B′ C′ → Term Δᴾ → Term Δᴾ
