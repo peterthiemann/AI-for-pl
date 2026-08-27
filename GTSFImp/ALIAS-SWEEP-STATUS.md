@@ -467,3 +467,29 @@ extracts the ∉-component at UniShape types, where the ★ branch is
 refuted by the embedding equation; `paired-var-right-⊑` gets the
 same split, with the ★ branch refuted by its variable right
 endpoint).
+
+### Step 6, item 2 — mirror re-threaded onto the weak layer
+### (2026-08-27)
+
+`proof/LR-narrow/ImpreciseReveal.agda` now runs entirely on
+`AliasAvoid★ᵖ`/`replace★-⊑`: the statements, the extension record's
+fields, and every worker take the ★-right-exempt avoidance.  The
+imprecise-only wrapper kinds in `UniWrapᵇ` carry the weak avoidance
+function too (their peels only ever go through the mirror's own
+frame transformers, never the two-sided machinery).  Structure of
+the exemption handling:
+
+* `shape-star-∉` discharges the ★ branch at fun- and ∀-shaped
+  types (the embedding of a `UniShape` type is never ★), so the
+  alias workers extract the strong `c ∉ᵗ T` component exactly
+  where the replacement is real.
+* At the unseal configuration and in `paired-var-right-⊑`, the ★
+  branch contradicts the variable right endpoint outright
+  (with-abstract the exemption equation and refute; a standalone
+  `＇Z ≡ ★ → ⊥` helper stalls on metas, the with-form does not).
+
+The extension-head can now be fed derivations whose star-copied
+subderivations carry no avoidance.  Next per the design doc's
+addendum: the right-side `UniWraps` imprecise-only kind and the
+right-kit chain extension (the instᵐ instantiation via `subst₂-⊑`
+transporting the weak predicate, plus the occurs-vacuity split).

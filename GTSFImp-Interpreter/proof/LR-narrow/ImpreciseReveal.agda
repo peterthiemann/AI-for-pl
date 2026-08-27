@@ -9,8 +9,12 @@ module proof.LR-narrow.ImpreciseReveal where
 --     right-replaced form.  The precise endpoint and its term are
 --     untouched.
 --   * Every case produces the clause at the canonical replaced
---     derivation built by `replace-⊑` (the left endpoint fixed by
+--     derivation built by `replace★-⊑` (the left endpoint fixed by
 --     `replaceTy-absent`) and reindexes to the caller's derivation.
+--   * The avoidance premise is the ★-right-exempt `AliasAvoid★ᵖ`:
+--     exempted alias leaves have ★ on the right, where the wrapper
+--     is an identity, so the strong component is only consulted at
+--     the fun- and ∀-shaped types.
 --   * The `∀⊑` source case conses the imprecise-only wrapper onto
 --     the stored right-universal family; the family's producers do
 --     not yet supply that wrapper, so the case is threaded as the
@@ -25,6 +29,7 @@ open import Data.Empty using (⊥; ⊥-elim)
 open import Data.List using ([])
 open import Data.Maybe using (just; nothing)
 open import Data.Product using (_×_; _,_; Σ-syntax; proj₁; proj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
   using (_≡_; _≢_; refl; sym; trans; cong; cong₂)
@@ -64,7 +69,7 @@ open import proof.LR-narrow.KeepStepExpansion using
 open import proof.LR-narrow.RevealSteps
 open import proof.LR-narrow.RevealLifting using
   (PairedSlot; paired-slot; center; atom; entry-eq; mode-eq;
-   slot-future; renameᵗ-replaceTy; alias-avoid-lift-body)
+   slot-future; renameᵗ-replaceTy; alias-avoid★-lift-body)
 open import proof.LR-narrow.StarNoOccurrence using
   (replaceTy-absent; renameᵗ-∉ᵗ; renameᵗ-reflects-∉ᵗ)
 open import proof.LR-narrow.CastComposition using
@@ -88,12 +93,11 @@ open import proof.LR-narrow.UniversalReveal using
 open import proof.LR-narrow.ImprecisionSize using
   (sizeᵖ; lift-center-size)
 open import proof.LR-narrow.AliasAvoid using
-  (AliasAvoidᵖ; alias-avoid-subst-left;
-   alias-avoid-subst-rightᵉ; alias-avoid-any; alias-avoid-unique)
+  (AliasAvoid★ᵖ; alias-avoid★-any)
 open import proof.LR-narrow.RevealLifting using
-  (alias-avoid-lift-center)
+  (alias-avoid★-lift-center)
 open import proof.LR-narrow.ReplaceImprecision using
-  (replace-⊑; replace-alias-not-self)
+  (replace★-⊑; replace-alias-not-self★)
 open import proof.LR-narrow.PreciseReveal using
   (no-precise-bottom-value)
 
@@ -123,7 +127,7 @@ record ImpreciseRightExtension : Set where
         {Bᴵ : Ty Δᴵ} {Ac : Ty (suc Δᶜ)} {Bc Cᴵ : Ty Δᶜ}
         {nonvar : NonVar Ac} {occurs : Fin.zero ∈ᵗ Ac}
         (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
-      → AliasAvoidᵖ (center s) (I.∀⊑ nonvar occurs p₀)
+      → AliasAvoid★ᵖ (center s) (I.∀⊑ nonvar occurs p₀)
       → center s ∉ᵗ `∀ Ac
       → UniShape Bᴵ
       → embedImprecise (core W) Bᴵ ≡ Bc
@@ -139,7 +143,7 @@ record ImpreciseRightExtension : Set where
         {Bᴵ : Ty Δᴵ} {Ac : Ty (suc Δᶜ)} {Bc Cᴵ : Ty Δᶜ}
         {nonvar : NonVar Ac} {occurs : Fin.zero ∈ᵗ Ac}
         (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
-      → AliasAvoidᵖ (center s) (I.∀⊑ nonvar occurs p₀)
+      → AliasAvoid★ᵖ (center s) (I.∀⊑ nonvar occurs p₀)
       → center s ∉ᵗ `∀ Ac
       → UniShape Bᴵ
       → embedImprecise (core W) Bᴵ ≡ Bc
@@ -161,7 +165,7 @@ ImpreciseRevealAt : ℕ → Set
 ImpreciseRevealAt k = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W) {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-  → AliasAvoidᵖ (center s) p
+  → AliasAvoid★ᵖ (center s) p
   → center s ∉ᵗ Aᴾ
   → embedImprecise (core W) Bᴵ ≡ Aᴵ
   → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Aᴾ ⊑ Cᴵ)
@@ -176,7 +180,7 @@ ImpreciseConcealAt : ℕ → Set
 ImpreciseConcealAt k = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W) {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-  → AliasAvoidᵖ (center s) p
+  → AliasAvoid★ᵖ (center s) p
   → center s ∉ᵗ Aᴾ
   → embedImprecise (core W) Bᴵ ≡ Aᴵ
   → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Aᴾ ⊑ Cᴵ)
@@ -260,7 +264,7 @@ paired-var-right-⊑ : ∀ {Δ} {μ : I.ImpEnv Δ} {A B : Ty Δ}
   → μ Z ≡ I.X⊑X
   → (r : I._⊢_⊑_ μ A B)
   → B ≡ ＇ Z
-  → AliasAvoidᵖ Z r
+  → AliasAvoid★ᵖ Z r
   → A ≡ ＇ Z
 paired-var-right-⊑ mode I.★⊑★ () avoid
 paired-var-right-⊑ mode I.ι⊑ι () avoid
@@ -286,9 +290,15 @@ paired-var-right-⊑ mode (I.∀⊑★ nonstar r) () avoid
 paired-var-right-⊑ mode I.bot-elim () avoid
 paired-var-right-⊑ mode I.bot⊑★ () avoid
 paired-var-right-⊑ {Z = Z} mode
-    (I.alias {X = X} {T = T} eq r) refl (Z∉T , avoid)
+    (I.alias {X = X} {T = T} eq r) refl (inj₁ star-eq , avoid)
+    with star-eq
+paired-var-right-⊑ {Z = Z} mode
+    (I.alias {X = X} {T = T} eq r) refl (inj₁ star-eq , avoid)
+    | ()
+paired-var-right-⊑ {Z = Z} mode
+    (I.alias {X = X} {T = T} eq r) refl (inj₂ Z∉T , avoid)
     with paired-var-right-⊑ mode r refl avoid
-paired-var-right-⊑ mode (I.alias eq r) refl (Z∉T , avoid)
+paired-var-right-⊑ mode (I.alias eq r) refl (inj₂ Z∉T , avoid)
     | refl = ⊥-elim (PI.∈∉-⊥ Z∉T var-∈)
 
 ------------------------------------------------------------------------
@@ -457,13 +467,31 @@ embI-replace-body-eq W s B = trans
       (toRenameᵗ (impreciseEmbedding (core W))) (slotRᴵ s)))
 
 ------------------------------------------------------------------------
+-- At a fun- or ∀-shaped type the ★ exemption is vacuous
+------------------------------------------------------------------------
+
+shape-star-∉ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    {Bᴵ : Ty Δᴵ} {Aᴵ : Ty Δᶜ} {P : Set}
+  → UniShape Bᴵ
+  → embedImprecise (core W) Bᴵ ≡ Aᴵ
+  → (Aᴵ ≡ ★) ⊎ P
+  → P
+shape-star-∉ W shape-fun sourceᴵ (inj₁ star-eq)
+    with trans sourceᴵ star-eq
+shape-star-∉ W shape-fun sourceᴵ (inj₁ star-eq) | ()
+shape-star-∉ W shape-all sourceᴵ (inj₁ star-eq)
+    with trans sourceᴵ star-eq
+shape-star-∉ W shape-all sourceᴵ (inj₁ star-eq) | ()
+shape-star-∉ W shape sourceᴵ (inj₂ x) = x
+
+------------------------------------------------------------------------
 -- The canonical right-replaced derivations
 ------------------------------------------------------------------------
 
 replace-right-⊑ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W) {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-  → AliasAvoidᵖ (center s) p
+  → AliasAvoid★ᵖ (center s) p
   → center s ∉ᵗ Aᴾ
   → impEnv (core W) I.⊢ Aᴾ ⊑
       replaceTy (center s)
@@ -471,13 +499,13 @@ replace-right-⊑ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
 replace-right-⊑ W s p avoid no-occur =
   subst≡ (λ L → impEnv (core W) I.⊢ L ⊑ _)
     (replaceTy-absent (center s) _ no-occur)
-    (replace-⊑ (center s) (mode-eq s) (rep-related (atom s))
+    (replace★-⊑ (center s) (mode-eq s) (rep-related (atom s))
       p avoid)
 
 replace-right-body-⊑ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W) {Ac Bc : Ty (suc Δᶜ)}
     (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Ac ⊑ Bc)
-  → AliasAvoidᵖ (Fin.suc (center s)) p₀
+  → AliasAvoid★ᵖ (Fin.suc (center s)) p₀
   → Fin.suc (center s) ∉ᵗ Ac
   → I.extᵐ (impEnv (core W)) I.⊢ Ac ⊑
       replaceTy (Fin.suc (center s))
@@ -485,7 +513,7 @@ replace-right-body-⊑ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
 replace-right-body-⊑ W s p₀ avoid no-occur =
   subst≡ (λ L → I.extᵐ (impEnv (core W)) I.⊢ L ⊑ _)
     (replaceTy-absent (Fin.suc (center s)) _ no-occur)
-    (replace-⊑ (Fin.suc (center s))
+    (replace★-⊑ (Fin.suc (center s))
       (I.ext-mode-paired {μ = impEnv (core W)} {v = I.X⊑X}
         {Z = center s} (mode-eq s))
       (shift-⊑ I.X⊑X (rep-related (atom s)))
@@ -504,7 +532,7 @@ mutual
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-    → AliasAvoidᵖ (center s) p
+    → AliasAvoid★ᵖ (center s) p
     → sizeᵖ p ≤ fuel
     → center s ∉ᵗ Aᴾ
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -528,7 +556,14 @@ mutual
       (∉-var neq) sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (≢ᶠ→≢ neq (sym (impreciseAligned (atom s))))
   imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
-      (I.alias eq′ p′) (c∉T , av′) size
+      (I.alias eq′ p′) (inj₁ star-eq , av′) size
+      no-occur sourceᴵ q targetᴵ related | yes refl | refl
+      with star-eq
+  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+      (I.alias eq′ p′) (inj₁ star-eq , av′) size
+      no-occur sourceᴵ q targetᴵ related | yes refl | refl | ()
+  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+      (I.alias eq′ p′) (inj₂ c∉T , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (PI.∈∉-⊥
       (subst≡ (λ T′ → center s ∉ᵗ T′)
@@ -578,7 +613,7 @@ mutual
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-    → AliasAvoidᵖ (center s) p
+    → AliasAvoid★ᵖ (center s) p
     → sizeᵖ p ≤ fuel
     → center s ∉ᵗ Aᴾ
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -602,7 +637,14 @@ mutual
       (∉-var neq) sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (≢ᶠ→≢ neq (sym (impreciseAligned (atom s))))
   imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
-      (I.alias eq′ p′) (c∉T , av′) size
+      (I.alias eq′ p′) (inj₁ star-eq , av′) size
+      no-occur sourceᴵ q targetᴵ related | yes refl | refl
+      with star-eq
+  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+      (I.alias eq′ p′) (inj₁ star-eq , av′) size
+      no-occur sourceᴵ q targetᴵ related | yes refl | refl | ()
+  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+      (I.alias eq′ p′) (inj₂ c∉T , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (PI.∈∉-⊥
       (subst≡ (λ T′ → center s ∉ᵗ T′)
@@ -652,7 +694,7 @@ mutual
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-    → AliasAvoidᵖ (center s) p
+    → AliasAvoid★ᵖ (center s) p
     → sizeᵖ p ≤ fuel
     → center s ∉ᵗ Aᴾ
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -679,10 +721,10 @@ mutual
   imp-value-go ext zero (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.⇒⊑⇒ p₁ p₂) avoid () no-occur sourceᴵ q targetᴵ related
   imp-value-go ext (suc fuel) (suc m) W s shape
-      (I.alias eq′ {notSelf} p′) (c∉T , av′) (s≤s size′) no-occur
+      (I.alias eq′ {notSelf} p′) (leaf , av′) (s≤s size′) no-occur
       sourceᴵ q targetᴵ related =
     imp-alias-value ext fuel (suc m) W s shape eq′ {notSelf} p′
-      c∉T av′ size′ sourceᴵ q targetᴵ related
+      leaf av′ size′ sourceᴵ q targetᴵ related
   imp-value-go ext zero (suc m) W s shape
       (I.alias eq′ p′) avoid () no-occur sourceᴵ q targetᴵ related
   imp-value-go ext fuel (suc m) W s shape
@@ -755,8 +797,8 @@ mutual
         ⊑ embedImprecise (core W) A₀ᴵ)
       (p₂ : impEnv (core W) I.⊢ P₂
         ⊑ embedImprecise (core W) B₀ᴵ)
-    → AliasAvoidᵖ (center s) p₁
-    → AliasAvoidᵖ (center s) p₂
+    → AliasAvoid★ᵖ (center s) p₁
+    → AliasAvoid★ᵖ (center s) p₂
     → sizeᵖ p₁ ≤ fuel
     → sizeᵖ p₂ ≤ fuel
     → center s ∉ᵗ P₁
@@ -816,8 +858,8 @@ mutual
         ⊑ embedImprecise (core W) A₀ᴵ)
       (p₂ : impEnv (core W) I.⊢ P₂
         ⊑ embedImprecise (core W) B₀ᴵ)
-    → AliasAvoidᵖ (center s) p₁
-    → AliasAvoidᵖ (center s) p₂
+    → AliasAvoid★ᵖ (center s) p₁
+    → AliasAvoid★ᵖ (center s) p₂
     → sizeᵖ p₁ ≤ fuel
     → sizeᵖ p₂ ≤ fuel
     → center s ∉ᵗ P₁
@@ -886,7 +928,7 @@ mutual
         (suc m) (Uᴵ ↓ cᴵ) Uᴾ
     concealed = imp-conceal-go ext fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₁)
-      (alias-avoid-lift-center W≼W′ (center s) p₁ avoid₁)
+      (alias-avoid★-lift-center W≼W′ (center s) p₁ avoid₁)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₁)) size₁)
       (lift-center-∉ᵗ W≼W′ ∉₁)
       (embedImprecise-lift W≼W′ A₀ᴵ)
@@ -911,7 +953,7 @@ mutual
         (suc m) ((Vᴵ′ · (Uᴵ ↓ cᴵ)) ↑ dᴵ) (Vᴾ′ · Uᴾ)
     framed = imp-revealed-computations ext fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₂)
-      (alias-avoid-lift-center W≼W′ (center s) p₂ avoid₂)
+      (alias-avoid★-lift-center W≼W′ (center s) p₂ avoid₂)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₂)) size₂)
       (lift-center-∉ᵗ W≼W′ ∉₂)
       (embedImprecise-lift W≼W′ B₀ᴵ)
@@ -955,8 +997,8 @@ mutual
       (eq′ : impEnv (core W) X ≡ I.X⊑ᵗ T)
       {notSelf : False (isVar? X Aᴵ)}
       (p′ : impEnv (core W) I.⊢ T ⊑ Aᴵ)
-    → center s ∉ᵗ T
-    → AliasAvoidᵖ (center s) p′
+    → (Aᴵ ≡ ★) ⊎ (center s ∉ᵗ T)
+    → AliasAvoid★ᵖ (center s) p′
     → sizeᵖ p′ ≤ fuel
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
     → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ ＇ X ⊑ Cᴵ)
@@ -968,12 +1010,12 @@ mutual
     → ValueImprecision W q j
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Vᴾ
   imp-alias-value ext fuel zero W s shape eq′ {notSelf} p′
-      c∉T av′ size′ sourceᴵ q targetᴵ related =
+      leaf av′ size′ sourceᴵ q targetᴵ related =
     imp-reveal-endpoints W s (I.alias eq′ {notSelf = notSelf} p′)
       sourceᴵ q targetᴵ related
       (imprecise-value related ↑ reveal-value-of shape)
   imp-alias-value ext fuel (suc m) W s {Bᴵ = Bᴵ} shape
-      {X = X} {Aᴵ = Aᴵ} eq′ {notSelf} p′ c∉T av′ size′ sourceᴵ
+      {X = X} {Aᴵ = Aᴵ} eq′ {notSelf} p′ leaf av′ size′ sourceᴵ
       q targetᴵ (endpointsₚ , holds) =
     ClosureProof.value-imprecision-reindex q q̂c refl
       (trans (sym targetᴵ) target-eq)
@@ -987,9 +1029,11 @@ mutual
             c∉T sourceᴵ q̂′ target-eq rel)
         holds)
     where
+    c∉T = shape-star-∉ W shape sourceᴵ leaf
+
     q̂′ = replace-right-⊑ W s p′ av′ c∉T
     q̂c = I.alias eq′
-      {notSelf = replace-alias-not-self (center s)
+      {notSelf = replace-alias-not-self★ (center s)
         (embedImprecise (core W) (slotRᴵ s)) c∉T p′ av′ notSelf}
       q̂′
 
@@ -1011,7 +1055,7 @@ mutual
       {B₀ᴵ : Ty (suc Δᴵ)} {Acᵇ : Ty (suc Δᶜ)}
       (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Acᵇ
         ⊑ embedImpreciseBody (core W) B₀ᴵ)
-    → AliasAvoidᵖ (Fin.suc (center s)) p₀
+    → AliasAvoid★ᵖ (Fin.suc (center s)) p₀
     → center s ∉ᵗ `∀ Acᵇ
     → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ `∀ Acᵇ ⊑ Cᴵ)
     → embedImprecise (core W)
@@ -1099,13 +1143,13 @@ mutual
             (sym body-eq) q̂₀))
 
       av-fn : (j′ : BodyImprecisionᵇ W′ Bᴾ*′ B₀ᴵ′)
-        → AliasAvoidᵖ (Fin.suc (center s′)) (bodyPᵇ j′)
-      av-fn j′ = alias-avoid-any
+        → AliasAvoid★ᵖ (Fin.suc (center s′)) (bodyPᵇ j′)
+      av-fn j′ = alias-avoid★-any
         (liftCenterBodyImprecision W≼W′ p₀) (bodyPᵇ j′)
         (trans (cong (liftCenterBody W≼W′) (sym Ac-eq))
           (sym (embedPreciseBody-lift W≼W′ Bᴾ*)))
         (sym (embedImpreciseBody-lift W≼W′ B₀ᴵ))
-        (alias-avoid-lift-body W≼W′ (center s) p₀ avoid)
+        (alias-avoid★-lift-body W≼W′ (center s) p₀ avoid)
 
       w : UniWrapᵇ W′ Bᴾ*′ B₀ᴵ′ Bᴾ*′
           (replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) B₀ᴵ′)
@@ -1148,7 +1192,7 @@ mutual
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-    → AliasAvoidᵖ (center s) p
+    → AliasAvoid★ᵖ (center s) p
     → sizeᵖ p ≤ fuel
     → center s ∉ᵗ Aᴾ
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -1186,7 +1230,7 @@ mutual
           refl
           (imp-reveal-go ext fuel i W′ (slot-future s W≼W′)
             (liftCenterImprecision W≼W′ p)
-            (alias-avoid-lift-center W≼W′ (center s) p avoid)
+            (alias-avoid★-lift-center W≼W′ (center s) p avoid)
             (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p))
               size)
             (lift-center-∉ᵗ W≼W′ no-occur)
@@ -1207,7 +1251,7 @@ mutual
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-    → AliasAvoidᵖ (center s) p
+    → AliasAvoid★ᵖ (center s) p
     → sizeᵖ p ≤ fuel
     → center s ∉ᵗ Aᴾ
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -1246,7 +1290,7 @@ mutual
           refl
           (imp-conceal-go ext fuel i W′ (slot-future s W≼W′)
             (liftCenterImprecision W≼W′ p)
-            (alias-avoid-lift-center W≼W′ (center s) p avoid)
+            (alias-avoid★-lift-center W≼W′ (center s) p avoid)
             (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p))
               size)
             (lift-center-∉ᵗ W≼W′ no-occur)
@@ -1267,7 +1311,7 @@ mutual
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-    → AliasAvoidᵖ (center s) p
+    → AliasAvoid★ᵖ (center s) p
     → sizeᵖ p ≤ fuel
     → center s ∉ᵗ Aᴾ
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -1295,10 +1339,10 @@ mutual
       (shape-fun {A₀ᴵ} {B₀ᴵ}) (I.⇒⊑⇒ p₁ p₂) avoid ()
       no-occur sourceᴵ q targetᴵ related
   imp-conceal-value-go ext (suc fuel) (suc m) W s shape
-      (I.alias eq′ {notSelf} p′) (c∉T , av′) (s≤s size′) no-occur
+      (I.alias eq′ {notSelf} p′) (leaf , av′) (s≤s size′) no-occur
       sourceᴵ q targetᴵ related =
     imp-conceal-alias-value ext fuel (suc m) W s shape eq′
-      {notSelf} p′ c∉T av′ size′ sourceᴵ q targetᴵ related
+      {notSelf} p′ leaf av′ size′ sourceᴵ q targetᴵ related
   imp-conceal-value-go ext zero (suc m) W s shape
       (I.alias eq′ p′) avoid () no-occur sourceᴵ q targetᴵ
       related
@@ -1369,8 +1413,8 @@ mutual
         ⊑ embedImprecise (core W) A₀ᴵ)
       (p₂ : impEnv (core W) I.⊢ P₂
         ⊑ embedImprecise (core W) B₀ᴵ)
-    → AliasAvoidᵖ (center s) p₁
-    → AliasAvoidᵖ (center s) p₂
+    → AliasAvoid★ᵖ (center s) p₁
+    → AliasAvoid★ᵖ (center s) p₂
     → sizeᵖ p₁ ≤ fuel
     → sizeᵖ p₂ ≤ fuel
     → center s ∉ᵗ P₁
@@ -1435,8 +1479,8 @@ mutual
         ⊑ embedImprecise (core W) A₀ᴵ)
       (p₂ : impEnv (core W) I.⊢ P₂
         ⊑ embedImprecise (core W) B₀ᴵ)
-    → AliasAvoidᵖ (center s) p₁
-    → AliasAvoidᵖ (center s) p₂
+    → AliasAvoid★ᵖ (center s) p₁
+    → AliasAvoid★ᵖ (center s) p₂
     → sizeᵖ p₁ ≤ fuel
     → sizeᵖ p₂ ≤ fuel
     → center s ∉ᵗ P₁
@@ -1507,7 +1551,7 @@ mutual
         (suc m) (Uᴵ ↑ cᴵ) Uᴾ
     revealed = imp-reveal-go ext fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₁)
-      (alias-avoid-lift-center W≼W′ (center s) p₁ avoid₁)
+      (alias-avoid★-lift-center W≼W′ (center s) p₁ avoid₁)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₁)) size₁)
       (lift-center-∉ᵗ W≼W′ ∉₁)
       (embedImprecise-lift W≼W′ A₀ᴵ)
@@ -1532,7 +1576,7 @@ mutual
         (suc m) ((Vᴵ′ · (Uᴵ ↑ cᴵ)) ↓ dᴵ) (Vᴾ′ · Uᴾ)
     framed = imp-concealed-computations ext fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₂)
-      (alias-avoid-lift-center W≼W′ (center s) p₂ avoid₂)
+      (alias-avoid★-lift-center W≼W′ (center s) p₂ avoid₂)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₂)) size₂)
       (lift-center-∉ᵗ W≼W′ ∉₂)
       (embedImprecise-lift W≼W′ B₀ᴵ)
@@ -1574,8 +1618,8 @@ mutual
       (eq′ : impEnv (core W) X ≡ I.X⊑ᵗ T)
       {notSelf : False (isVar? X Aᴵ)}
       (p′ : impEnv (core W) I.⊢ T ⊑ Aᴵ)
-    → center s ∉ᵗ T
-    → AliasAvoidᵖ (center s) p′
+    → (Aᴵ ≡ ★) ⊎ (center s ∉ᵗ T)
+    → AliasAvoid★ᵖ (center s) p′
     → sizeᵖ p′ ≤ fuel
     → embedImprecise (core W) Bᴵ ≡ Aᴵ
     → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ ＇ X ⊑ Cᴵ)
@@ -1586,13 +1630,13 @@ mutual
     → ValueImprecision W (I.alias eq′ {notSelf = notSelf} p′) j
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Vᴾ
   imp-conceal-alias-value ext fuel zero W s shape eq′ {notSelf}
-      p′ c∉T av′ size′ sourceᴵ q targetᴵ related =
+      p′ leaf av′ size′ sourceᴵ q targetᴵ related =
     imp-conceal-endpoints W s
       (I.alias eq′ {notSelf = notSelf} p′) sourceᴵ q targetᴵ
       related
       (imprecise-value related ↓ conceal-value-of shape)
   imp-conceal-alias-value ext fuel (suc m) W s {Bᴵ = Bᴵ} shape
-      {X = X} {Aᴵ = Aᴵ} eq′ {notSelf} p′ c∉T av′ size′ sourceᴵ
+      {X = X} {Aᴵ = Aᴵ} eq′ {notSelf} p′ leaf av′ size′ sourceᴵ
       q targetᴵ related =
     imp-conceal-endpoints W s
       (I.alias eq′ {notSelf = notSelf} p′) sourceᴵ q targetᴵ
@@ -1604,9 +1648,11 @@ mutual
           size′ c∉T sourceᴵ q̂′ target-eq rel)
       (proj₂ related′)
     where
+    c∉T = shape-star-∉ W shape sourceᴵ leaf
+
     q̂′ = replace-right-⊑ W s p′ av′ c∉T
     q̂c = I.alias eq′
-      {notSelf = replace-alias-not-self (center s)
+      {notSelf = replace-alias-not-self★ (center s)
         (embedImprecise (core W) (slotRᴵ s)) c∉T p′ av′ notSelf}
       q̂′
 
@@ -1634,7 +1680,7 @@ mutual
       {B₀ᴵ : Ty (suc Δᴵ)} {Acᵇ : Ty (suc Δᶜ)}
       (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Acᵇ
         ⊑ embedImpreciseBody (core W) B₀ᴵ)
-    → AliasAvoidᵖ (Fin.suc (center s)) p₀
+    → AliasAvoid★ᵖ (Fin.suc (center s)) p₀
     → center s ∉ᵗ `∀ Acᵇ
     → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ `∀ Acᵇ ⊑ Cᴵ)
     → embedImprecise (core W)
@@ -1732,13 +1778,13 @@ mutual
           (sym Ac-eq) p₀)
 
       av-fn : (j′ : BodyImprecisionᵇ W′ Bᴾ*′ B₀ᴵ′)
-        → AliasAvoidᵖ (Fin.suc (center s′)) (bodyPᵇ j′)
-      av-fn j′ = alias-avoid-any
+        → AliasAvoid★ᵖ (Fin.suc (center s′)) (bodyPᵇ j′)
+      av-fn j′ = alias-avoid★-any
         (liftCenterBodyImprecision W≼W′ p₀) (bodyPᵇ j′)
         (trans (cong (liftCenterBody W≼W′) (sym Ac-eq))
           (sym (embedPreciseBody-lift W≼W′ Bᴾ*)))
         (sym (embedImpreciseBody-lift W≼W′ B₀ᴵ))
-        (alias-avoid-lift-body W≼W′ (center s) p₀ avoid)
+        (alias-avoid★-lift-body W≼W′ (center s) p₀ avoid)
 
       w : UniWrapᵇ W′ Bᴾ*′
           (replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) B₀ᴵ′)
@@ -1800,7 +1846,7 @@ imprecise-reveal-value : ∀ {k : ℕ}
     {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
     {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-  → AliasAvoidᵖ (center s) p
+  → AliasAvoid★ᵖ (center s) p
   → center s ∉ᵗ Aᴾ
   → embedImprecise (core W) Bᴵ ≡ Aᴵ
   → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Aᴾ ⊑ Cᴵ)
@@ -1820,7 +1866,7 @@ imprecise-conceal-value : ∀ {k : ℕ}
     {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
     {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
-  → AliasAvoidᵖ (center s) p
+  → AliasAvoid★ᵖ (center s) p
   → center s ∉ᵗ Aᴾ
   → embedImprecise (core W) Bᴵ ≡ Aᴵ
   → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Aᴾ ⊑ Cᴵ)

@@ -24,7 +24,8 @@ open import Conversion using (replaceTy; 〖_,_↑_〗; makeConceal)
 import Imprecision as I
 open import Consistency using (toRenameᵗ)
 open import proof.ImprecisionConsistency using (ty-all-injective)
-open import proof.LR-narrow.AliasAvoid using (AliasAvoidᵖ)
+open import proof.LR-narrow.AliasAvoid using
+  (AliasAvoidᵖ; AliasAvoid★ᵖ)
 open import LR-narrow.World
 
 ------------------------------------------------------------------------
@@ -444,7 +445,7 @@ data UniWrapᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → BodyImprecisionᵇ W B
         (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
     → ((j : BodyImprecisionᵇ W B C)
-        → AliasAvoidᵖ (Fin.suc (center s)) (bodyPᵇ j))
+        → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
     → UniWrapᵇ W B C B
         (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
   conceal-impreciseᵇ : (s : PairedSlot W)
@@ -452,7 +453,7 @@ data UniWrapᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
     → BodyImprecisionᵇ W B C
     → ((j : BodyImprecisionᵇ W B C)
-        → AliasAvoidᵖ (Fin.suc (center s)) (bodyPᵇ j))
+        → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
     → UniWrapᵇ W B
         (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
         B C
