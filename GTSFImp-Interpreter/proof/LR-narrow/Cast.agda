@@ -4,6 +4,7 @@ open import LR-narrow.CastObligations using
    open-function-precise-injection;
    open-function-precise-generalization; open-universals;
    open-function-dynamic; open-base-dynamic; open-variable-dynamic;
+   open-alias;
    open-right-universal; open-universal-dynamic)
 
 module proof.LR-narrow.Cast (ob : CastValueObligations) where
@@ -5553,9 +5554,10 @@ related-value-casts I.bot-elim sourceᴾ sourceᴵ cᴾ cᴵ q targetᴾ
     targetᴵ related = ⊥-elim (no-precise-bottom-value related)
 related-value-casts I.bot⊑★ sourceᴾ sourceᴵ cᴾ cᴵ q targetᴾ
     targetᴵ related = ⊥-elim (no-precise-bottom-value related)
-related-value-casts {W = W} (I.alias eq p) sourceᴾ sourceᴵ cᴾ cᴵ
-    q targetᴾ targetᴵ related =
-  ⊥-elim (noAlias W _ eq)
+related-value-casts {W = W} (I.alias eq {notSelf = notSelf} p)
+    sourceᴾ sourceᴵ cᴾ cᴵ q targetᴾ targetᴵ related =
+  paired-cast-values ob (I.alias eq {notSelf = notSelf} p)
+    sourceᴾ sourceᴵ cᴾ cᴵ open-alias q targetᴾ targetᴵ related
 
 ------------------------------------------------------------------------
 -- Open structural cast compatibility

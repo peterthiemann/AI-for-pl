@@ -14,6 +14,7 @@ module LR-narrow.CastObligations where
 open import Data.Nat using (ℕ; suc)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality using (_≡_; _≢_)
+open import Relation.Nullary.Decidable using (False)
 
 open import Types
 open import CastTerms
@@ -97,6 +98,16 @@ data OpenPairedCastCase {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ} :
       {μᴾ : C.Env∼ Δᴾ} {μᴵ : C.Env∼ Δᴵ}
       {cᴾ : μᴾ C.⊢ Cᴾ ∼ Dᴾ} {cᴵ : μᴵ C.⊢ Cᴵ ∼ Dᴵ}
     → OpenPairedCastCase (I.X⊑★ mode) cᴾ cᴵ
+
+  -- Every cast pair whose source imprecision unfolds an alias.
+  open-alias : ∀ {X : TyVar Δᶜ} {T B : Ty Δᶜ}
+      {eq : impEnv (core W) X ≡ I.X⊑ᵗ T}
+      {notSelf : False (isVar? X B)}
+      {p : impEnv (core W) I.⊢ T ⊑ B}
+      {Cᴾ Dᴾ : Ty Δᴾ} {Cᴵ Dᴵ : Ty Δᴵ}
+      {μᴾ : C.Env∼ Δᴾ} {μᴵ : C.Env∼ Δᴵ}
+      {cᴾ : μᴾ C.⊢ Cᴾ ∼ Dᴾ} {cᴵ : μᴵ C.⊢ Cᴵ ∼ Dᴵ}
+    → OpenPairedCastCase (I.alias eq {notSelf = notSelf} p) cᴾ cᴵ
 
   open-right-universal : ∀ {Aᴾ : Ty (suc Δᶜ)} {Aᴵ : Ty Δᶜ}
       {nonvar : NonVar Aᴾ} {occurs : Fin.zero ∈ᵗ Aᴾ}
