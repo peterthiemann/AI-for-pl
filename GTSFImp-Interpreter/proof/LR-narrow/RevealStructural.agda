@@ -91,7 +91,8 @@ open module DynamicRevealModule = proof.LR-narrow.DynamicReveal
          dyn-lifted-reveal-precise; dyn-lifted-conceal-precise;
          dyn-slot-precise-variable-lift; dyn-slot-precise-rep-lift)
 open import proof.LR-narrow.KeepStepExpansion using
-  (related-imprecise-keep-step-expand)
+  (related-imprecise-keep-step-expand;
+   related-precise-keep-step-expand)
 open import proof.LR-narrow.BindStepExpansion using
   (paired-bind-step; related-paired-bind-step-expand)
 open import proof.LR-narrow.UniversalReveal using
@@ -106,7 +107,10 @@ open import proof.LR-narrow.ReplaceImprecision using
    replaceTy-nonvar; replaceTy-occurs; shift-no-zero)
 open import proof.LR-narrow.AliasAvoid using
   (target-occurs-sourceᵖ; env-aliases-avoidᵖ;
-   alias-avoid-subst-left; alias-avoid-subst-rightᵉ; alias-avoid-any)
+   alias-avoid-subst-left; alias-avoid-subst-rightᵉ; alias-avoid-any;
+   alias-avoid-weaken★)
+open import proof.LR-narrow.ImpreciseReveal using
+  (imprecise-reveal; imprecise-conceal)
 open import proof.LR-narrow.ImprecisionSize using
   (sizeᵖ; lift-center-size; size-subst-left; size-subst-right;
    lift-center-dynamic-body-size)
@@ -5390,14 +5394,14 @@ bottom-conceal-impossible W s sourceᴾ q targetᴾ related
 paired-not-alias : ∀ {Δ} {T : Ty Δ} → I.X⊑X ≡ I.X⊑ᵗ T → ⊥
 paired-not-alias ()
 
--- Under the avoidance premise both replacement conversions at an
--- alias derivation are identities: the precise type is the alias
--- variable (mode-disjoint from the slot), and the right-hand side
--- avoids the center because the representative does, so it is left
--- untouched — and its shape (a variable or ★, by
--- `alias-premise-B-shape`) makes the imprecise conversion an
--- identity as well.  Both sides step by `id-reveal`/`id-conceal`
--- and the values stay related at the alias derivation.
+-- The precise type is the alias variable (mode-disjoint from the
+-- slot), so the precise conversion is an identity and steps by
+-- `id-reveal`/`id-conceal`.  The imprecise endpoint is arbitrary:
+-- the one-sided imprecise reveal handles it structurally, with the
+-- avoidance premises weakened to the ★-right-exempt form.  This no
+-- longer consults the representative's shape, so it is compatible
+-- with generalizing the alias representative beyond variables
+-- (Finding I item 1).
 
 reveal-alias : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W)
@@ -5424,98 +5428,15 @@ reveal-alias W s {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {X = X} {T = T} {B = B}
     {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
     {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
     with rename-variable-inversion _ sourceᴾ
-       | ClosureProof.alias-premise-B-shape p′
-           (alias-holds-rep (semanticEntry W X) eq
-             (Data.Product.proj₂ related))
-           (Data.Product.proj₂
-             (alias-holds-payload (semanticEntry W X) eq
-               (Data.Product.proj₂ related)))
 reveal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
     eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
     {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
     {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | inj₁ (Yb , refl)
-    with rename-variable-inversion _ sourceᴵ
-reveal-alias W s {X = X} {T = T}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | inj₁ (Yb , refl)
-    | Yᴵ , refl , Ybeq
-    with slotXᴾ s ≟ Yᴾ | slotXᴵ s ≟ Yᴵ
-reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} related
-    | Yᴾ , refl , Xeq | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq
-    | yes peq | _ =
-  ⊥-elim (paired-not-alias
-    (trans (sym (mode-eq s))
-      (trans (cong (impEnv (core W))
-        (trans (sym (preciseAligned (atom s)))
-          (trans (cong (toRenameᵗ (preciseEmbedding (core W))) peq)
-            Xeq)))
-        eq)))
-reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} related
-    | Yᴾ , refl , Xeq | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq
-    | no _ | yes ieq =
-  ⊥-elim (PI.∈∉-⊥ T∉
-    (target-occurs-sourceᵖ p′ avoid′
-      (subst≡ (λ Z → Z ∈ᵗ ＇ Yb)
-        (trans (sym Ybeq)
-          (trans (cong (toRenameᵗ (impreciseEmbedding (core W)))
-            (sym ieq))
-            (impreciseAligned (atom s))))
-        var-∈)))
-reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq
-    | no _ | no _
-    with reveal-id-step-question {Σ = impreciseStore (core W)}
-           (＇ Yᴵ)
-           (imprecise-value
-             (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} related))
-       | reveal-id-step-question {Σ = preciseStore (core W)}
-           (＇ Yᴾ)
-           (precise-value
-             (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} related))
-reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq
-    | no _ | no _
-    | vVᴵ , step-eqᴵ | vVᴾ , step-eqᴾ =
-  related-pure-step-expand (λ ()) (λ ())
-    (reveal-id-value-none (＇ Yᴵ) vVᴵ)
-    (reveal-id-value-none (＇ Yᴾ) vVᴾ)
-    (id-reveal vVᴵ) (id-reveal vVᴾ) step-eqᴵ step-eqᴾ
-    (related-values-return vVᴵ vVᴾ
-      (λ j j≤ → ClosureProof.value-imprecision-reindex q
-        (I.alias eq {notSelf = notSelf} p′)
-        (trans (sym targetᴾ) (cong ＇_ Xeq))
-        (trans (sym targetᴵ) (cong ＇_ Ybeq))
-        (value-imprecision-downward-to
-          {p = I.alias eq {notSelf = notSelf} p′}
-          {k = suc k} (≤-trans j≤ (n≤1+n k)) related)))
-reveal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | inj₂ refl
-    with rename-star-injective _ sourceᴵ
-reveal-alias W s {X = X} {T = T}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | inj₂ refl | refl
+    | Yᴾ , refl , Xeq
     with slotXᴾ s ≟ Yᴾ
 reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
     q targetᴾ targetᴵ {k = suc k} related
-    | Yᴾ , refl , Xeq | inj₂ refl | refl | yes peq =
+    | Yᴾ , refl , Xeq | yes peq =
   ⊥-elim (paired-not-alias
     (trans (sym (mode-eq s))
       (trans (cong (impEnv (core W))
@@ -5523,38 +5444,42 @@ reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
           (trans (cong (toRenameᵗ (preciseEmbedding (core W))) peq)
             Xeq)))
         eq)))
-reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | inj₂ refl | refl | no _
-    with reveal-id-step-question {Σ = impreciseStore (core W)} ★
-           (imprecise-value
-             (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} related))
-       | reveal-id-step-question {Σ = preciseStore (core W)}
+reveal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
+    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
+    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
+    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    | Yᴾ , refl , Xeq | no _
+    with reveal-id-step-question {Σ = preciseStore (core W)}
            (＇ Yᴾ)
            (precise-value
              (ClosureProof.value-imprecision-endpoints
                {p = I.alias eq {notSelf = notSelf} p′}
                {k = suc k} related))
-reveal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | inj₂ refl | refl | no _
-    | vVᴵ , step-eqᴵ | vVᴾ , step-eqᴾ =
-  related-pure-step-expand (λ ()) (λ ())
-    (reveal-id-value-none ★ vVᴵ)
+reveal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
+    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
+    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
+    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    | Yᴾ , refl , Xeq | no _ | vVᴾ , step-eqᴾ =
+  related-precise-keep-step-expand (λ ())
     (reveal-id-value-none (＇ Yᴾ) vVᴾ)
-    (id-reveal vVᴵ) (id-reveal vVᴾ) step-eqᴵ step-eqᴾ
-    (related-values-return vVᴵ vVᴾ
-      (λ j j≤ → ClosureProof.value-imprecision-reindex q
+    (pure-step (id-reveal vVᴾ)) step-eqᴾ
+    (ClosureProof.computations-related-reindex q̃ q
+      (sym var-eq) refl refl refl
+      (imprecise-reveal W s
         (I.alias eq {notSelf = notSelf} p′)
-        (trans (sym targetᴾ) (cong ＇_ Xeq))
-        (sym targetᴵ)
-        (value-imprecision-downward-to
-          {p = I.alias eq {notSelf = notSelf} p′}
-          {k = suc k} (≤-trans j≤ (n≤1+n k)) related)))
+        (inj₂ T∉ , alias-avoid-weaken★ p′ avoid′)
+        center∉ sourceᴵ q̃ targetᴵ related))
+  where
+  var-eq : Cᴾ ≡ ＇ X
+  var-eq = trans (sym targetᴾ) (cong ＇_ Xeq)
+
+  q̃ : impEnv (core W) I.⊢ ＇ X ⊑ Cᴵ
+  q̃ = subst≡ (λ L → impEnv (core W) I.⊢ L ⊑ Cᴵ) var-eq q
+
+  center∉ : center s ∉ᵗ ＇ X
+  center∉ = ∉-var (≢→≢ᶠ (λ ceq → paired-not-alias
+    (trans (sym (mode-eq s))
+      (trans (cong (impEnv (core W)) ceq) eq))))
 
 conceal-alias : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W)
@@ -5582,22 +5507,15 @@ conceal-alias W s {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {X = X} {T = T} {B = B}
     {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
     {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
     with rename-variable-inversion _ sourceᴾ
-       | occurs? (center s) B
-conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T} {B = B}
+conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
     eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
     {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} related
-    | Yᴾ , refl , Xeq | present c∈ =
-  ⊥-elim (PI.∈∉-⊥ T∉ (target-occurs-sourceᵖ p′ avoid′ c∈))
-conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T} {B = B}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} related
-    | Yᴾ , refl , Xeq | absent c∉B
+    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    | Yᴾ , refl , Xeq
     with slotXᴾ s ≟ Yᴾ
 conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
     q targetᴾ targetᴵ {k = suc k} related
-    | Yᴾ , refl , Xeq | absent c∉B | yes peq =
+    | Yᴾ , refl , Xeq | yes peq =
   ⊥-elim (paired-not-alias
     (trans (sym (mode-eq s))
       (trans (cong (impEnv (core W))
@@ -5605,131 +5523,41 @@ conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
           (trans (cong (toRenameᵗ (preciseEmbedding (core W))) peq)
             Xeq)))
         eq)))
-conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T} {B = B}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | absent c∉B | no _
-    with ClosureProof.value-imprecision-reindex
-           (I.alias eq {notSelf = notSelf} p′) q
-           (sym (trans (sym targetᴾ) (cong ＇_ Xeq)))
-           (sym (trans (sym targetᴵ)
-             (trans (cong (embedImprecise (core W))
-               (replaceTy-absent (slotXᴵ s) (slotRᴵ s)
-                 (renameᵗ-reflects-∉ᵗ
-                   (toRenameᵗ (impreciseEmbedding (core W))) Bᴵ
-                   (subst≡ (λ Z → Z ∉ᵗ _)
-                     (sym (impreciseAligned (atom s)))
-                     (subst≡ (λ A → center s ∉ᵗ A)
-                       (sym sourceᴵ) c∉B)))))
-               sourceᴵ)))
-           related
-conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T} {B = B}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    with ClosureProof.alias-premise-B-shape p′
-           (alias-holds-rep (semanticEntry W X) eq
-             (Data.Product.proj₂ relatedₐ))
-           (Data.Product.proj₂
-             (alias-holds-payload (semanticEntry W X) eq
-               (Data.Product.proj₂ relatedₐ)))
 conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
     eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
     {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
     {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₁ (Yb , refl)
-    with rename-variable-inversion _ sourceᴵ
-conceal-alias W s {X = X} {T = T}
-    eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
-    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq
-    with slotXᴵ s ≟ Yᴵ
-conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq | yes ieq =
-  ⊥-elim (PI.∈∉-⊥ c∉B
-    (subst≡ (λ Z → Z ∈ᵗ ＇ Yb)
-      (trans (sym Ybeq)
-        (trans (cong (toRenameᵗ (impreciseEmbedding (core W)))
-          (sym ieq))
-          (impreciseAligned (atom s))))
-      var-∈))
-conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq | no _
-    with conceal-id-step-question {Σ = impreciseStore (core W)}
-           (＇ Yᴵ)
-           (imprecise-value
-             (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} relatedₐ))
-       | conceal-id-step-question {Σ = preciseStore (core W)}
+    | Yᴾ , refl , Xeq | no _
+    with conceal-id-step-question {Σ = preciseStore (core W)}
            (＇ Yᴾ)
            (precise-value
              (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} relatedₐ))
-conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₁ (Yb , refl) | Yᴵ , refl , Ybeq | no _
-    | vVᴵ , step-eqᴵ | vVᴾ , step-eqᴾ =
-  related-pure-step-expand (λ ()) (λ ())
-    (conceal-id-value-none (＇ Yᴵ) vVᴵ)
-    (conceal-id-value-none (＇ Yᴾ) vVᴾ)
-    (id-conceal vVᴵ) (id-conceal vVᴾ) step-eqᴵ step-eqᴾ
-    (related-values-return vVᴵ vVᴾ
-      (λ j j≤ →
-        value-imprecision-downward-to
-          {p = I.alias eq {notSelf = notSelf} p′}
-          {k = suc k} (≤-trans j≤ (n≤1+n k)) relatedₐ))
+               {p = q} {k = suc k} related))
 conceal-alias W s {Bᴵ = Bᴵ} {X = X} {T = T}
     eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
     {Cᴾ = Cᴾ} {Cᴵ = Cᴵ} q targetᴾ targetᴵ
     {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₂ refl
-    with rename-star-injective _ sourceᴵ
-conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₂ refl | refl
-    with conceal-id-step-question {Σ = impreciseStore (core W)} ★
-           (imprecise-value
-             (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} relatedₐ))
-       | conceal-id-step-question {Σ = preciseStore (core W)}
-           (＇ Yᴾ)
-           (precise-value
-             (ClosureProof.value-imprecision-endpoints
-               {p = I.alias eq {notSelf = notSelf} p′}
-               {k = suc k} relatedₐ))
-conceal-alias W s eq {notSelf} p′ T∉ avoid′ sourceᴾ sourceᴵ
-    q targetᴾ targetᴵ {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    related
-    | Yᴾ , refl , Xeq | absent c∉B | no _ | relatedₐ
-    | inj₂ refl | refl
-    | vVᴵ , step-eqᴵ | vVᴾ , step-eqᴾ =
-  related-pure-step-expand (λ ()) (λ ())
-    (conceal-id-value-none ★ vVᴵ)
+    | Yᴾ , refl , Xeq | no _ | vVᴾ , step-eqᴾ =
+  related-precise-keep-step-expand (λ ())
     (conceal-id-value-none (＇ Yᴾ) vVᴾ)
-    (id-conceal vVᴵ) (id-conceal vVᴾ) step-eqᴵ step-eqᴾ
-    (related-values-return vVᴵ vVᴾ
-      (λ j j≤ →
-        value-imprecision-downward-to
-          {p = I.alias eq {notSelf = notSelf} p′}
-          {k = suc k} (≤-trans j≤ (n≤1+n k)) relatedₐ))
+    (pure-step (id-conceal vVᴾ)) step-eqᴾ
+    (imprecise-conceal W s
+      (I.alias eq {notSelf = notSelf} p′)
+      (inj₂ T∉ , alias-avoid-weaken★ p′ avoid′)
+      center∉ sourceᴵ q̃ targetᴵ
+      (ClosureProof.value-imprecision-reindex q̃ q
+        (sym var-eq) refl related))
+  where
+  var-eq : Cᴾ ≡ ＇ X
+  var-eq = trans (sym targetᴾ) (cong ＇_ Xeq)
+
+  q̃ : impEnv (core W) I.⊢ ＇ X ⊑ Cᴵ
+  q̃ = subst≡ (λ L → impEnv (core W) I.⊢ L ⊑ Cᴵ) var-eq q
+
+  center∉ : center s ∉ᵗ ＇ X
+  center∉ = ∉-var (≢→≢ᶠ (λ ceq → paired-not-alias
+    (trans (sym (mode-eq s))
+      (trans (cong (impEnv (core W)) ceq) eq))))
 
 ------------------------------------------------------------------------
 -- The induction

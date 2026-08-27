@@ -526,3 +526,22 @@ way:
 `make check` green.  Next: Finding I items 1 (alias representative
 as a `Ty Δᴾ`), 3 (alias-slot frame transformers) and 4 (the
 producer cascades), then retiring `universal-familyᵇ`.
+
+Step 6, item 1 (partial) — alias reveal cases re-based; Finding J
+recorded (2026-08-27).  `reveal-alias`/`conceal-alias` in
+`RevealStructural` now discharge the imprecise endpoint through the
+one-sided imprecise reveal (`imprecise-reveal`/`imprecise-conceal`)
+instead of the variable-representative shape analysis: the precise
+side is an identity by mode-disjointness as before, the avoidance
+weakens with `alias-avoid-weaken★`, and `alias-holds-rep` /
+`alias-premise-B-shape` are deleted.  The reveal machinery is now
+compatible with general alias representatives.
+
+The record flip itself is BLOCKED by Finding J (see
+REPLACEMENT-CLOSURE-DESIGN.md): with a ∀-shaped representative
+whose binder occurs (`R = ∀(＇0⇒＇0)`), the `∀⊑`/`∀⊑∀` fork makes
+`＇X ⊑ B` non-shape-functional, `ground-imprecise-targets-agree`
+becomes false, and a term-related program pair exists whose
+imprecise ★-projection blames while the precise one succeeds —
+the ★-projection coherence (and the DGG argument through it) needs
+a design decision before item 1 can complete.

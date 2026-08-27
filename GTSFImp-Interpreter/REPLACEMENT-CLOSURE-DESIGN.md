@@ -1309,3 +1309,97 @@ alias-slot frame transformers), item 4 (the producer cascades for
 `lambda-familyᵇ`/`cast-familyᵇ` via
 `related-alias-bind-step-expand`), then retiring the deferred
 `universal-familyᵇ` field.
+
+## Finding J — general alias representatives break the ★-projection
+## tag coherence (2026-08-27)
+
+Finding I item 1 proposed generalizing `aliasRepName : TyVar Δᴾ` to
+`aliasRep : Ty Δᴾ`, claiming the only non-trivial consumer beyond
+`reveal-alias`/`conceal-alias` is the `ground-imprecise-targets-agree`
+recursion, where "the general rep only adds non-variable base cases".
+That claim is WRONG, and the failure is not a proof inconvenience
+but a design-level fact about the precision rules.
+
+### J.1  The syntactic lemma is false for general representatives
+
+`ground-imprecise-targets-agree` (proof/LR-narrow/Cast.agda) states
+that two derivations from one embedded precise ground to nonstar
+embedded imprecise targets agree on the target.  Its alias case
+recurses through the representative; with variable representatives
+every source along the chain is a variable, the chain bottoms at a
+non-alias mode, and the target is forced.  With a general
+representative the recursion escapes to arbitrary embedded sources,
+where the claim fails outright.  Counterexample: let an alias slot
+`X` record `R = `∀ (＇0 ⇒ ＇0)`.  Then from the shared source
+`embP R = ∀(＇0 ⇒ ＇0)`:
+
+* `w  : ∀(＇0⇒＇0) ⊑ ★⇒★` by `I.∀⊑` — nonvar, `0` occurs, and the
+  premise `＇0⇒＇0 ⊑ ★⇒★` holds at `instᵐ` (both components
+  `＇0 ⊑ ★` by `X⊑★`, since the bound variable is
+  star-discharged);
+* `w₂ : ∀(＇0⇒＇0) ⊑ ∀(＇0⇒＇0)` by `I.∀⊑∀` (componentwise `X⊑X`
+  at `extᵐ`).
+
+Both targets are nonstar embedded-imprecise images (`★⇒★` and
+`∀(＇0⇒＇0)` are their own preimages), yet they do not even agree
+in shape.  Prefixing both with the `alias` rule at `X` gives two
+derivations `＇X-emb ⊑ B₁ / B₂` with `B₁ = ★⇒★`, `B₂ = ∀(…)`.
+So type precision at an alias variable is NOT shape-functional once
+representatives may be ∀-types whose bound variable occurs — the
+fork between `∀⊑` (target-transparent, star-discharged binder) and
+`∀⊑∀` is exactly the ambiguity.
+
+### J.2  The ambiguity reaches the main theorem
+
+The lemma backs the ★-projection coherence of `related-value-casts`
+(the `？`-vs-`？` cases): a dynamic payload carries some
+`payload-q : embP Hᴾ ⊑ embI Hᴵ` (`DynamicPayloadShape` stores the
+imprecise ground `Hᴵ` existentially), the cast pair carries an
+independent `q`, and tag agreement of `Hᴵ` with the projection
+ground is derived by running both derivations from the shared
+precise source.  With the counterexample's slot:
+
+* value side: seal a ∀-value at `X`, inject at `＇X`; the imprecise
+  partner is a `∀⊑`-related fun value injected at `★⇒★`
+  (`payload-q` via `alias`+`∀⊑`);
+* cast side: precise `⟨★？＇X⟩` against imprecise `⟨★？∀★⟩`, the
+  target pair related by `q` via `alias`+`∀⊑∀`.
+
+`cast⊑cast²` (proof/DGG/CastTermImprecision.agda) requires exactly
+endpoint-⊑ derivations, so this program pair is term-related.
+Operationally the precise projection succeeds (`＇X` against `＇X`)
+while the imprecise projection blames (`∀★` against tag `★⇒★`) —
+violating `forward-blame` of `ComputationsRelated`.  So under
+general representatives the ★⊑★/projection story is not merely
+harder to prove; the relation (and the DGG argument through it)
+admits a genuine counterexample, and a design decision is needed
+before item 1's record flip can land:
+
+1. make the alias premise shape-canonical (restrict the `∀⊑`-route
+   at alias-unfolding positions) — must check the producer
+   cascades (item 4) and the fundamental property's seal/injection
+   cases still go through;
+2. record a canonical injection tag in the alias atom and constrain
+   `DynamicPayloadShape` at alias-variable grounds to factor
+   through it — must check real term pairs cannot inject the same
+   sealed value under both readings;
+3. weaken the projection coherence (allow the imprecise side to
+   blame more at mismatched projections) — changes the DGG
+   statement itself;
+4. keep variable representatives and redesign the cascade's
+   self-alias discharge to avoid general reps — contradicts
+   I.3/I.4 as currently planned.
+
+### J.3  What landed anyway
+
+`reveal-alias`/`conceal-alias` (proof/LR-narrow/RevealStructural)
+no longer consult the representative's shape: the precise side is
+an identity conversion by mode-disjointness as before, and the
+imprecise side is discharged by the one-sided imprecise reveal
+(`imprecise-reveal`/`imprecise-conceal`, with the avoidance
+weakened by `alias-avoid-weaken★` and the exemption taken on the
+`center ∉ T` side).  `alias-holds-rep` (Atoms) and
+`alias-premise-B-shape` (Closure) are deleted — the reveal path is
+now compatible with general representatives.  The remaining
+consumers of variable-ness are the tag-coherence layer above and
+the mechanical record sweep, both gated on the J.2 decision.

@@ -158,11 +158,13 @@ open TargetSemanticAtom public
 -- recorded in the mode: the center variable unfolds to the embedding
 -- of the bound representation type.  Unlike the dynamic slot it
 -- carries no imprecision derivation — the `alias` rule supplies the
--- premise at each use.  The representative is always a VARIABLE (the
--- operational alias binds the fresh name of the preceding
--- allocation), which pins the alias premise's right-hand side to a
--- variable or ★ and lets the reveal machinery treat alias slots by
--- identity conversions.
+-- premise at each use.  The representative is currently a VARIABLE
+-- (the operational alias binds the fresh name of the preceding
+-- allocation).  The reveal machinery no longer depends on this (the
+-- alias cases route through the one-sided imprecise reveal); the
+-- remaining dependency is the ★-projection tag coherence in the
+-- cast proof — see Finding J of REPLACEMENT-CLOSURE-DESIGN.md
+-- before generalizing the representative to a type.
 
 record AliasSemanticAtom {Δᴾ Δᴵ Δᶜ}
     (W : CoreWorld Δᴾ Δᴵ Δᶜ) (Z : TyVar Δᶜ) (T : Ty Δᶜ) : Set where
@@ -376,22 +378,6 @@ alias-atom-no-target (dynamic-entry a) () related
 alias-atom-no-target (target-entry a) () related
 alias-atom-no-target (alias-entry a) refl related =
   aliasNoTargetOccupant a
-
--- The representative recorded by an inhabited alias slot is a
--- variable, and the payload sits below the seal at the alias premise.
-
-alias-holds-rep : ∀ {Δᴾ Δᴵ Δᶜ mode}
-    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
-    {ℛ : PayloadRelation W} {p : impEnv W I.⊢ T ⊑ B} {Vᴵ Vᴾ}
-    (entry : SemanticEntry W Z mode) (eq : mode ≡ I.X⊑ᵗ T)
-  → AliasAtomHolds ℛ entry eq p Vᴵ Vᴾ
-  → Σ[ Y ∈ TyVar Δᶜ ] T ≡ ＇ Y
-alias-holds-rep (paired-entry a) eq ()
-alias-holds-rep (dynamic-entry a) () holds
-alias-holds-rep (target-entry a) () holds
-alias-holds-rep {W = W} (alias-entry a) refl holds =
-  toRenameᵗ (preciseEmbedding W) (aliasRepName a) ,
-  sym (aliasRep-eq a)
 
 alias-holds-payload : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
