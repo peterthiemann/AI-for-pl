@@ -1,6 +1,6 @@
 open import proof.LR-narrow.RevealStatements
 
-module proof.LR-narrow.PreciseReveal (ob : RevealObligations) where
+module proof.LR-narrow.PreciseReveal where
 
 -- File Charter:
 --   * The one-sided structural reveal and conceal: when a paired slot's
@@ -78,8 +78,6 @@ open import proof.LR-narrow.SlotLifting using
    lifted-reveal-precise; lifted-conceal-precise;
    liftPreciseTy-arrow; slot-precise-variable-lift)
 
-open RevealObligations ob using
-  (blocked-precise-reveal; blocked-precise-conceal)
 
 open PreciseComposition revealFrame using () renaming
   (precise-frame-computations-related to reveal-precise-composition;
@@ -300,8 +298,48 @@ precise-universal-value (suc k) below W s {B₁ = B₁}
 precise-universal-value (suc k) below W s {B₁ = B₁}
     (I.X⊑★ eq) no-occur () related
 precise-universal-value (suc k) below W s {B₁ = B₁}
-    (I.∀⊑∀ p₀) no-occur sourceᴾ related =
-  blocked-precise-reveal below W s p₀ no-occur sourceᴾ related
+    (I.∀⊑∀ p₀) no-occur sourceᴾ
+    related@(endpoints , Bᴾ* , Bᴵ* , embP* , embI* , fam)
+    with ty-all-injective
+           (renameᵗ-injective
+             (toRenameᵗ-injective (preciseEmbedding (core W)))
+             (trans embP* (sym sourceᴾ)))
+precise-universal-value (suc k) below W s {B₁ = B₁}
+    (I.∀⊑∀ p₀) no-occur sourceᴾ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+    related@(endpoints , .B₁ , Bᴵ* , embP* , embI* , fam)
+    | refl =
+  precise-reveal-endpoints W s (I.∀⊑∀ p₀) no-occur
+    sourceᴾ endpoints (precise-value endpoints ↑ all) ,
+  B₁ , Bᴵ* , embP* , embI* ,
+  (λ {Δᴾ′} {Δᴵ′} {Δᶜ′} {W′} W≼W′ {Bᴾ′} {Bᴵ′} σ →
+    let s′ = slot-future s W≼W′
+        avoid′ : slotXᴾ s′ ∉ᵗ `∀ (liftPreciseBody W≼W′ B₁)
+        avoid′ = subst≡ (slotXᴾ s′ ∉ᵗ_)
+          (liftPreciseTy-universal W≼W′ B₁)
+          (subst≡ (_∉ᵗ liftPreciseTy W≼W′ (`∀ B₁))
+            (sym (slot-precise-variable-lift s W≼W′))
+            (lift-∉ᵗ W≼W′ no-occur))
+        base-impᵇ = body-imprecisionᵇ-of p₀ embP* embI*
+        w = reveal-inertᵇ s′ (liftPreciseBody W≼W′ B₁)
+          (liftImpreciseBody W≼W′ Bᴵ*) avoid′
+          (body-imprecisionᵇ-future W≼W′ base-impᵇ)
+        term-eq : wrapTermᴾᵇ (w ∷ σ) (liftPreciseTerm W≼W′ Vᴾ)
+            ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
+                (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B₁ 〗))
+        term-eq = cong (wrapTermᴾᵇ σ)
+          (trans
+            (cong
+              (λ T → liftPreciseTerm W≼W′ Vᴾ
+                ↑ 〖 slotXᴾ s′ , slotRᴾ s′ ↑ T 〗)
+              (sym (liftPreciseTy-universal W≼W′ B₁)))
+            (sym (lifted-reveal-precise s W≼W′ Vᴾ (`∀ B₁))))
+    in ClosureProof.universals-related-transport
+      {W = W′}
+      {p = liftCenterBodyImprecision W≼W′ p₀}
+      {Bᴾ = Bᴾ′} {k = suc k}
+      refl term-eq
+      (fam W≼W′ (w ∷ σ)))
 precise-universal-value (suc k) below W s {B₁ = B₁}
     I.∀★⊑★ no-occur sourceᴾ
     related@(endpoints , shape , payload) =
@@ -402,8 +440,49 @@ precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
 precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
     (I.X⊑★ eq) no-occur () related
 precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
-    (I.∀⊑∀ p₀) no-occur sourceᴾ related =
-  blocked-precise-conceal below W s p₀ no-occur sourceᴾ related
+    (I.∀⊑∀ p₀) no-occur sourceᴾ
+    related@(endpoints , Bᴾ* , Bᴵ* , embP* , embI* , fam)
+    with ty-all-injective
+           (renameᵗ-injective
+             (toRenameᵗ-injective (preciseEmbedding (core W)))
+             (trans embP* (sym sourceᴾ)))
+precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
+    (I.∀⊑∀ p₀) no-occur sourceᴾ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+    related@(endpoints , .B₁ , Bᴵ* , embP* , embI* , fam)
+    | refl =
+  precise-conceal-endpoints W s (I.∀⊑∀ p₀) no-occur
+    sourceᴾ endpoints (precise-value endpoints ↓ all) ,
+  B₁ , Bᴵ* , embP* , embI* ,
+  (λ {Δᴾ′} {Δᴵ′} {Δᶜ′} {W′} W≼W′ {Bᴾ′} {Bᴵ′} σ →
+    let s′ = slot-future s W≼W′
+        avoid′ : slotXᴾ s′ ∉ᵗ `∀ (liftPreciseBody W≼W′ B₁)
+        avoid′ = subst≡ (slotXᴾ s′ ∉ᵗ_)
+          (liftPreciseTy-universal W≼W′ B₁)
+          (subst≡ (_∉ᵗ liftPreciseTy W≼W′ (`∀ B₁))
+            (sym (slot-precise-variable-lift s W≼W′))
+            (lift-∉ᵗ W≼W′ no-occur))
+        base-impᵇ = body-imprecisionᵇ-of p₀ embP* embI*
+        w = conceal-inertᵇ s′ (liftPreciseBody W≼W′ B₁)
+          (liftImpreciseBody W≼W′ Bᴵ*) avoid′
+          (body-imprecisionᵇ-future W≼W′ base-impᵇ)
+        term-eq : wrapTermᴾᵇ (w ∷ σ) (liftPreciseTerm W≼W′ Vᴾ)
+            ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
+                (Vᴾ ↓ makeConceal (slotXᴾ s) (slotRᴾ s)
+                  (`∀ B₁)))
+        term-eq = cong (wrapTermᴾᵇ σ)
+          (trans
+            (cong
+              (λ T → liftPreciseTerm W≼W′ Vᴾ
+                ↓ makeConceal (slotXᴾ s′) (slotRᴾ s′) T)
+              (sym (liftPreciseTy-universal W≼W′ B₁)))
+            (sym (lifted-conceal-precise s W≼W′ Vᴾ (`∀ B₁))))
+    in ClosureProof.universals-related-transport
+      {W = W′}
+      {p = liftCenterBodyImprecision W≼W′ p₀}
+      {Bᴾ = Bᴾ′} {k = suc k}
+      refl term-eq
+      (fam W≼W′ (w ∷ σ)))
 precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
     I.∀★⊑★ no-occur sourceᴾ
     related@(endpoints , shape , payload) =

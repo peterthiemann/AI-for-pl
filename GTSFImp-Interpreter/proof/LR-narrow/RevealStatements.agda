@@ -8,11 +8,6 @@ module proof.LR-narrow.RevealStatements where
 --     `∀⊑` case recurses at the same step index into the strictly
 --     smaller body derivation, so the induction is lexicographic in
 --     (step index, derivation size).
---   * `RevealObligations` collects the universal cases that are still
---     open as explicit hypotheses; each receives the full bundle of
---     statements at every lexicographically smaller pair, so a later
---     proof may recur through the same induction.  See
---     FUNDAMENTAL-PROPERTY-PLAN.md, Findings C and D.
 
 open import Data.Nat using (ℕ; suc; _≤_; _<_)
 open import Data.Nat.Properties using (≤-trans; ≤-refl; <-cmp; ≤⇒≯)
@@ -243,59 +238,3 @@ full-revealAt statements {n = n} = revealAt (statements n)
 
 full-concealAt : ∀ {k} → FullStatements k → ConcealAt k
 full-concealAt statements {n = n} = concealAt (statements n)
-
-------------------------------------------------------------------------
--- The obligations
-------------------------------------------------------------------------
-
-record RevealObligations : Set where
-  field
-    blocked-precise-reveal : ∀ {k n} → Below k n
-      → ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
-          {B₁ : Ty (suc Δᴾ)} {Aᴾc Aᴵc : Ty (suc Δᶜ)}
-          (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
-      → slotXᴾ s ∉ᵗ `∀ B₁
-      → embedPrecise (core W) (`∀ B₁) ≡ `∀ Aᴾc
-      → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-      → ValueImprecision W (I.∀⊑∀ p₀) k Vᴵ Vᴾ
-      → ValueImprecision W (I.∀⊑∀ p₀) k
-          Vᴵ (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B₁ 〗)
-
-    blocked-precise-conceal : ∀ {k n} → Below k n
-      → ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
-          {B₁ : Ty (suc Δᴾ)} {Aᴾc Aᴵc : Ty (suc Δᶜ)}
-          (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
-      → slotXᴾ s ∉ᵗ `∀ B₁
-      → embedPrecise (core W) (`∀ B₁) ≡ `∀ Aᴾc
-      → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-      → ValueImprecision W (I.∀⊑∀ p₀) k Vᴵ Vᴾ
-      → ValueImprecision W (I.∀⊑∀ p₀) k
-          Vᴵ (Vᴾ ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B₁))
-
-    blocked-dyn-reveal-universal : ∀ {k n} → Below k n
-      → ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (d : DynamicSlot W)
-          {B₁ : Ty (suc Δᴾ)} {Aᴾc Aᴵc : Ty (suc Δᶜ)}
-          (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
-      → embedPrecise (core W) (`∀ B₁) ≡ `∀ Aᴾc
-      → ∀ {Cᴾ : Ty Δᶜ}
-          (q : impEnv (core W) I.⊢ Cᴾ ⊑ `∀ Aᴵc)
-      → embedPrecise (core W)
-          (replaceTy (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁)) ≡ Cᴾ
-      → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-      → ValueImprecision W (I.∀⊑∀ p₀) k Vᴵ Vᴾ
-      → ValueImprecision W q k
-          Vᴵ (Vᴾ ↑ 〖 dslotXᴾ d , dslotRᴾ d ↑ `∀ B₁ 〗)
-
-    blocked-dyn-conceal-universal : ∀ {k n} → Below k n
-      → ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (d : DynamicSlot W)
-          {B₁ : Ty (suc Δᴾ)} {Aᴾc Aᴵc : Ty (suc Δᶜ)}
-          (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
-      → embedPrecise (core W) (`∀ B₁) ≡ `∀ Aᴾc
-      → ∀ {Cᴾ : Ty Δᶜ}
-          (q : impEnv (core W) I.⊢ Cᴾ ⊑ `∀ Aᴵc)
-      → embedPrecise (core W)
-          (replaceTy (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁)) ≡ Cᴾ
-      → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-      → ValueImprecision W q k Vᴵ Vᴾ
-      → ValueImprecision W (I.∀⊑∀ p₀) k
-          Vᴵ (Vᴾ ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁))

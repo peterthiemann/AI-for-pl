@@ -1,6 +1,6 @@
 open import proof.LR-narrow.RevealStatements
 
-module proof.LR-narrow.DynamicReveal (ob : RevealObligations) where
+module proof.LR-narrow.DynamicReveal where
 
 -- File Charter:
 --   * The one-sided structural reveal and conceal at a dynamic slot:
@@ -85,7 +85,7 @@ open import LR-narrow.Atoms using (shift-⊑)
 open import proof.LR-narrow.TypeRenamingComposition using
   (pack↑; pack↓; apply↑; apply↓)
 import proof.LR-narrow.PreciseReveal
-open module PreciseRevealModule = proof.LR-narrow.PreciseReveal ob
+open module PreciseRevealModule = proof.LR-narrow.PreciseReveal
   using (precise-endpoint-type; precise-endpoint-type-of;
          identity-reveal; identity-conceal;
          ArrowSource; arrow-arrow; arrow-star; arrow-source-view;
@@ -93,8 +93,6 @@ open module PreciseRevealModule = proof.LR-narrow.PreciseReveal ob
          size-bound-left; size-bound-right;
          no-precise-bottom-value)
 
-open RevealObligations ob using
-  (blocked-dyn-reveal-universal; blocked-dyn-conceal-universal)
 
 open PreciseComposition revealFrame using () renaming
   (precise-frame-computations-related to reveal-precise-composition;
@@ -437,6 +435,10 @@ dyn-embed-∉ {W = W} d B = rename-not-in-image
 -- sources are refuted; only the paired universal source remains an
 -- obligation.
 
+∉-all-inv : ∀ {Δ} {X : TyVar Δ} {A : Ty (suc Δ)}
+  → X ∉ᵗ `∀ A → Fin.suc X ∉ᵗ A
+∉-all-inv (∉-all h) = h
+
 dyn-universal-value : ∀ (j sz : ℕ) (below : Below j sz)
     {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (d : DynamicSlot W)
     {B₁ : Ty (suc Δᴾ)} {Aᴾ Aᴵ : Ty Δᶜ}
@@ -467,9 +469,117 @@ dyn-universal-value (suc k) sz below W d {B₁ = B₁}
 dyn-universal-value (suc k) sz below W d {B₁ = B₁}
     (I.X⊑★ eq) () q targetᴾ related
 dyn-universal-value (suc k) sz below W d {B₁ = B₁}
-    (I.∀⊑∀ p₀) sourceᴾ q targetᴾ related =
-  blocked-dyn-reveal-universal below W d p₀ sourceᴾ q targetᴾ
-    related
+    (I.∀⊑∀ {A = Aᴾc} {B = Aᴵc} p₀) sourceᴾ q targetᴾ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+    related@(endpoints , Bᴾ* , Bᴵ* , embP* , embI* , fam)
+    with ty-all-injective
+           (renameᵗ-injective
+             (toRenameᵗ-injective (preciseEmbedding (core W)))
+             (trans embP* (sym sourceᴾ)))
+dyn-universal-value (suc k) sz below W d {B₁ = B₁}
+    (I.∀⊑∀ {A = Aᴾc} {B = Aᴵc} p₀) sourceᴾ q targetᴾ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+    related@(endpoints , .B₁ , Bᴵ* , embP* , embI* , fam)
+    | refl =
+  ClosureProof.value-imprecision-reindex q alt₀ {k = suc k}
+    (trans (sym targetᴾ) chain) refl
+    (dyn-reveal-endpoints W d (I.∀⊑∀ p₀) sourceᴾ
+      alt₀ chain endpoints
+      (precise-value endpoints ↑ all) ,
+    replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁ ,
+    Bᴵ* , chain , embI* ,
+    (λ W≼W′ σ → fam₀ W≼W′ σ))
+  where
+  chain : embedPrecise (core W)
+      (replaceTy (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁))
+      ≡ replaceTy (dcenter d)
+          (embedPrecise (core W) (dslotRᴾ d)) (`∀ Aᴾc)
+  chain = trans (dyn-embed-replace d (`∀ B₁))
+    (cong
+      (replaceTy (dcenter d)
+        (embedPrecise (core W) (dslotRᴾ d)))
+      sourceᴾ)
+
+  avoidᴵᵇ : Fin.suc (dcenter d) ∉ᵗ Aᴵc
+  avoidᴵᵇ = ∉-all-inv
+    (subst≡ (dcenter d ∉ᵗ_) (impreciseEmbedded endpoints)
+      (dyn-embed-∉ d (impreciseType endpoints)))
+
+  inner : I.extᵐ (impEnv (core W)) I.⊢
+      replaceTy (Fin.suc (dcenter d))
+        (⇑ᵗ (embedPrecise (core W) (dslotRᴾ d))) Aᴾc ⊑ Aᴵc
+  inner = replace-left-⊑ (Fin.suc (dcenter d))
+    (cong I.⇑ᵛ (dmode-eq d))
+    (shift-⊑ I.X⊑X (dynamicRep-related (datom d)))
+    avoidᴵᵇ p₀
+
+  alt₀ = replace-left-⊑ (dcenter d) (dmode-eq d)
+    (dynamicRep-related (datom d)) (∉-all avoidᴵᵇ)
+    (I.∀⊑∀ p₀)
+
+  fam₀ : UniversalFamily W inner
+      (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁)
+      Bᴵ* (suc k) Vᴵ
+      (Vᴾ ↑ 〖 dslotXᴾ d , dslotRᴾ d ↑ `∀ B₁ 〗)
+  fam₀ {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+    ClosureProof.universals-phantom
+      (liftCenterBodyImprecision W≼W′ p₀)
+      (liftCenterBodyImprecision W≼W′ inner)
+      (ClosureProof.universals-related-transport
+        {W = W′}
+        {p = liftCenterBodyImprecision W≼W′ p₀}
+        {Bᴾ = Bᴾ′} {k = suc k}
+        (wrapTermᴵᵇ-subst σ-eq σ (liftImpreciseTerm W≼W′ Vᴵ))
+        term-eq
+        (fam W≼W′ (w† ∷ σ†)))
+    where
+    d′ = dyn-slot-future d W≼W′
+
+    σ-eq : liftPreciseBody W≼W′
+        (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁)
+        ≡ replaceTy (Fin.suc (dslotXᴾ d′)) (⇑ᵗ (dslotRᴾ d′))
+            (liftPreciseBody W≼W′ B₁)
+    σ-eq = trans
+      (liftPreciseBody-replace W≼W′ (dslotXᴾ d) (dslotRᴾ d) B₁)
+      (cong₂
+        (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R)
+          (liftPreciseBody W≼W′ B₁))
+        (sym (dyn-slot-precise-variable-lift d W≼W′))
+        (sym (dyn-slot-precise-rep-lift d W≼W′)))
+
+    base-impᵇ : BodyImprecisionᵇ W
+        (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁)
+        Bᴵ*
+    base-impᵇ = body-imprecisionᵇ-of inner chain embI*
+
+    w† = reveal-dynᵇ d′ (liftPreciseBody W≼W′ B₁)
+      (liftImpreciseBody W≼W′ Bᴵ*)
+      (body-imprecisionᵇ-subst σ-eq
+        (body-imprecisionᵇ-future W≼W′ base-impᵇ))
+
+    σ† : UniWrapsᵇ W′
+        (replaceTy (Fin.suc (dslotXᴾ d′)) (⇑ᵗ (dslotRᴾ d′))
+          (liftPreciseBody W≼W′ B₁))
+        (liftImpreciseBody W≼W′ Bᴵ*) Bᴾ′ Bᴵ′
+    σ† = subst≡
+      (λ B → UniWrapsᵇ W′ B (liftImpreciseBody W≼W′ Bᴵ*)
+        Bᴾ′ Bᴵ′) σ-eq σ
+
+    term-eq : wrapTermᴾᵇ (w† ∷ σ†) (liftPreciseTerm W≼W′ Vᴾ)
+        ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
+            (Vᴾ ↑ 〖 dslotXᴾ d , dslotRᴾ d ↑ `∀ B₁ 〗))
+    term-eq = trans
+      (wrapTermᴾᵇ-subst σ-eq σ
+        (liftPreciseTerm W≼W′ Vᴾ
+          ↑ 〖 dslotXᴾ d′ , dslotRᴾ d′
+              ↑ `∀ (liftPreciseBody W≼W′ B₁) 〗))
+      (cong (wrapTermᴾᵇ σ)
+        (trans
+          (cong
+            (λ T → liftPreciseTerm W≼W′ Vᴾ
+              ↑ 〖 dslotXᴾ d′ , dslotRᴾ d′ ↑ T 〗)
+            (sym (liftPreciseTy-universal W≼W′ B₁)))
+          (sym (dyn-lifted-reveal-precise d W≼W′ Vᴾ (`∀ B₁)))))
 dyn-universal-value (suc k) sz below W d {B₁ = B₁}
     I.bot-elim sourceᴾ q targetᴾ related =
   ⊥-elim (no-precise-bottom-value {p = I.bot-elim} {k = suc k}
@@ -774,9 +884,125 @@ dyn-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
 dyn-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
     (I.X⊑★ eq) () q targetᴾ related
 dyn-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
-    (I.∀⊑∀ p₀) sourceᴾ q targetᴾ related =
-  blocked-dyn-conceal-universal below W d p₀ sourceᴾ q targetᴾ
-    related
+    (I.∀⊑∀ {A = Aᴾc} {B = Aᴵc} p₀) sourceᴾ q targetᴾ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related = conceal-universal-case
+  where
+  chain : embedPrecise (core W)
+      (replaceTy (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁))
+      ≡ replaceTy (dcenter d)
+          (embedPrecise (core W) (dslotRᴾ d)) (`∀ Aᴾc)
+  chain = trans (dyn-embed-replace d (`∀ B₁))
+    (cong
+      (replaceTy (dcenter d)
+        (embedPrecise (core W) (dslotRᴾ d)))
+      sourceᴾ)
+
+  related-endpoints =
+    ClosureProof.value-imprecision-endpoints related
+
+  avoidᴵᵇ : Fin.suc (dcenter d) ∉ᵗ Aᴵc
+  avoidᴵᵇ = ∉-all-inv
+    (subst≡ (dcenter d ∉ᵗ_)
+      (impreciseEmbedded related-endpoints)
+      (dyn-embed-∉ d (impreciseType related-endpoints)))
+
+  inner : I.extᵐ (impEnv (core W)) I.⊢
+      replaceTy (Fin.suc (dcenter d))
+        (⇑ᵗ (embedPrecise (core W) (dslotRᴾ d))) Aᴾc ⊑ Aᴵc
+  inner = replace-left-⊑ (Fin.suc (dcenter d))
+    (cong I.⇑ᵛ (dmode-eq d))
+    (shift-⊑ I.X⊑X (dynamicRep-related (datom d)))
+    avoidᴵᵇ p₀
+
+  alt : impEnv (core W) I.⊢
+      replaceTy (dcenter d)
+        (embedPrecise (core W) (dslotRᴾ d)) (`∀ Aᴾc)
+      ⊑ `∀ Aᴵc
+  alt = replace-left-⊑ (dcenter d) (dmode-eq d)
+    (dynamicRep-related (datom d)) (∉-all avoidᴵᵇ)
+    (I.∀⊑∀ p₀)
+
+  conceal-universal-case : ValueImprecision W
+      (I.∀⊑∀ p₀) (suc k)
+      Vᴵ (Vᴾ ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁))
+  conceal-universal-case
+      with ClosureProof.value-imprecision-reindex alt q
+        {k = suc k} (trans (sym chain) targetᴾ) refl related
+  conceal-universal-case
+      | endpointsq , Bᴾ* , Bᴵ* , embP* , embI* , famq
+      with ty-all-injective
+        (renameᵗ-injective
+          (toRenameᵗ-injective (preciseEmbedding (core W)))
+          (trans embP* (sym chain)))
+  conceal-universal-case
+      | endpointsq
+      , .(replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁)
+      , Bᴵ* , embP* , embI* , famq
+      | refl =
+    dyn-conceal-endpoints W d (I.∀⊑∀ p₀) sourceᴾ q
+      targetᴾ related-endpoints
+      (precise-value related-endpoints ↓ all) ,
+    B₁ , Bᴵ* , sourceᴾ , embI* ,
+    (λ W≼W′ σ → fam-out W≼W′ σ)
+    where
+    fam-out : UniversalFamily W p₀ B₁ Bᴵ* (suc k)
+        Vᴵ (Vᴾ ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d) (`∀ B₁))
+    fam-out {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+      ClosureProof.universals-phantom
+        (liftCenterBodyImprecision W≼W′ inner)
+        (liftCenterBodyImprecision W≼W′ p₀)
+        (ClosureProof.universals-related-transport
+          {W = W′}
+          {p = liftCenterBodyImprecision W≼W′ inner}
+          {Bᴾ = Bᴾ′} {k = suc k}
+          (wrapTermᴵᵇ-subst (sym σ-eq) (w† ∷ σ)
+            (liftImpreciseTerm W≼W′ Vᴵ))
+          term-eq
+          (famq W≼W′ σ‡))
+      where
+      d′ = dyn-slot-future d W≼W′
+
+      σ-eq : liftPreciseBody W≼W′
+          (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B₁)
+          ≡ replaceTy (Fin.suc (dslotXᴾ d′)) (⇑ᵗ (dslotRᴾ d′))
+              (liftPreciseBody W≼W′ B₁)
+      σ-eq = trans
+        (liftPreciseBody-replace W≼W′ (dslotXᴾ d) (dslotRᴾ d) B₁)
+        (cong₂
+          (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R)
+            (liftPreciseBody W≼W′ B₁))
+          (sym (dyn-slot-precise-variable-lift d W≼W′))
+          (sym (dyn-slot-precise-rep-lift d W≼W′)))
+
+      w† = conceal-dynᵇ d′ (liftPreciseBody W≼W′ B₁)
+        (liftImpreciseBody W≼W′ Bᴵ*)
+        (body-imprecisionᵇ-future W≼W′
+          (body-imprecisionᵇ-of p₀ sourceᴾ embI*))
+
+      σ‡ : UniWrapsᵇ W′
+          (liftPreciseBody W≼W′
+            (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d))
+              B₁))
+          (liftImpreciseBody W≼W′ Bᴵ*) Bᴾ′ Bᴵ′
+      σ‡ = subst≡
+        (λ B → UniWrapsᵇ W′ B (liftImpreciseBody W≼W′ Bᴵ*)
+          Bᴾ′ Bᴵ′) (sym σ-eq) (w† ∷ σ)
+
+      term-eq : wrapTermᴾᵇ σ‡ (liftPreciseTerm W≼W′ Vᴾ)
+          ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
+              (Vᴾ ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d)
+                (`∀ B₁)))
+      term-eq = trans
+        (wrapTermᴾᵇ-subst (sym σ-eq) (w† ∷ σ)
+          (liftPreciseTerm W≼W′ Vᴾ))
+        (cong (wrapTermᴾᵇ σ)
+          (trans
+            (cong
+              (λ T → liftPreciseTerm W≼W′ Vᴾ
+                ↓ makeConceal (dslotXᴾ d′) (dslotRᴾ d′) T)
+              (sym (liftPreciseTy-universal W≼W′ B₁)))
+            (sym (dyn-lifted-conceal-precise d W≼W′ Vᴾ
+              (`∀ B₁)))))
 dyn-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
     I.bot-elim sourceᴾ q targetᴾ related =
   ⊥-elim (no-precise-bottom-value {p = I.bot-elim} {k = suc k}

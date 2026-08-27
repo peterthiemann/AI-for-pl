@@ -157,11 +157,45 @@ green and committed:
   their documented `TERMINATING` pragma (allocation-order
   well-foundedness — the one inherited pragma of the sweep).
 
-**REMAINING (Finding H order)**: (3) the `∀⊑∀` clause becomes a
-wrap-closed family (consumers project `[]`; the four obligations
-become cons projections); (4) the `∀⊑∀` producers (`Cast`, the
-`RevealStructural` assemblies) build families by σ-induction — the
-flagged largest proof; (5) delete `RevealObligations`.
+**Finding-H steps (3) and (5) are DONE** (tree fully green):
+
+* the `∀⊑∀` clause stores `UniversalFamily` — a wrap-closed Kripke
+  family over the two-sided wrapper algebra `UniWrapᵇ`/`UniWrapsᵇ`
+  (paired constructors carry the wrap-level avoid, dynamic and
+  inert wrappers convert the precise side only; the carried clause
+  data is `BodyImprecisionᵇ`, the plain two-sided body
+  imprecision);
+* consumers project the empty sequence at the reflexive future
+  (definitionally the old chain); the closure transports
+  (`universals-phantom`, `universal-family-future`, downward, the
+  four per-step lemmas) mirror the right-universal family's;
+* the producers: the `reveal-universal`/`conceal-universal`
+  assemblies and the four previously-blocked obligations
+  (`blocked-precise-reveal`/`-conceal`,
+  `blocked-dyn-reveal`/`-conceal-universal`) are cons-projections
+  (`λ W≼W′ σ → fam W≼W′ (w ∷ σ)` with the lifted wrapper and the
+  wrap-term equalities); `RevealObligations` is DELETED and the
+  reveal development (`RevealStructural`, `PreciseReveal`,
+  `DynamicReveal`, `UniversalFamilyKit`) is obligation-free;
+* the from-scratch producers (`universal-compatible` — the `Λ⊑Λ`
+  compatibility — and `Cast`'s `∀ᶜ` cast) build the family through
+  the `UniversalFamilyKitᵇ` record (`to-familyᵇ` from
+  `UniversalData`, the endpoints-plus-chain presentation).
+
+**REMAINING — step (4) residual**: construct the in-tree
+`universal-family-kitᵇ : UniversalFamilyKitᵇ` (currently deferred
+as the `universal-familyᵇ` field of `RemainingObligations` in
+`FundamentalAssembly`).  Its paired chain extensions follow the
+existing `reveal-universal-head`/`conceal-universal-head`; the
+inert and dynamic extensions are the flagged largest proofs: their
+chain obligations run the wrapper β (`bind Rᴾ`) plus the inner
+type application (`bind ＇0`) against the single imprecise β
+(`bind Rᴵ`), so the trace pairs `(Rᴾ, Rᴵ)` as the paired bind and
+classifies `bind ＇0` with `future-alias` at the just-bound paired
+variable (the alias representative is the paired center, so the
+alias chain ends at a paired mode) — mirror
+`reveal-right-universal-absent-inner` with
+`aliasBindWorld (pairedBindWorld W′ Rᴾ Rᴵ r) Fin.zero`.
 
 ## Recurring mechanical recipes (used dozens of times already)
 

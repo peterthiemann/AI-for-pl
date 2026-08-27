@@ -1,6 +1,6 @@
 open import proof.LR-narrow.RevealStatements
 
-module proof.LR-narrow.UniversalFamilyKit (ob : RevealObligations) where
+module proof.LR-narrow.UniversalFamilyKit where
 
 -- File Charter:
 --   * Discharges the replacement-closure kit: every right-universal
@@ -33,10 +33,10 @@ open import LR-narrow.UniversalFamily
 import proof.LR-narrow.Closure as ClosureProof
 open import proof.LR-narrow.SlotLifting using (slot-future)
 import proof.LR-narrow.DynamicReveal
-open module DynKit = proof.LR-narrow.DynamicReveal ob using
+open module DynKit = proof.LR-narrow.DynamicReveal using
   (dyn-reveal-endpoints; dyn-conceal-endpoints)
 import proof.LR-narrow.PreciseReveal
-open module PreciseKit = proof.LR-narrow.PreciseReveal ob using
+open module PreciseKit = proof.LR-narrow.PreciseReveal using
   (precise-reveal-endpoints; precise-conceal-endpoints)
 open import proof.LR-narrow.ImprecisionSize using (sizeᵖ)
 open import proof.LR-narrow.AliasAvoid using (AliasAvoidᵖ)
@@ -50,7 +50,7 @@ import proof.DGG.CtxImp as CTI
 import proof.DGG.CastTermImprecision as CTIR
 import proof.LR-narrow.Universal as UniversalProof
 open import LR-narrow.TermRelation
-open import proof.LR-narrow.RevealStructural ob using
+open import proof.LR-narrow.RevealStructural using
   (statements-all; revealed-endpoints; concealed-endpoints;
    reveal-right-universal-head;
    conceal-right-universal-head; reveal-right-universal-absent-head;

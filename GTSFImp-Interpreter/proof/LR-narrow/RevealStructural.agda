@@ -1,6 +1,6 @@
 open import proof.LR-narrow.RevealStatements
 
-module proof.LR-narrow.RevealStructural (ob : RevealObligations) where
+module proof.LR-narrow.RevealStructural where
 
 -- File Charter:
 --   * The structural reveal and conceal compatibility at a paired
@@ -77,14 +77,14 @@ open import proof.LR-narrow.StarNoOccurrence using
    renameᵗ-∉ᵗ; paired-no-occurrence; liftCenter-∉ᵗ;
    ⊑-var-right-nonvar; ⊑-base-right-no-var)
 import proof.LR-narrow.PreciseReveal
-open module PreciseRevealModule = proof.LR-narrow.PreciseReveal ob
+open module PreciseRevealModule = proof.LR-narrow.PreciseReveal
   using (precise-reveal; precise-conceal; sizeᵗ;
          precise-revealed-computations;
          precise-concealed-computations;
          precise-universal-value; precise-universal-conceal-value;
          lift-∉ᵗ)
 import proof.LR-narrow.DynamicReveal
-open module DynamicRevealModule = proof.LR-narrow.DynamicReveal ob
+open module DynamicRevealModule = proof.LR-narrow.DynamicReveal
   using (dyn-reveal; dyn-conceal;
          dyn-revealed-computations; dyn-concealed-computations;
          dyn-embed-∉; dyn-embed-replace; dyn-slot-future;
