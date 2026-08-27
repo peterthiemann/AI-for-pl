@@ -1162,3 +1162,52 @@ Discharging `ImpreciseRightExtension` needs, in order:
      image of `target-occurs-sourceᵖ`, with the paired mode ruling
      out the alias and dynamic leaves), and the replaced right
      endpoint provably does not contain the center.
+
+### Addendum — the exact remaining gap is an avoidance weakening
+
+Scoping the `ImpreciseRightExtension` discharge against the tree
+sharpened the plan above:
+
+* The ⊑-substitution engine EXISTS: `subst₂-⊑` (with `subst-⊑`,
+  `open-head-alias-map`, and the `openRelatedBodyImprecision`
+  pattern in `LR-narrow/World.agda`).  The chain-extension head's
+  instantiated source relation `t″` is the `instᵐ` mirror of
+  `openRelatedBodyImprecision`, with the star discharge at the
+  bound variable given by the head's `r★`.
+* The head's world plumbing is unproblematic: the right-universal
+  head's precise term and post-bind bound are exactly the source
+  head's, and the imprecise side settles purely, so the
+  transformation is an imprecise-frame composition whose value plug
+  is the mirror at `(lift t″ → lift t)` — `UniShape` makes the
+  wrapped value a value.
+* The one genuine gap: the mirror demands `AliasAvoidᵖ` of `t″`,
+  but `subst₂-⊑` copies `r★`'s subderivations into the star
+  positions, and their alias leaves (all with ★ right endpoints)
+  admit no avoidance guarantee.  The fix is a ★-right-exempt
+  avoidance variant — at an alias leaf, `(B ≡ ★) ⊎ (c ∉ᵗ T)` —
+  threaded through the mirror in place of `AliasAvoidᵖ`:
+  - the mirror's alias case is only reached at `UniShape` types,
+    where the ★-branch is refuted by the embedding equation, so its
+    proofs are unaffected;
+  - the weakened `replace-⊑` is provable: its `⇒⊑★` clause already
+    routes through the avoidance-free `replace-star`, and at a
+    ★-right alias leaf the replaced judgment can reuse the UNREPLACED
+    premise (`T ⊑ ★` is untouched by the replacement, since the
+    right endpoint ★ is fixed and the left variable is
+    mode-disjoint from the slot);
+  - the instantiation lemma then transports the weakened predicate:
+    inherited leaves substitute (in the occurs-absent branch the
+    center avoids the substituted representatives), star-copied
+    leaves take the ★ branch.
+* The occurs-present branch of the head is vacuous via the mirror
+  image of `target-occurs-sourceᵖ` (a paired center occurring on
+  the left occurs on the right; the alias and dynamic leaves are
+  ruled out by the paired mode) against the replaced right
+  endpoint's center-freeness.
+
+Order for the discharge: the weakened predicate + its transports,
+the weakened `replace-⊑`, re-thread `ImpreciseReveal` (mechanical —
+every case already treats ★-right positions as identities), the
+right-side `UniWraps` kind, the kit's chain-extension via the
+instantiation lemma and the occurs split, then instantiate and
+delete `ImpreciseRightExtension`.
