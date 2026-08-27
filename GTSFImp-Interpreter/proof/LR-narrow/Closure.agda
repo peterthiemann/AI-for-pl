@@ -10,8 +10,8 @@ open import Data.List using ([])
 open import Data.Nat using (ℕ; zero; suc; _≤_; z≤n; s≤s)
 open import Data.Nat.Properties using (m≤n⇒m<n∨m≡n)
 open import Data.Empty using (⊥-elim)
-open import Data.Product using (_,_)
-open import Data.Sum using (inj₁; inj₂)
+open import Data.Product using (_,_; Σ-syntax)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Unit.Polymorphic.Base using (tt)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; cong; cong₂; refl; sym; trans)
@@ -1158,6 +1158,39 @@ alias-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
 alias-holds-future {Z = Z} W≼W′ f eq p holds =
   alias-holds-lift W≼W′ f (entry-future W≼W′ Z) eq
     (liftCenterMode-alias W≼W′ Z eq) p holds
+
+-- The right-hand side of an alias premise on an inhabited value is a
+-- variable or ★: with variable representatives the premise's left is
+-- a variable, whose only rules are the two variable leaves and a
+-- further alias, and the chain is consumed through the values'
+-- nested alias slots.
+
+alias-premise-B-shape : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {T B : Ty Δᶜ} {k} {Vᴵ : Term Δᴵ} {Uᴾ : Term Δᴾ}
+    (p : impEnv (core W) I.⊢ T ⊑ B)
+  → (Σ[ Y ∈ TyVar Δᶜ ] T ≡ ＇ Y)
+  → ValueImprecisionᵏ (suc k) W p Vᴵ Uᴾ
+  → (Σ[ Yb ∈ TyVar Δᶜ ] B ≡ ＇ Yb) ⊎ (B ≡ ★)
+alias-premise-B-shape I.★⊑★ (Y , ()) related
+alias-premise-B-shape I.ι⊑ι (Y , ()) related
+alias-premise-B-shape (I.X⊑X {X = X}) (Y , eq) related =
+  inj₁ (X , refl)
+alias-premise-B-shape (I.⇒⊑⇒ p q) (Y , ()) related
+alias-premise-B-shape (I.∀⊑∀ p) (Y , ()) related
+alias-premise-B-shape (I.⇒⊑★ p q) (Y , ()) related
+alias-premise-B-shape I.ι⊑★ (Y , ()) related
+alias-premise-B-shape (I.X⊑★ eq) tvar related = inj₂ refl
+alias-premise-B-shape (I.∀⊑ nonvar occurs p) (Y , ()) related
+alias-premise-B-shape I.∀★⊑★ (Y , ()) related
+alias-premise-B-shape (I.∀⊑★ nonstar p) (Y , ()) related
+alias-premise-B-shape I.bot-elim (Y , ()) related
+alias-premise-B-shape I.bot⊑★ (Y , ()) related
+alias-premise-B-shape {W = W} (I.alias {X = X} eq p) tvar
+    (endpoints , holds) =
+  alias-premise-B-shape p
+    (alias-holds-rep (semanticEntry W X) eq holds)
+    (Data.Product.proj₂
+      (alias-holds-payload (semanticEntry W X) eq holds))
 
 dynamic-atom-tag-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}

@@ -27,7 +27,10 @@ open import Conversion using
 open import Consistency using (toRenameᵗ; wk↪ᵗ)
 import Imprecision as I
 open import proof.ImprecisionConsistency using
-  (toRenameᵗ-injective; ext-injective)
+  (toRenameᵗ-injective; ext-injective; fin-suc-injective;
+   shift-star-map; shift-alias-map)
+open import proof.LR-narrow.AliasAvoid using
+  (AliasAvoidᵖ; alias-avoid-rename)
 open import proof.TypeInTermSubst using (toRename-wk-eq; renameᵗ-wk-eq)
 open import proof.LR-narrow.TypeRenamingComposition using
   (Packed↑; Packed↓; pack↑; pack↓; pack-↦↑; pack-↦↓; pack-∀↑; pack-∀↓;
@@ -337,3 +340,38 @@ slot-future s W≼W′ = paired-slot
   (lifted-atom (slot-lift s W≼W′))
   (lifted-entry-eq (slot-lift s W≼W′))
   (liftCenterMode-paired W≼W′ (center s) (mode-eq s))
+
+------------------------------------------------------------------------
+-- Derivation-restricted avoidance lifts along futures
+------------------------------------------------------------------------
+
+-- Lifting a derivation to a future world creates no alias leaves, so
+-- avoidance of the lifted center transports (Finding H).
+
+alias-avoid-lift-center : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    (W≼W′ : Future W W′) (c : TyVar Δᶜ)
+    (p : I._⊢_⊑_ (impEnv (core W)) Aᴾ Aᴵ)
+  → AliasAvoidᵖ c p
+  → AliasAvoidᵖ (liftCenterVariable W≼W′ c)
+      (liftCenterImprecision W≼W′ p)
+alias-avoid-lift-center future-refl c p avoid = avoid
+alias-avoid-lift-center (future-paired {W′ = W₁} W≼W′ r) c p avoid =
+  alias-avoid-rename {μ′ = I.extᵐ (impEnv (core W₁))} Fin.suc
+    fin-suc-injective (shift-star-map {v = I.X⊑X})
+    (shift-alias-map {v = I.X⊑X})
+    (liftCenterImprecision W≼W′ p)
+    (alias-avoid-lift-center W≼W′ c p avoid)
+alias-avoid-lift-center (future-precise {W′ = W₁} W≼W′ r) c p avoid =
+  alias-avoid-rename {μ′ = I.instᵐ (impEnv (core W₁))} Fin.suc
+    fin-suc-injective (shift-star-map {v = I.X⊑★})
+    (shift-alias-map {v = I.X⊑★})
+    (liftCenterImprecision W≼W′ p)
+    (alias-avoid-lift-center W≼W′ c p avoid)
+alias-avoid-lift-center (future-imprecise {W′ = W₁} W≼W′) c p avoid =
+  alias-avoid-rename {μ′ = I.instᵐ (impEnv (core W₁))} Fin.suc
+    fin-suc-injective (shift-star-map {v = I.X⊑★})
+    (shift-alias-map {v = I.X⊑★})
+    (liftCenterImprecision W≼W′ p)
+    (alias-avoid-lift-center W≼W′ c p avoid)

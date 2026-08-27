@@ -40,6 +40,7 @@ open import proof.LR-narrow.RevealLifting using (PairedSlot)
 open import proof.LR-narrow.SlotLifting using
   (slotXᴾ; slotXᴵ; slotRᴾ; slotRᴵ)
 open import proof.LR-narrow.ImprecisionSize using (sizeᵖ)
+open import proof.LR-narrow.AliasAvoid using (AliasAvoidᵖ) public
 
 ------------------------------------------------------------------------
 -- The paired statements, sized by the source derivation
@@ -54,6 +55,7 @@ RevealAtSized k n = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W)
     {Bᴾ : Ty Δᴾ} {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
+  → AliasAvoidᵖ (center s) p
   → sizeᵖ p ≤ n
   → embedPrecise (core W) Bᴾ ≡ Aᴾ
   → embedImprecise (core W) Bᴵ ≡ Aᴵ
@@ -71,6 +73,7 @@ ConcealAtSized k n = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     (s : PairedSlot W)
     {Bᴾ : Ty Δᴾ} {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
+  → AliasAvoidᵖ (center s) p
   → sizeᵖ p ≤ n
   → embedPrecise (core W) Bᴾ ≡ Aᴾ
   → embedImprecise (core W) Bᴵ ≡ Aᴵ

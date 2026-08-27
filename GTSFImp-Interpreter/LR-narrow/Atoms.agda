@@ -347,6 +347,35 @@ alias-atom-no-target (target-entry a) () related
 alias-atom-no-target (alias-entry a) refl related =
   aliasNoTargetOccupant a
 
+-- The representative recorded by an inhabited alias slot is a
+-- variable, and the payload sits below the seal at the alias premise.
+
+alias-holds-rep : ∀ {Δᴾ Δᴵ Δᶜ mode}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
+    {ℛ : PayloadRelation W} {p : impEnv W I.⊢ T ⊑ B} {Vᴵ Vᴾ}
+    (entry : SemanticEntry W Z mode) (eq : mode ≡ I.X⊑ᵗ T)
+  → AliasAtomHolds ℛ entry eq p Vᴵ Vᴾ
+  → Σ[ Y ∈ TyVar Δᶜ ] T ≡ ＇ Y
+alias-holds-rep (paired-entry a) eq ()
+alias-holds-rep (dynamic-entry a) () holds
+alias-holds-rep (target-entry a) () holds
+alias-holds-rep {W = W} (alias-entry a) refl holds =
+  toRenameᵗ (preciseEmbedding W) (aliasRepName a) ,
+  sym (aliasRep-eq a)
+
+alias-holds-payload : ∀ {Δᴾ Δᴵ Δᶜ mode}
+    {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B : Ty Δᶜ}
+    {ℛ : PayloadRelation W} {p : impEnv W I.⊢ T ⊑ B} {Vᴵ Vᴾ}
+    (entry : SemanticEntry W Z mode) (eq : mode ≡ I.X⊑ᵗ T)
+  → AliasAtomHolds ℛ entry eq p Vᴵ Vᴾ
+  → Σ[ Uᴾ ∈ Term Δᴾ ] ℛ p Vᴵ Uᴾ
+alias-holds-payload (paired-entry a) eq ()
+alias-holds-payload (dynamic-entry a) () holds
+alias-holds-payload (target-entry a) () holds
+alias-holds-payload (alias-entry a) refl
+    (alias-holds Uᴾ shape related) =
+  Uᴾ , related
+
 ------------------------------------------------------------------------
 -- Reindexing slots through fresh bindings
 ------------------------------------------------------------------------
