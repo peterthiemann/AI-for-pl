@@ -1211,3 +1211,101 @@ every case already treats ★-right positions as identities), the
 right-side `UniWraps` kind, the kit's chain-extension via the
 instantiation lemma and the occurs split, then instantiate and
 delete `ImpreciseRightExtension`.
+
+## Implementation log — the right-universal chain extension landed;
+## `ImpreciseRightExtension` discharged and deleted (2026-08-27)
+
+Finding I item 2 is complete.  The right-side `UniWraps` gained the
+imprecise-only kinds, the kit's σ-induction gained their chain
+extensions, and the `∀⊑` cases of the mirror are now closed in
+place, so the extension record is gone.  Four discoveries made the
+discharge simpler than the addendum's plan:
+
+* **The extension discharge is a pure cons, not a kit call.**  The
+  mirror's `∀⊑` case only needs to cons the imprecise-only wrapper
+  onto the *stored* family — `λ W≼W′ σ → fam W≼W′ (w ∷ σ‡)` plus
+  the phantom/endpoint transports — exactly like the two-sided
+  `∀⊑∀` case.  No recursion into the kit or the reveal induction is
+  involved, so `imp-right-universal-value` and
+  `imp-conceal-right-universal-value` live before the mutual block
+  and the feared cons/kit circularity never materializes.  The kit
+  is needed only to keep `universal-family-kit` total once the new
+  wrapper kinds exist.
+* **Store freshness is a theorem, not a missing atom field.**  The
+  `∋` relation of `TyStore` is telescopic (every witness shifts the
+  bound type past the entry), so `store-∋-∉ : Σ ∋ X ⦂ B → X ∉ᵗ B`
+  falls out by induction with `shift-∈ᵗ-inversion` — no
+  `pairedFresh` field and no atom sweep.  Consequently the slot
+  variable does not occur in its own representative, and with
+  `replaceTy-self-∉` the replaced imprecise endpoint is free of the
+  center.
+* **There is no occurs split.**  The pre-existing
+  `paired-no-occurrence` (the contrapositive of the planned
+  occurrence-transfer mirror, already in `StarNoOccurrence`)
+  turns the replaced endpoint's center-freeness into
+  center-freeness of the *shared precise endpoint*, derived from
+  the caller's own `t` (reveal side) or the built `t‴` (conceal
+  side).  The mirror's `∉` premise is therefore available
+  unconditionally and the head is total outright; the addendum's
+  occurs-present vacuity argument is subsumed.
+* **The star-map needs no avoidance premise.**  `star-avoid★ᵖ`
+  proves the weakened predicate outright for any derivation with ★
+  on the right (all its subderivations stay below ★, so every
+  alias leaf takes the exemption).  `subst₂-avoid★` therefore
+  takes only two premise functions — avoidance of the same-map's
+  insertions and the `∉`-transport along the alias map — and each
+  `⊑ ★`-output clause is discharged wholesale by `star-avoid★ᵖ`
+  applied to the (possibly stuck) recursive output, which
+  typechecks because no matching is needed at the application.
+
+The landed pieces:
+
+* `LR-narrow/Atoms.agda` — `store-∋-¬∈`/`store-∋-∉`.
+* `proof/LR-narrow/StarNoOccurrence.agda` — `replaceTy-self-∉`.
+* `proof/LR-narrow/AliasAvoid.agda` — `star-avoid★ᵖ`,
+  `alias-avoid★-subst₂`, the map-closure lemmas
+  (`same-avoid-exts/-insts`, `subst-avoid-map-extend`) and
+  `subst₂-avoid★` (the transport along `subst₂-⊑`, mirroring its
+  clause and with structure; the alias case maps the exemption by
+  `cong (substᵗ σᴿ)` and the strong component by the alias-map
+  `∉`-transport).
+* `LR-narrow/World.agda` — `openRightBodyImprecision`, the `instᵐ`
+  mirror of `openRelatedBodyImprecision`: σᴿ is `singleSubᵗ ★`,
+  `same`/`star` discharge the bound variable with the caller's
+  `r★`, and `shift-openᵗ` fixes the shifted right endpoint.
+* `LR-narrow/SlotSequence.agda` — the `reveal-imprecise` and
+  `conceal-imprecise` kinds of the right-side `UniWrap` (shape,
+  center-freeness of the precise body, carried target
+  `BodyImprecision`, weak avoid-fn); identity on the precise term.
+* `proof/LR-narrow/ImpreciseReveal.agda` —
+  `replace-right-inst-body-⊑` (the canonical replaced `instᵐ`
+  body via `replace★-⊑` at `v = I.X⊑★` and `shift-replace`), the
+  two cons functions, and the `∀⊑` dispatches rewired onto them
+  (baking `Bc := embI Bᴵ` by with-abstracting `sourceᴵ`);
+  `ImpreciseRightExtension` deleted and the `ext` parameter
+  stripped file-wide.
+* `proof/LR-narrow/UniversalFamilyKit.agda` —
+  `open-right-body-avoid★` (rebuilding the instantiation with its
+  maps in scope and transferring to the World-built derivation by
+  `alias-avoid★-any`, since the World lemma's `where`-functions
+  are inaccessible), the two heads
+  (`reveal-imprecise-right-head`/`conceal-imprecise-right-head`:
+  no β-step — the source chain's head at the canonical
+  instantiation `t″`/`t‴`, then the one-sided
+  `ImpreciseComposition` whose plug returns the mirrored values
+  with the post-bind Σ passed through unchanged; the conceal head
+  canonicalizes the caller's `t` to `tᶜ` so avoidance always flows
+  from the wrapper's carried data, and reindexes by
+  `computations-related-post-bind-reindex` at the end), the two
+  chain extensions, and the two `extend-wrap` cases (all four
+  embedding equations `refl` at the canonical bodies).
+
+With this the mirror is closed: `imprecise-reveal`,
+`imprecise-conceal` and their value forms need nothing beyond the
+derivation, its weak avoidance, and the center's absence from the
+precise endpoint.  Next in Finding I: item 1 (generalize the alias
+atom's representative to a `Ty Δᴾ`), item 3 (the one-sided
+alias-slot frame transformers), item 4 (the producer cascades for
+`lambda-familyᵇ`/`cast-familyᵇ` via
+`related-alias-bind-step-expand`), then retiring the deferred
+`universal-familyᵇ` field.

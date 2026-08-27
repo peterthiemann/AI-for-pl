@@ -16,10 +16,12 @@ module proof.LR-narrow.AliasAvoid where
 open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Unit using (⊤; tt)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
+open import Data.Nat using (suc)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 import Data.Fin as Fin
+open import Relation.Nullary using (yes; no)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; sym; trans; cong)
+  using (_≡_; refl; sym; trans; cong; subst₂)
   renaming (subst to subst≡)
 
 open import Types
@@ -29,10 +31,16 @@ open import proof.ImprecisionConsistency using
   (rename-⊑; RenameAliasMap; NoAliases; ext-no-aliases;
    inst-no-aliases; shift-occurs; ext-injective;
    rename-star-map-ext; rename-star-map-inst;
-   rename-alias-map-ext; rename-alias-map-inst)
+   rename-alias-map-ext; rename-alias-map-inst;
+   fin-suc-injective; subst₂-⊑; SubstAliasMap;
+   subst₂-same-map-exts; subst₂-same-map-insts;
+   subst₂-star-map-exts; subst₂-star-map-insts;
+   subst-alias-map-exts; subst-alias-map-insts;
+   shift-⊑; shift-star-map; shift-alias-map)
 open import proof.Imprecision using
   (AliasesAvoid; ext-aliases-avoid-suc; inst-aliases-avoid-suc)
-open import proof.LR-narrow.StarNoOccurrence using (renameᵗ-∉ᵗ)
+open import proof.LR-narrow.StarNoOccurrence using
+  (renameᵗ-∉ᵗ; renameᵗ-reflects-∉ᵗ)
 
 ------------------------------------------------------------------------
 -- The predicate
@@ -453,3 +461,160 @@ target-occurs-source★ᵖ I.bot⊑★ avoid ()
 target-occurs-source★ᵖ (I.alias eq p) (inj₁ refl , avoid) ()
 target-occurs-source★ᵖ (I.alias eq p) (inj₂ c∉T , avoid) c∈ =
   ⊥-elim (PI.∈∉-⊥ c∉T (target-occurs-source★ᵖ p avoid c∈))
+
+------------------------------------------------------------------------
+-- Below ★ every alias leaf is exempted
+------------------------------------------------------------------------
+
+-- The subderivations of a derivation whose right endpoint is ★ all
+-- have ★ on the right themselves, so the weakened predicate holds of
+-- them outright: every alias leaf takes the exemption branch.
+
+star-avoid★ᵖ : ∀ {Δ} {μ : I.ImpEnv Δ} {A : Ty Δ} {c : TyVar Δ}
+    (p : I._⊢_⊑_ μ A ★)
+  → AliasAvoid★ᵖ c p
+star-avoid★ᵖ I.★⊑★ = tt
+star-avoid★ᵖ I.ι⊑★ = tt
+star-avoid★ᵖ (I.X⊑★ eq) = tt
+star-avoid★ᵖ (I.⇒⊑★ p q) = star-avoid★ᵖ p , star-avoid★ᵖ q
+star-avoid★ᵖ I.∀★⊑★ = tt
+star-avoid★ᵖ (I.∀⊑★ nonstar p) = star-avoid★ᵖ p
+star-avoid★ᵖ (I.∀⊑ nonvar occurs p) = star-avoid★ᵖ p
+star-avoid★ᵖ I.bot⊑★ = tt
+star-avoid★ᵖ (I.alias eq p) = inj₁ refl , star-avoid★ᵖ p
+
+------------------------------------------------------------------------
+-- Avoidance through a two-sided substitution
+------------------------------------------------------------------------
+
+-- Transport along `subst₂-⊑`: inherited alias leaves substitute their
+-- recorded representative, so the avoidance premise is a substituted
+-- non-occurrence; the star-map's copies land below ★ and are covered
+-- by `star-avoid★ᵖ`; the same-map's insertions carry their own
+-- avoidance.
+
+alias-avoid★-subst₂ : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {A A′ B B′ : Ty Δ} {c : TyVar Δ}
+    (eqᴸ : A ≡ A′) (eqᴿ : B ≡ B′)
+    (p : I._⊢_⊑_ μ A B)
+  → AliasAvoid★ᵖ c p
+  → AliasAvoid★ᵖ c (subst₂ (λ L R → I._⊢_⊑_ μ L R) eqᴸ eqᴿ p)
+alias-avoid★-subst₂ refl refl p avoid = avoid
+
+same-avoid-exts : ∀ {Δ Δ′} {ν : I.ImpEnv Δ′}
+    {σᴸ σᴿ : Δ ⇒ˢ Δ′} {c′ : TyVar Δ′}
+    (same : ∀ X → ν I.⊢ σᴸ X ⊑ σᴿ X)
+  → (∀ X → AliasAvoid★ᵖ c′ (same X))
+  → ∀ X → AliasAvoid★ᵖ (Fin.suc c′)
+      (subst₂-same-map-exts same X)
+same-avoid-exts same sa Fin.zero = tt
+same-avoid-exts {ν = ν} same sa (Fin.suc X) =
+  alias-avoid★-rename Fin.suc fin-suc-injective
+    (shift-star-map {ν = ν} {v = I.X⊑X})
+    (shift-alias-map {ν = ν} {v = I.X⊑X})
+    (same X) (sa X)
+
+same-avoid-insts : ∀ {Δ Δ′} {ν : I.ImpEnv Δ′}
+    {σᴸ σᴿ : Δ ⇒ˢ Δ′} {c′ : TyVar Δ′}
+    (same : ∀ X → ν I.⊢ σᴸ X ⊑ σᴿ X)
+  → (∀ X → AliasAvoid★ᵖ c′ (same X))
+  → ∀ X → AliasAvoid★ᵖ (Fin.suc c′)
+      (subst₂-same-map-insts same X)
+same-avoid-insts same sa Fin.zero = tt
+same-avoid-insts {ν = ν} same sa (Fin.suc X) =
+  alias-avoid★-rename Fin.suc fin-suc-injective
+    (shift-star-map {ν = ν} {v = I.X⊑★})
+    (shift-alias-map {ν = ν} {v = I.X⊑★})
+    (same X) (sa X)
+
+subst-avoid-map-extend : ∀ {Δ Δ′} {μ : I.ImpEnv Δ}
+    {σ : Δ ⇒ˢ Δ′} {v : I.VarImp (suc Δ)}
+    {c : TyVar Δ} {c′ : TyVar Δ′}
+  → (∀ {T} → v ≡ I.X⊑ᵗ T → ⊥)
+  → (∀ X {T} → μ X ≡ I.X⊑ᵗ T → c ∉ᵗ T → c′ ∉ᵗ substᵗ σ T)
+  → ∀ X {T} → I.extendᵐ v μ X ≡ I.X⊑ᵗ T
+  → Fin.suc c ∉ᵗ T
+  → Fin.suc c′ ∉ᵗ substᵗ (extsᵗ σ) T
+subst-avoid-map-extend head-not-alias hav Fin.zero eq c∉T =
+  ⊥-elim (head-not-alias eq)
+subst-avoid-map-extend hna hav (Fin.suc X) eq c∉T
+    with I.lift-alias-inv eq
+subst-avoid-map-extend {σ = σ} {c′ = c′} hna hav
+    (Fin.suc X) eq c∉T | T₀ , mode , refl =
+  subst≡ (Fin.suc c′ ∉ᵗ_) (sym (substᵗ-shift σ T₀))
+    (renameᵗ-∉ᵗ Fin.suc fin-suc-injective
+      (hav X mode (renameᵗ-reflects-∉ᵗ Fin.suc T₀ c∉T)))
+
+subst₂-avoid★ : ∀ {Δ Δ′} {μ : I.ImpEnv Δ} {ν : I.ImpEnv Δ′}
+    {σᴸ σᴿ : Δ ⇒ˢ Δ′} {A B : Ty Δ} {c : TyVar Δ} {c′ : TyVar Δ′}
+    (same : ∀ X → ν I.⊢ σᴸ X ⊑ σᴿ X)
+    (star : ∀ X → μ X ≡ I.X⊑★ → ν I.⊢ σᴸ X ⊑ ★)
+    (ha : SubstAliasMap μ ν σᴸ)
+  → (∀ X → AliasAvoid★ᵖ c′ (same X))
+  → (∀ X {T} → μ X ≡ I.X⊑ᵗ T → c ∉ᵗ T → c′ ∉ᵗ substᵗ σᴸ T)
+  → (p : I._⊢_⊑_ μ A B)
+  → AliasAvoid★ᵖ c p
+  → AliasAvoid★ᵖ c′ (subst₂-⊑ same star ha p)
+subst₂-avoid★ same star ha sa hav I.★⊑★ avoid = tt
+subst₂-avoid★ same star ha sa hav I.ι⊑ι avoid = tt
+subst₂-avoid★ same star ha sa hav I.X⊑X avoid = sa _
+subst₂-avoid★ same star ha sa hav (I.⇒⊑⇒ p q) (ap , aq) =
+  subst₂-avoid★ same star ha sa hav p ap ,
+  subst₂-avoid★ same star ha sa hav q aq
+subst₂-avoid★ {μ = μ} {ν = ν} {σᴸ = σᴸ} {σᴿ = σᴿ}
+    same star ha sa hav (I.∀⊑∀ p) avoid =
+  subst₂-avoid★ {μ = I.extᵐ μ} {ν = I.extᵐ ν}
+    {σᴸ = extsᵗ σᴸ} {σᴿ = extsᵗ σᴿ}
+    (subst₂-same-map-exts same) (subst₂-star-map-exts star)
+    (subst-alias-map-exts ha)
+    (same-avoid-exts same sa)
+    (subst-avoid-map-extend (λ ()) hav) p avoid
+subst₂-avoid★ same star ha sa hav (I.⇒⊑★ p q) avoid =
+  star-avoid★ᵖ (subst₂-⊑ same star ha p) ,
+  star-avoid★ᵖ (subst₂-⊑ same star ha q)
+subst₂-avoid★ same star ha sa hav I.ι⊑★ avoid = tt
+subst₂-avoid★ same star ha sa hav (I.X⊑★ x⊑★) avoid =
+  star-avoid★ᵖ (star _ x⊑★)
+subst₂-avoid★ {μ = μ} {ν = ν} {σᴸ = σᴸ} {σᴿ = σᴿ}
+    same star ha sa hav
+    (I.∀⊑ {A = A} {B = B} nonvar occurs p) avoid =
+  alias-avoid★-subst-rightᵉ (substᵗ-shift σᴿ B)
+    (subst₂-avoid★ {μ = I.instᵐ μ} {ν = I.instᵐ ν}
+      {σᴸ = extsᵗ σᴸ} {σᴿ = extsᵗ σᴿ}
+      (subst₂-same-map-insts same) (subst₂-star-map-insts star)
+      (subst-alias-map-insts ha)
+      (same-avoid-insts same sa)
+      (subst-avoid-map-extend (λ ()) hav) p avoid)
+subst₂-avoid★ same star ha sa hav I.∀★⊑★ avoid = tt
+subst₂-avoid★ same star ha sa hav (I.∀⊑★ nonstar p) avoid =
+  star-avoid★ᵖ (subst₂-⊑ same star ha (I.∀⊑★ nonstar p))
+subst₂-avoid★ same star ha sa hav I.bot-elim avoid = tt
+subst₂-avoid★ same star ha sa hav I.bot⊑★ avoid = tt
+subst₂-avoid★ {σᴸ = σᴸ} {σᴿ = σᴿ} same star ha sa hav
+    (I.alias {X = X} {T = T} {B = B} eq p) (leaf , av-p)
+    with ha X eq
+subst₂-avoid★ {σᴸ = σᴸ} {σᴿ = σᴿ} same star ha sa hav
+    (I.alias {X = X} {T = T} {B = B} eq p) (leaf , av-p)
+    | inj₁ collapse =
+  alias-avoid★-subst-left (sym collapse)
+    (subst₂-avoid★ same star ha sa hav p av-p)
+subst₂-avoid★ {σᴸ = σᴸ} {σᴿ = σᴿ} same star ha sa hav
+    (I.alias {X = X} {T = T} {B = B} eq p) (leaf , av-p)
+    | inj₂ (X′ , to-var , aliased)
+    with isVar? X′ (substᵗ σᴿ B)
+subst₂-avoid★ {σᴸ = σᴸ} {σᴿ = σᴿ} same star ha sa hav
+    (I.alias {X = X} {T = T} {B = B} eq p) (leaf , av-p)
+    | inj₂ (X′ , to-var , aliased) | yes B≡X′ =
+  alias-avoid★-subst₂ (sym to-var) (sym B≡X′) I.X⊑X tt
+subst₂-avoid★ {σᴸ = σᴸ} {σᴿ = σᴿ} {c = c} {c′ = c′}
+    same star ha sa hav
+    (I.alias {X = X} {T = T} {B = B} eq p) (leaf , av-p)
+    | inj₂ (X′ , to-var , aliased) | no B≢X′ =
+  alias-avoid★-subst-left (sym to-var)
+    (map-leaf leaf ,
+     subst₂-avoid★ same star ha sa hav p av-p)
+  where
+  map-leaf : (B ≡ ★) ⊎ (c ∉ᵗ T)
+    → (substᵗ σᴿ B ≡ ★) ⊎ (c′ ∉ᵗ substᵗ σᴸ T)
+  map-leaf (inj₁ eqB) = inj₁ (cong (substᵗ σᴿ) eqB)
+  map-leaf (inj₂ c∉T) = inj₂ (hav X eq c∉T)

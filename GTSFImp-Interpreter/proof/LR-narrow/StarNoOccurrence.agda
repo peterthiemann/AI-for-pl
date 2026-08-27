@@ -106,6 +106,23 @@ renameᵗ-reflects-∉ᵗ ρ (A ⇒ B) (∉-fun absentA absentB) =
 renameᵗ-reflects-∉ᵗ ρ (`∀ A) (∉-all absentA) =
   ∉-all (renameᵗ-reflects-∉ᵗ (extᵗ ρ) A absentA)
 
+-- Replacing a variable by a type it does not occur in removes every
+-- occurrence of that variable.
+
+replaceTy-self-∉ : ∀ {Δ} (X : TyVar Δ) (R : Ty Δ) (B : Ty Δ)
+  → X ∉ᵗ R
+  → X ∉ᵗ replaceTy X R B
+replaceTy-self-∉ X R (＇ Y) X∉R with X ≟ Y
+replaceTy-self-∉ X R (＇ Y) X∉R | yes refl = X∉R
+replaceTy-self-∉ X R (＇ Y) X∉R | no X≢Y = ∉-var (≢→≢ᶠ X≢Y)
+replaceTy-self-∉ X R (‵ ι) X∉R = ∉-base
+replaceTy-self-∉ X R ★ X∉R = ∉-star
+replaceTy-self-∉ X R (A ⇒ B) X∉R =
+  ∉-fun (replaceTy-self-∉ X R A X∉R) (replaceTy-self-∉ X R B X∉R)
+replaceTy-self-∉ X R (`∀ A) X∉R =
+  ∉-all (replaceTy-self-∉ (Fin.suc X) (⇑ᵗ R) A
+    (renameᵗ-∉ᵗ Fin.suc fin-suc-injective X∉R))
+
 
 
 ------------------------------------------------------------------------

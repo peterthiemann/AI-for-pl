@@ -15,7 +15,7 @@ module LR-narrow.Atoms where
 
 open import Data.List using ([])
 open import Data.Nat using (ℕ; suc; s≤s; z≤n)
-open import Data.Empty using (⊥)
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Product using (_×_; _,_; Σ-syntax)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
@@ -71,6 +71,36 @@ shift-∈ᵗ-inversion : ∀ {Δ} {Y : TyVar (suc Δ)} (A : Ty Δ)
   → Y ∈ᵗ ⇑ᵗ A
   → Σ[ Y′ ∈ TyVar Δ ] (Y ≡ Fin.suc Y′) × (Y′ ∈ᵗ A)
 shift-∈ᵗ-inversion A occurs = rename-∈ᵗ-inversion Fin.suc A occurs
+
+-- A store lookup shifts the bound type past the entry itself, so a
+-- bound variable never occurs in its own representation type.
+
+store-∋-¬∈ : ∀ {Δ} {Σ : TyStore Δ} {X : TyVar Δ} {B : Ty Δ}
+  → Σ ∋ X ⦂ B
+  → X ∈ᵗ B
+  → ⊥
+store-∋-¬∈ (Z∋ {A = A} refl) occurs
+    with shift-∈ᵗ-inversion A occurs
+store-∋-¬∈ (Z∋ {A = A} refl) occurs | Y′ , () , occurs′
+store-∋-¬∈ (S-lift∋ {A = A} bound refl) occurs
+    with shift-∈ᵗ-inversion A occurs
+store-∋-¬∈ (S-lift∋ {A = A} bound refl) occurs
+    | Y′ , eq , occurs′ =
+  store-∋-¬∈ bound
+    (subst≡ (_∈ᵗ A) (sym (fin-suc-injective eq)) occurs′)
+store-∋-¬∈ (S-bind∋ {A = A} bound refl) occurs
+    with shift-∈ᵗ-inversion A occurs
+store-∋-¬∈ (S-bind∋ {A = A} bound refl) occurs
+    | Y′ , eq , occurs′ =
+  store-∋-¬∈ bound
+    (subst≡ (_∈ᵗ A) (sym (fin-suc-injective eq)) occurs′)
+
+store-∋-∉ : ∀ {Δ} {Σ : TyStore Δ} {X : TyVar Δ} {B : Ty Δ}
+  → Σ ∋ X ⦂ B
+  → X ∉ᵗ B
+store-∋-∉ {X = X} {B = B} bound with occurs? X B
+store-∋-∉ bound | present occurs = ⊥-elim (store-∋-¬∈ bound occurs)
+store-∋-∉ bound | absent no-occur = no-occur
 
 record SemanticAtom {Δᴾ Δᴵ Δᶜ}
     (W : CoreWorld Δᴾ Δᴵ Δᶜ) (Z : TyVar Δᶜ) : Set where

@@ -493,3 +493,36 @@ subderivations carry no avoidance.  Next per the design doc's
 addendum: the right-side `UniWraps` imprecise-only kind and the
 right-kit chain extension (the instᵐ instantiation via `subst₂-⊑`
 transporting the weak predicate, plus the occurs-vacuity split).
+
+Step 6, item 2 — chain extension landed, extension record deleted
+(2026-08-27).  The right-side `UniWraps` gained the imprecise-only
+`reveal-imprecise`/`conceal-imprecise` kinds and the kit gained
+their chain extensions, so the mirror's `∀⊑` cases now cons the
+wrapper onto the stored family directly and
+`ImpreciseRightExtension` is gone (the `ext` parameter stripped
+from the whole mirror).  Load-bearing simplifications found on the
+way:
+
+* The cons is kit-free (a projection of the stored family), so
+  there is no circularity between the mirror and the kit.
+* `store-∋-∉` (new, in `LR-narrow/Atoms.agda`): the telescopic
+  store lookup makes representative freshness a theorem, so the
+  planned occurs-present vacuity split disappeared entirely — the
+  heads derive the center's absence from the precise endpoint
+  unconditionally via the pre-existing `paired-no-occurrence`
+  applied to the replaced-endpoint derivation, with
+  `replaceTy-self-∉` killing the replaced imprecise endpoint.
+* `star-avoid★ᵖ` (new): any `⊑ ★` derivation satisfies the weak
+  predicate outright, so `subst₂-avoid★` (the transport along
+  `subst₂-⊑`, new in `proof/LR-narrow/AliasAvoid.agda`) needs no
+  premise for the star map and discharges every `⊑ ★` output
+  clause wholesale.
+* `openRightBodyImprecision` (new, `LR-narrow/World.agda`): the
+  `instᵐ` instantiation with σᴿ = `singleSubᵗ ★` and the bound
+  variable discharged at the caller's `r★`;
+  `open-right-body-avoid★` (kit) transports the weak predicate by
+  rebuilding the instantiation and transferring by uniqueness.
+
+`make check` green.  Next: Finding I items 1 (alias representative
+as a `Ty Δᴾ`), 3 (alias-slot frame transformers) and 4 (the
+producer cascades), then retiring `universal-familyᵇ`.

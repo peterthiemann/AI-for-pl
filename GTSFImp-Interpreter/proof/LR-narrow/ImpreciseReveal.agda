@@ -16,10 +16,10 @@ module proof.LR-narrow.ImpreciseReveal where
 --     is an identity, so the strong component is only consulted at
 --     the fun- and ∀-shaped types.
 --   * The `∀⊑` source case conses the imprecise-only wrapper onto
---     the stored right-universal family; the family's producers do
---     not yet supply that wrapper, so the case is threaded as the
---     `ImpreciseRightExtension` record until the right-universal
---     family gains its imprecise-only chain extension.
+--     the stored right-universal family and reindexes the clause to
+--     the replaced derivation; no recursion into the reveal
+--     induction is involved, so the cons lives outside the mutual
+--     block.
 
 open import Data.Nat using (ℕ; zero; suc; _+_; _≤_; _<_; z≤n; s≤s)
 open import Data.Nat.Properties using
@@ -95,7 +95,8 @@ open import proof.LR-narrow.ImprecisionSize using
 open import proof.LR-narrow.AliasAvoid using
   (AliasAvoid★ᵖ; alias-avoid★-any)
 open import proof.LR-narrow.RevealLifting using
-  (alias-avoid★-lift-center)
+  (alias-avoid★-lift-center; alias-avoid★-lift-dynamic-body;
+   liftImpreciseTy-replace; shift-replace)
 open import proof.LR-narrow.ReplaceImprecision using
   (replace★-⊑; replace-alias-not-self★)
 open import proof.LR-narrow.PreciseReveal using
@@ -109,53 +110,6 @@ open ImpreciseComposition concealFrame using () renaming
   (imprecise-frame-computations-related to
     conceal-imprecise-composition;
    ImprecisePlugValues to ConcealImprecisePlugValues)
-
-------------------------------------------------------------------------
--- The extension record for the right-universal source
-------------------------------------------------------------------------
-
--- A right-universal source stores a family quantified over the
--- one-sided sequence kinds, which do not yet include the
--- imprecise-only wrapper; until the right-universal family gains
--- that chain extension the two value-level cases are threaded as
--- premises.
-
-record ImpreciseRightExtension : Set where
-  field
-    imprecise-right-reveal-value : ∀ {Δᴾ Δᴵ Δᶜ}
-        (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
-        {Bᴵ : Ty Δᴵ} {Ac : Ty (suc Δᶜ)} {Bc Cᴵ : Ty Δᶜ}
-        {nonvar : NonVar Ac} {occurs : Fin.zero ∈ᵗ Ac}
-        (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
-      → AliasAvoid★ᵖ (center s) (I.∀⊑ nonvar occurs p₀)
-      → center s ∉ᵗ `∀ Ac
-      → UniShape Bᴵ
-      → embedImprecise (core W) Bᴵ ≡ Bc
-      → (q : impEnv (core W) I.⊢ `∀ Ac ⊑ Cᴵ)
-      → embedImprecise (core W) (replaceTy (slotXᴵ s) (slotRᴵ s) Bᴵ)
-          ≡ Cᴵ
-      → ∀ {j : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-      → ValueImprecision W (I.∀⊑ nonvar occurs p₀) j Vᴵ Vᴾ
-      → ValueImprecision W q j
-          (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Vᴾ
-    imprecise-right-conceal-value : ∀ {Δᴾ Δᴵ Δᶜ}
-        (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
-        {Bᴵ : Ty Δᴵ} {Ac : Ty (suc Δᶜ)} {Bc Cᴵ : Ty Δᶜ}
-        {nonvar : NonVar Ac} {occurs : Fin.zero ∈ᵗ Ac}
-        (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
-      → AliasAvoid★ᵖ (center s) (I.∀⊑ nonvar occurs p₀)
-      → center s ∉ᵗ `∀ Ac
-      → UniShape Bᴵ
-      → embedImprecise (core W) Bᴵ ≡ Bc
-      → (q : impEnv (core W) I.⊢ `∀ Ac ⊑ Cᴵ)
-      → embedImprecise (core W) (replaceTy (slotXᴵ s) (slotRᴵ s) Bᴵ)
-          ≡ Cᴵ
-      → ∀ {j : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-      → ValueImprecision W q j Vᴵ Vᴾ
-      → ValueImprecision W (I.∀⊑ nonvar occurs p₀) j
-          (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Vᴾ
-
-open ImpreciseRightExtension public
 
 ------------------------------------------------------------------------
 -- The statements
@@ -519,6 +473,305 @@ replace-right-body-⊑ W s p₀ avoid no-occur =
       (shift-⊑ I.X⊑X (rep-related (atom s)))
       p₀ avoid)
 
+replace-right-inst-body-⊑ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (s : PairedSlot W) {Ac : Ty (suc Δᶜ)} {Bc : Ty Δᶜ}
+    (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
+  → AliasAvoid★ᵖ (Fin.suc (center s)) p₀
+  → Fin.suc (center s) ∉ᵗ Ac
+  → I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑
+      ⇑ᵗ (replaceTy (center s)
+        (embedImprecise (core W) (slotRᴵ s)) Bc)
+replace-right-inst-body-⊑ W s {Ac = Ac} {Bc = Bc} p₀ avoid
+    no-occur =
+  subst≡ (λ L → I.instᵐ (impEnv (core W)) I.⊢ L ⊑ _)
+    (replaceTy-absent (Fin.suc (center s)) _ no-occur)
+    (subst≡ (λ R → I.instᵐ (impEnv (core W)) I.⊢
+        replaceTy (Fin.suc (center s))
+          (⇑ᵗ (embedPrecise (core W) (slotRᴾ s))) Ac ⊑ R)
+      (sym (shift-replace (center s)
+        (embedImprecise (core W) (slotRᴵ s)) Bc))
+      (replace★-⊑ (Fin.suc (center s))
+        (I.ext-mode-paired {μ = impEnv (core W)} {v = I.X⊑★}
+          {Z = center s} (mode-eq s))
+        (shift-⊑ I.X⊑★ (rep-related (atom s)))
+        p₀ avoid))
+
+------------------------------------------------------------------------
+-- The right-universal cons
+------------------------------------------------------------------------
+
+-- A `∀⊑` source stores a replacement-closed right-universal family;
+-- wrapping the imprecise endpoint conses the imprecise-only wrapper
+-- onto the stored family and reindexes the clause to the replaced
+-- derivation.  No recursion into the reveal induction is involved:
+-- the wrapper's peels are discharged by the family itself.
+
+imp-right-universal-value : ∀ (j : ℕ)
+    {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
+    {B₀ᴵ : Ty Δᴵ} {Acᵈ : Ty (suc Δᶜ)}
+    {nonvar : NonVar Acᵈ} {occurs : Fin.zero ∈ᵗ Acᵈ}
+    (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Acᵈ
+      ⊑ ⇑ᵗ (embedImprecise (core W) B₀ᴵ))
+  → AliasAvoid★ᵖ (Fin.suc (center s)) p₀
+  → center s ∉ᵗ `∀ Acᵈ
+  → UniShape B₀ᴵ
+  → ∀ {Cᴵ : Ty Δᶜ}
+      (q : impEnv (core W) I.⊢ `∀ Acᵈ ⊑ Cᴵ)
+  → embedImprecise (core W)
+      (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ) ≡ Cᴵ
+  → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W (I.∀⊑ nonvar occurs p₀) j Vᴵ Vᴾ
+  → ValueImprecision W q j
+      (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ B₀ᴵ 〗) Vᴾ
+imp-right-universal-value zero W s {nonvar = nonvar}
+    {occurs = occurs} p₀ avoid no-occur shape q targetᴵ related =
+  imp-reveal-endpoints W s (I.∀⊑ nonvar occurs p₀) refl q targetᴵ
+    related (imprecise-value related ↑ reveal-value-of shape)
+imp-right-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ} {Acᵈ = Acᵈ}
+    {nonvar = nonvar} {occurs = occurs}
+    p₀ avoid (∉-all ∉ᵇ) shape q targetᴵ
+    related@(endpointsₚ , Bᴾ* , Bᴵ* , embP* , embI* , fam)
+    with renameᵗ-injective
+           (toRenameᵗ-injective (impreciseEmbedding (core W)))
+           embI*
+imp-right-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ} {Acᵈ = Acᵈ}
+    {nonvar = nonvar} {occurs = occurs}
+    p₀ avoid (∉-all ∉ᵇ) shape q targetᴵ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+    related@(endpointsₚ , Bᴾ* , .B₀ᴵ , embP* , embI* , fam)
+    | refl =
+  ClosureProof.value-imprecision-reindex q q̂c refl
+    (trans (sym targetᴵ) ty-eq)
+    (imp-reveal-endpoints W s (I.∀⊑ nonvar occurs p₀) refl q̂c
+      ty-eq endpointsₚ
+      (imprecise-value endpointsₚ ↑ reveal-value-of shape) ,
+    Bᴾ* ,
+    replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ ,
+    embP* , ty-eq ,
+    (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σ′ →
+      fam-out {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σ′))
+  where
+  q̂₀ = replace-right-inst-body-⊑ W s p₀ avoid ∉ᵇ
+  q̂c = I.∀⊑ nonvar occurs q̂₀
+  ty-eq = embI-replace-eq W s B₀ᴵ
+
+  Ac-eq : embedPreciseBody (core W) Bᴾ* ≡ Acᵈ
+  Ac-eq = ty-all-injective embP*
+
+  fam-out : RightUniversalFamily W q̂₀ Bᴾ*
+      (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ) (suc m)
+      (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ B₀ᴵ 〗) Vᴾ
+  fam-out {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+    ClosureProof.right-universals-phantom
+      (liftCenterDynamicBodyImprecision W≼W′ p₀)
+      (liftCenterDynamicBodyImprecision W≼W′ q̂₀)
+      (ClosureProof.right-universals-related-transport
+        {W = W′} {p = liftCenterDynamicBodyImprecision W≼W′ p₀}
+        {Bᴾ = Bᴾ′} {k = suc m}
+        refl termᴵ-eq termᴾ-eq
+        (fam W≼W′ (w ∷ σ‡)))
+    where
+    s′ = slot-future s W≼W′
+    B₀ᴵ′ = liftImpreciseTy W≼W′ B₀ᴵ
+    Bᴾ*′ = liftPreciseBody W≼W′ Bᴾ*
+
+    imprecise-eq : liftImpreciseTy W≼W′
+        (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+        ≡ replaceTy (slotXᴵ s′) (slotRᴵ s′) B₀ᴵ′
+    imprecise-eq = trans
+      (liftImpreciseTy-replace W≼W′ (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+      (cong₂ (λ Xv R → replaceTy Xv R B₀ᴵ′)
+        (sym (slot-imprecise-variable-lift s W≼W′))
+        (sym (slot-imprecise-rep-lift s W≼W′)))
+
+    ∉ᵇ′ : Fin.suc (center s′) ∉ᵗ
+        embedPreciseBody (core W′) Bᴾ*′
+    ∉ᵇ′ = subst≡ (Fin.suc (center s′) ∉ᵗ_)
+      (sym (embedPreciseBody-lift W≼W′ Bᴾ*))
+      (lift-center-body-∉ᵗ W≼W′
+        (subst≡ (Fin.suc (center s) ∉ᵗ_) (sym Ac-eq) ∉ᵇ))
+
+    base-imp : BodyImprecision W Bᴾ*
+        (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+    base-imp = body-imprecision-of nonvar occurs q̂₀ embP* ty-eq
+
+    av-fn : (j′ : BodyImprecision W′ Bᴾ*′ B₀ᴵ′)
+      → AliasAvoid★ᵖ (Fin.suc (center s′)) (bodyP j′)
+    av-fn j′ = alias-avoid★-any
+      (liftCenterDynamicBodyImprecision W≼W′ p₀) (bodyP j′)
+      (trans (cong (liftCenterBody W≼W′) (sym Ac-eq))
+        (sym (embedPreciseBody-lift W≼W′ Bᴾ*)))
+      (trans (liftCenterBody-shift W≼W′
+        (embedImprecise (core W) B₀ᴵ))
+        (cong ⇑ᵗ (sym (embedImprecise-lift W≼W′ B₀ᴵ))))
+      (alias-avoid★-lift-dynamic-body W≼W′ (center s) p₀ avoid)
+
+    w : UniWrap W′ Bᴾ*′ B₀ᴵ′ Bᴾ*′
+        (replaceTy (slotXᴵ s′) (slotRᴵ s′) B₀ᴵ′)
+    w = reveal-imprecise s′ Bᴾ*′ B₀ᴵ′ (shape-lift W≼W′ shape)
+      ∉ᵇ′
+      (body-imprecision-subst-imp imprecise-eq
+        (body-imprecision-future W≼W′ base-imp))
+      av-fn
+
+    σ‡ : UniWraps W′ Bᴾ*′
+        (replaceTy (slotXᴵ s′) (slotRᴵ s′) B₀ᴵ′) Bᴾ′ Bᴵ′
+    σ‡ = subst≡
+      (λ C → UniWraps W′ Bᴾ*′ C Bᴾ′ Bᴵ′) imprecise-eq σ
+
+    termᴾ-eq : wrapTermᴾ (w ∷ σ‡) (liftPreciseTerm W≼W′ Vᴾ)
+        ≡ wrapTermᴾ σ (liftPreciseTerm W≼W′ Vᴾ)
+    termᴾ-eq = wrapTermᴾ-subst-imp imprecise-eq σ
+      (liftPreciseTerm W≼W′ Vᴾ)
+
+    termᴵ-eq : wrapTermᴵ (w ∷ σ‡) (liftImpreciseTerm W≼W′ Vᴵ)
+        ≡ wrapTermᴵ σ (liftImpreciseTerm W≼W′
+            (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ B₀ᴵ 〗))
+    termᴵ-eq = trans
+      (wrapTermᴵ-subst-imp imprecise-eq σ
+        (liftImpreciseTerm W≼W′ Vᴵ
+          ↑ 〖 slotXᴵ s′ , slotRᴵ s′ ↑ B₀ᴵ′ 〗))
+      (cong (wrapTermᴵ σ)
+        (sym (lifted-reveal-imprecise s W≼W′ Vᴵ B₀ᴵ)))
+
+imp-conceal-right-universal-value : ∀ (j : ℕ)
+    {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
+    {B₀ᴵ : Ty Δᴵ} {Acᵈ : Ty (suc Δᶜ)}
+    {nonvar : NonVar Acᵈ} {occurs : Fin.zero ∈ᵗ Acᵈ}
+    (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Acᵈ
+      ⊑ ⇑ᵗ (embedImprecise (core W) B₀ᴵ))
+  → AliasAvoid★ᵖ (Fin.suc (center s)) p₀
+  → center s ∉ᵗ `∀ Acᵈ
+  → UniShape B₀ᴵ
+  → ∀ {Cᴵ : Ty Δᶜ}
+      (q : impEnv (core W) I.⊢ `∀ Acᵈ ⊑ Cᴵ)
+  → embedImprecise (core W)
+      (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ) ≡ Cᴵ
+  → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W q j Vᴵ Vᴾ
+  → ValueImprecision W (I.∀⊑ nonvar occurs p₀) j
+      (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) B₀ᴵ) Vᴾ
+imp-conceal-right-universal-value zero W s {nonvar = nonvar}
+    {occurs = occurs} p₀ avoid no-occur shape q targetᴵ related =
+  imp-conceal-endpoints W s (I.∀⊑ nonvar occurs p₀) refl q
+    targetᴵ related
+    (imprecise-value related ↓ conceal-value-of shape)
+imp-conceal-right-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ}
+    {Acᵈ = Acᵈ} {nonvar = nonvar} {occurs = occurs}
+    p₀ avoid (∉-all ∉ᵇ) shape q targetᴵ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    with ClosureProof.value-imprecision-reindex
+           (I.∀⊑ nonvar occurs
+             (replace-right-inst-body-⊑ W s p₀ avoid ∉ᵇ))
+           q refl
+           (trans (sym (embI-replace-eq W s B₀ᴵ)) targetᴵ)
+           related
+imp-conceal-right-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ}
+    {Acᵈ = Acᵈ} {nonvar = nonvar} {occurs = occurs}
+    p₀ avoid (∉-all ∉ᵇ) shape q targetᴵ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    | (endpointsʳ , Bᴾ* , Bᴵ*ʳ , embP* , embI*ʳ , fam-r)
+    with renameᵗ-injective
+           (toRenameᵗ-injective (impreciseEmbedding (core W)))
+           (trans embI*ʳ (sym (embI-replace-eq W s B₀ᴵ)))
+imp-conceal-right-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ}
+    {Acᵈ = Acᵈ} {nonvar = nonvar} {occurs = occurs}
+    p₀ avoid (∉-all ∉ᵇ) shape q targetᴵ
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    | (endpointsʳ , Bᴾ* ,
+       .(replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ) ,
+       embP* , embI*ʳ , fam-r)
+    | refl =
+  imp-conceal-endpoints W s (I.∀⊑ nonvar occurs p₀) refl q
+    targetᴵ
+    (ClosureProof.value-imprecision-endpoints
+      {W = W} {p = q} {k = suc m} related)
+    (imprecise-value
+      (ClosureProof.value-imprecision-endpoints
+        {W = W} {p = q} {k = suc m} related)
+      ↓ conceal-value-of shape) ,
+  Bᴾ* , B₀ᴵ , embP* , refl ,
+  (λ {_} {_} {_} {W₂} W≼W₂ {B₂} {C₂} σ′ →
+    fam-out {W′ = W₂} W≼W₂ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σ′)
+  where
+  q̂₀ = replace-right-inst-body-⊑ W s p₀ avoid ∉ᵇ
+  ty-eq = embI-replace-eq W s B₀ᴵ
+
+  Ac-eq : embedPreciseBody (core W) Bᴾ* ≡ Acᵈ
+  Ac-eq = ty-all-injective embP*
+
+  fam-out : RightUniversalFamily W p₀ Bᴾ* B₀ᴵ (suc m)
+      (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) B₀ᴵ) Vᴾ
+  fam-out {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+    ClosureProof.right-universals-phantom
+      (liftCenterDynamicBodyImprecision W≼W′ q̂₀)
+      (liftCenterDynamicBodyImprecision W≼W′ p₀)
+      (ClosureProof.right-universals-related-transport
+        {W = W′} {p = liftCenterDynamicBodyImprecision W≼W′ q̂₀}
+        {Bᴾ = Bᴾ′} {k = suc m}
+        refl termᴵ-eq termᴾ-eq
+        (fam-r W≼W′ σ†))
+    where
+    s′ = slot-future s W≼W′
+    B₀ᴵ′ = liftImpreciseTy W≼W′ B₀ᴵ
+    Bᴾ*′ = liftPreciseBody W≼W′ Bᴾ*
+
+    imprecise-eq : liftImpreciseTy W≼W′
+        (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+        ≡ replaceTy (slotXᴵ s′) (slotRᴵ s′) B₀ᴵ′
+    imprecise-eq = trans
+      (liftImpreciseTy-replace W≼W′ (slotXᴵ s) (slotRᴵ s) B₀ᴵ)
+      (cong₂ (λ Xv R → replaceTy Xv R B₀ᴵ′)
+        (sym (slot-imprecise-variable-lift s W≼W′))
+        (sym (slot-imprecise-rep-lift s W≼W′)))
+
+    ∉ᵇ′ : Fin.suc (center s′) ∉ᵗ
+        embedPreciseBody (core W′) Bᴾ*′
+    ∉ᵇ′ = subst≡ (Fin.suc (center s′) ∉ᵗ_)
+      (sym (embedPreciseBody-lift W≼W′ Bᴾ*))
+      (lift-center-body-∉ᵗ W≼W′
+        (subst≡ (Fin.suc (center s) ∉ᵗ_) (sym Ac-eq) ∉ᵇ))
+
+    base-imp : BodyImprecision W Bᴾ* B₀ᴵ
+    base-imp = body-imprecision-of nonvar occurs p₀ embP* refl
+
+    av-fn : (j′ : BodyImprecision W′ Bᴾ*′ B₀ᴵ′)
+      → AliasAvoid★ᵖ (Fin.suc (center s′)) (bodyP j′)
+    av-fn j′ = alias-avoid★-any
+      (liftCenterDynamicBodyImprecision W≼W′ p₀) (bodyP j′)
+      (trans (cong (liftCenterBody W≼W′) (sym Ac-eq))
+        (sym (embedPreciseBody-lift W≼W′ Bᴾ*)))
+      (trans (liftCenterBody-shift W≼W′
+        (embedImprecise (core W) B₀ᴵ))
+        (cong ⇑ᵗ (sym (embedImprecise-lift W≼W′ B₀ᴵ))))
+      (alias-avoid★-lift-dynamic-body W≼W′ (center s) p₀ avoid)
+
+    w : UniWrap W′ Bᴾ*′
+        (replaceTy (slotXᴵ s′) (slotRᴵ s′) B₀ᴵ′) Bᴾ*′ B₀ᴵ′
+    w = conceal-imprecise s′ Bᴾ*′ B₀ᴵ′ (shape-lift W≼W′ shape)
+      ∉ᵇ′ (body-imprecision-future W≼W′ base-imp) av-fn
+
+    σ† : UniWraps W′ Bᴾ*′
+        (liftImpreciseTy W≼W′
+          (replaceTy (slotXᴵ s) (slotRᴵ s) B₀ᴵ)) Bᴾ′ Bᴵ′
+    σ† = subst≡
+      (λ C → UniWraps W′ Bᴾ*′ C Bᴾ′ Bᴵ′)
+      (sym imprecise-eq) (w ∷ σ)
+
+    termᴾ-eq : wrapTermᴾ σ† (liftPreciseTerm W≼W′ Vᴾ)
+        ≡ wrapTermᴾ σ (liftPreciseTerm W≼W′ Vᴾ)
+    termᴾ-eq = wrapTermᴾ-subst-imp (sym imprecise-eq) (w ∷ σ)
+      (liftPreciseTerm W≼W′ Vᴾ)
+
+    termᴵ-eq : wrapTermᴵ σ† (liftImpreciseTerm W≼W′ Vᴵ)
+        ≡ wrapTermᴵ σ (liftImpreciseTerm W≼W′
+            (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) B₀ᴵ))
+    termᴵ-eq = trans
+      (wrapTermᴵ-subst-imp (sym imprecise-eq) (w ∷ σ)
+        (liftImpreciseTerm W≼W′ Vᴵ))
+      (cong (wrapTermᴵ σ)
+        (sym (lifted-conceal-imprecise s W≼W′ Vᴵ B₀ᴵ)))
+
 ------------------------------------------------------------------------
 -- The one-sided imprecise reveal and conceal
 ------------------------------------------------------------------------
@@ -528,7 +781,7 @@ replace-right-body-⊑ W s p₀ avoid no-occur =
 -- Kripke re-entries preserve the size.
 
 mutual
-  imp-reveal-go : ∀ (ext : ImpreciseRightExtension) (fuel j : ℕ)
+  imp-reveal-go : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -543,26 +796,26 @@ mutual
     → ValueImprecision W p j Vᴵ Vᴾ
     → ComputationsRelated W (FutureValueRelation q) j
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Vᴾ
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
       sourceᴵ q targetᴵ related with slotXᴵ s ≟ Y
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
       sourceᴵ q targetᴵ related | no _ =
     imp-identity-reveal W p q (trans (sym sourceᴵ) targetᴵ)
       (＇ Y) related
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
       sourceᴵ q targetᴵ related | yes refl
       with sourceᴵ
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y} I.X⊑X avoid size
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y} I.X⊑X avoid size
       (∉-var neq) sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (≢ᶠ→≢ neq (sym (impreciseAligned (atom s))))
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y}
       (I.alias eq′ p′) (inj₁ star-eq , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl
       with star-eq
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y}
       (I.alias eq′ p′) (inj₁ star-eq , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl | ()
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y}
       (I.alias eq′ p′) (inj₂ c∉T , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (PI.∈∉-⊥
@@ -571,45 +824,45 @@ mutual
           (cong ＇_ (impreciseAligned (atom s))) av′)
         c∉T)
       var-∈)
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y}
       (I.∀⊑ nonvar occurs p₀) avoid size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl
       with paired-var-right-⊑ (mode-eq s)
              (I.∀⊑ nonvar occurs p₀)
              (cong ＇_ (impreciseAligned (atom s))) avoid
-  imp-reveal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-reveal-go fuel j W s {Bᴵ = ＇ Y}
       (I.∀⊑ nonvar occurs p₀) avoid size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl | ()
-  imp-reveal-go ext fuel j W s {Bᴵ = ‵ ι} p avoid size no-occur
+  imp-reveal-go fuel j W s {Bᴵ = ‵ ι} p avoid size no-occur
       sourceᴵ q targetᴵ related =
     imp-identity-reveal W p q (trans (sym sourceᴵ) targetᴵ)
       (‵ ι) related
-  imp-reveal-go ext fuel j W s {Bᴵ = ★} p avoid size no-occur
+  imp-reveal-go fuel j W s {Bᴵ = ★} p avoid size no-occur
       sourceᴵ q targetᴵ related =
     imp-identity-reveal W p q (trans (sym sourceᴵ) targetᴵ)
       ★ related
-  imp-reveal-go ext fuel j W s {Bᴵ = A₀ᴵ ⇒ B₀ᴵ} p avoid size
+  imp-reveal-go fuel j W s {Bᴵ = A₀ᴵ ⇒ B₀ᴵ} p avoid size
       no-occur sourceᴵ q targetᴵ related =
     related-values-return
       (imprecise-value endpoints ↑ reveal-value-of shape-fun)
       (precise-value endpoints)
-      (λ i i≤j → imp-value-go ext fuel i W s shape-fun p avoid
+      (λ i i≤j → imp-value-go fuel i W s shape-fun p avoid
         size no-occur sourceᴵ q targetᴵ
         (value-imprecision-downward-to i≤j related))
     where
     endpoints = ClosureProof.value-imprecision-endpoints related
-  imp-reveal-go ext fuel j W s {Bᴵ = `∀ B₀ᴵ} p avoid size
+  imp-reveal-go fuel j W s {Bᴵ = `∀ B₀ᴵ} p avoid size
       no-occur sourceᴵ q targetᴵ related =
     related-values-return
       (imprecise-value endpoints ↑ reveal-value-of shape-all)
       (precise-value endpoints)
-      (λ i i≤j → imp-value-go ext fuel i W s shape-all p avoid
+      (λ i i≤j → imp-value-go fuel i W s shape-all p avoid
         size no-occur sourceᴵ q targetᴵ
         (value-imprecision-downward-to i≤j related))
     where
     endpoints = ClosureProof.value-imprecision-endpoints related
 
-  imp-conceal-go : ∀ (ext : ImpreciseRightExtension) (fuel j : ℕ)
+  imp-conceal-go : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -624,26 +877,26 @@ mutual
     → ValueImprecision W q j Vᴵ Vᴾ
     → ComputationsRelated W (FutureValueRelation p) j
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Vᴾ
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
       sourceᴵ q targetᴵ related with slotXᴵ s ≟ Y
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
       sourceᴵ q targetᴵ related | no _ =
     imp-identity-conceal W p q (trans (sym sourceᴵ) targetᴵ)
       (＇ Y) related
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y} p avoid size no-occur
       sourceᴵ q targetᴵ related | yes refl
       with sourceᴵ
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y} I.X⊑X avoid size
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y} I.X⊑X avoid size
       (∉-var neq) sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (≢ᶠ→≢ neq (sym (impreciseAligned (atom s))))
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y}
       (I.alias eq′ p′) (inj₁ star-eq , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl
       with star-eq
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y}
       (I.alias eq′ p′) (inj₁ star-eq , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl | ()
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y}
       (I.alias eq′ p′) (inj₂ c∉T , av′) size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl =
     ⊥-elim (PI.∈∉-⊥
@@ -652,45 +905,45 @@ mutual
           (cong ＇_ (impreciseAligned (atom s))) av′)
         c∉T)
       var-∈)
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y}
       (I.∀⊑ nonvar occurs p₀) avoid size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl
       with paired-var-right-⊑ (mode-eq s)
              (I.∀⊑ nonvar occurs p₀)
              (cong ＇_ (impreciseAligned (atom s))) avoid
-  imp-conceal-go ext fuel j W s {Bᴵ = ＇ Y}
+  imp-conceal-go fuel j W s {Bᴵ = ＇ Y}
       (I.∀⊑ nonvar occurs p₀) avoid size
       no-occur sourceᴵ q targetᴵ related | yes refl | refl | ()
-  imp-conceal-go ext fuel j W s {Bᴵ = ‵ ι} p avoid size no-occur
+  imp-conceal-go fuel j W s {Bᴵ = ‵ ι} p avoid size no-occur
       sourceᴵ q targetᴵ related =
     imp-identity-conceal W p q (trans (sym sourceᴵ) targetᴵ)
       (‵ ι) related
-  imp-conceal-go ext fuel j W s {Bᴵ = ★} p avoid size no-occur
+  imp-conceal-go fuel j W s {Bᴵ = ★} p avoid size no-occur
       sourceᴵ q targetᴵ related =
     imp-identity-conceal W p q (trans (sym sourceᴵ) targetᴵ)
       ★ related
-  imp-conceal-go ext fuel j W s {Bᴵ = A₀ᴵ ⇒ B₀ᴵ} p avoid size
+  imp-conceal-go fuel j W s {Bᴵ = A₀ᴵ ⇒ B₀ᴵ} p avoid size
       no-occur sourceᴵ q targetᴵ related =
     related-values-return
       (imprecise-value endpoints ↓ conceal-value-of shape-fun)
       (precise-value endpoints)
-      (λ i i≤j → imp-conceal-value-go ext fuel i W s shape-fun p
+      (λ i i≤j → imp-conceal-value-go fuel i W s shape-fun p
         avoid size no-occur sourceᴵ q targetᴵ
         (value-imprecision-downward-to i≤j related))
     where
     endpoints = ClosureProof.value-imprecision-endpoints related
-  imp-conceal-go ext fuel j W s {Bᴵ = `∀ B₀ᴵ} p avoid size
+  imp-conceal-go fuel j W s {Bᴵ = `∀ B₀ᴵ} p avoid size
       no-occur sourceᴵ q targetᴵ related =
     related-values-return
       (imprecise-value endpoints ↓ conceal-value-of shape-all)
       (precise-value endpoints)
-      (λ i i≤j → imp-conceal-value-go ext fuel i W s shape-all p
+      (λ i i≤j → imp-conceal-value-go fuel i W s shape-all p
         avoid size no-occur sourceᴵ q targetᴵ
         (value-imprecision-downward-to i≤j related))
     where
     endpoints = ClosureProof.value-imprecision-endpoints related
 
-  imp-value-go : ∀ (ext : ImpreciseRightExtension) (fuel j : ℕ)
+  imp-value-go : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -705,92 +958,96 @@ mutual
     → ValueImprecision W p j Vᴵ Vᴾ
     → ValueImprecision W q j
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Vᴾ
-  imp-value-go ext fuel zero W s shape p avoid size no-occur
+  imp-value-go fuel zero W s shape p avoid size no-occur
       sourceᴵ q targetᴵ related =
     imp-reveal-endpoints W s p sourceᴵ q targetᴵ related
       (imprecise-value related ↑ reveal-value-of shape)
-  imp-value-go ext (suc fuel) (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go (suc fuel) (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.⇒⊑⇒ p₁ p₂) (avoid₁ , avoid₂) size (∉-fun ∉₁ ∉₂)
       sourceᴵ q targetᴵ related with sourceᴵ
-  imp-value-go ext (suc fuel) (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go (suc fuel) (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.⇒⊑⇒ p₁ p₂) (avoid₁ , avoid₂) size (∉-fun ∉₁ ∉₂)
       sourceᴵ q targetᴵ related | refl =
-    imp-arrow-value ext fuel (suc m) W s p₁ p₂ avoid₁ avoid₂
+    imp-arrow-value fuel (suc m) W s p₁ p₂ avoid₁ avoid₂
       (sizeᵖ-bound-left size) (sizeᵖ-bound-right size) ∉₁ ∉₂
       q targetᴵ related
-  imp-value-go ext zero (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go zero (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.⇒⊑⇒ p₁ p₂) avoid () no-occur sourceᴵ q targetᴵ related
-  imp-value-go ext (suc fuel) (suc m) W s shape
+  imp-value-go (suc fuel) (suc m) W s shape
       (I.alias eq′ {notSelf} p′) (leaf , av′) (s≤s size′) no-occur
       sourceᴵ q targetᴵ related =
-    imp-alias-value ext fuel (suc m) W s shape eq′ {notSelf} p′
+    imp-alias-value fuel (suc m) W s shape eq′ {notSelf} p′
       leaf av′ size′ sourceᴵ q targetᴵ related
-  imp-value-go ext zero (suc m) W s shape
+  imp-value-go zero (suc m) W s shape
       (I.alias eq′ p′) avoid () no-occur sourceᴵ q targetᴵ related
-  imp-value-go ext fuel (suc m) W s shape
+  imp-value-go fuel (suc m) W s shape
       (I.∀⊑ nonvar occurs p₀) avoid size no-occur
-      sourceᴵ q targetᴵ related =
-    imprecise-right-reveal-value ext W s p₀ avoid no-occur
-      shape sourceᴵ q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+      sourceᴵ q targetᴵ related
+      with sourceᴵ
+  imp-value-go fuel (suc m) W s shape
+      (I.∀⊑ nonvar occurs p₀) avoid size no-occur
+      sourceᴵ q targetᴵ related | refl =
+    imp-right-universal-value (suc m) W s p₀ avoid no-occur
+      shape q targetᴵ related
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.∀⊑∀ p₀) avoid size no-occur sourceᴵ q targetᴵ related
       with sourceᴵ
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.∀⊑∀ p₀) avoid size no-occur sourceᴵ q targetᴵ related
       | refl =
-    imp-universal-value ext (suc m) W s p₀ avoid no-occur
+    imp-universal-value (suc m) W s p₀ avoid no-occur
       q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.bot-elim avoid size no-occur sourceᴵ q targetᴵ related =
     ⊥-elim (no-precise-bottom-value {p = I.bot-elim} {k = suc m}
       related)
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.★⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.ι⊑ι avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.X⊑X avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.∀⊑∀ p₀) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.⇒⊑★ p₀₁ p₀₂) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.ι⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.X⊑★ mode) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.∀★⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.∀⊑★ nonstar p₀) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.bot-elim avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.bot⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.★⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.ι⊑ι avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.X⊑X avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.⇒⊑⇒ p₀₁ p₀₂) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.⇒⊑★ p₀₁ p₀₂) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.ι⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.X⊑★ mode) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.∀★⊑★ avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.∀⊑★ nonstar p₀) avoid size no-occur () q targetᴵ related
-  imp-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.bot⊑★ avoid size no-occur () q targetᴵ related
 
   -- The wrapped function value: the imprecise endpoint redistributes
   -- the wrapper over the application.
 
-  imp-arrow-value : ∀ (ext : ImpreciseRightExtension) (fuel j : ℕ)
+  imp-arrow-value : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {A₀ᴵ B₀ᴵ : Ty Δᴵ} {P₁ P₂ : Ty Δᶜ}
       (p₁ : impEnv (core W) I.⊢ P₁
@@ -811,11 +1068,11 @@ mutual
     → ValueImprecision W (I.⇒⊑⇒ p₁ p₂) j Vᴵ Vᴾ
     → ValueImprecision W q j
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ A₀ᴵ ⇒ B₀ᴵ 〗) Vᴾ
-  imp-arrow-value ext fuel zero W s p₁ p₂ avoid₁ avoid₂
+  imp-arrow-value fuel zero W s p₁ p₂ avoid₁ avoid₂
       size₁ size₂ ∉₁ ∉₂ q targetᴵ related =
     imp-reveal-endpoints W s (I.⇒⊑⇒ p₁ p₂) refl q targetᴵ related
       (imprecise-value related ↑ reveal-value-of shape-fun)
-  imp-arrow-value ext fuel (suc i) W s {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
+  imp-arrow-value fuel (suc i) W s {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
       p₁ p₂ avoid₁ avoid₂ size₁ size₂ ∉₁ ∉₂
       q targetᴵ {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related =
     ClosureProof.value-imprecision-reindex q q̂c refl
@@ -840,7 +1097,7 @@ mutual
     functions zero n≤ rel = tt
     functions (suc n) sn≤ rel =
       (λ W′ W≼W′ argument-related →
-        imp-arrow-head ext fuel n W s p₁ p₂ avoid₁ avoid₂
+        imp-arrow-head fuel n W s p₁ p₂ avoid₁ avoid₂
           size₁ size₂ ∉₁ ∉₂ q̂₁ q̂₂
           (embI-replace-eq W s A₀ᴵ) (embI-replace-eq W s B₀ᴵ)
           rel W′ W≼W′ argument-related) ,
@@ -851,7 +1108,7 @@ mutual
 
   -- One head of the wrapped function value.
 
-  imp-arrow-head : ∀ (ext : ImpreciseRightExtension) (fuel m : ℕ)
+  imp-arrow-head : ∀ (fuel m : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {A₀ᴵ B₀ᴵ : Ty Δᴵ} {P₁ P₂ : Ty Δᶜ}
       (p₁ : impEnv (core W) I.⊢ P₁
@@ -883,7 +1140,7 @@ mutual
         (liftImpreciseTerm W≼W′
           (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ A₀ᴵ ⇒ B₀ᴵ 〗) · Uᴵ)
         (liftPreciseTerm W≼W′ Vᴾ · Uᴾ)
-  imp-arrow-head ext fuel m W s {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
+  imp-arrow-head fuel m W s {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
       p₁ p₂ avoid₁ avoid₂ size₁ size₂ ∉₁ ∉₂
       q₁ q₂ target₁ target₂ {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} function-related
       W′ W≼W′ {Uᴵ = Uᴵ} {Uᴾ = Uᴾ} argument-related =
@@ -926,7 +1183,7 @@ mutual
     concealed : ComputationsRelated W′
         (FutureValueRelation (liftCenterImprecision W≼W′ p₁))
         (suc m) (Uᴵ ↓ cᴵ) Uᴾ
-    concealed = imp-conceal-go ext fuel (suc m) W′ s′
+    concealed = imp-conceal-go fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₁)
       (alias-avoid★-lift-center W≼W′ (center s) p₁ avoid₁)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₁)) size₁)
@@ -951,7 +1208,7 @@ mutual
     framed : ComputationsRelated W′
         (FutureValueRelation (liftCenterImprecision W≼W′ q₂))
         (suc m) ((Vᴵ′ · (Uᴵ ↓ cᴵ)) ↑ dᴵ) (Vᴾ′ · Uᴾ)
-    framed = imp-revealed-computations ext fuel (suc m) W′ s′
+    framed = imp-revealed-computations fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₂)
       (alias-avoid★-lift-center W≼W′ (center s) p₂ avoid₂)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₂)) size₂)
@@ -990,7 +1247,7 @@ mutual
   -- The alias source: unfold the payload, wrap it, and rebuild the
   -- holding at the replaced premise.
 
-  imp-alias-value : ∀ (ext : ImpreciseRightExtension) (fuel j : ℕ)
+  imp-alias-value : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ)
       {X : TyVar Δᶜ} {T Aᴵ : Ty Δᶜ}
@@ -1009,12 +1266,12 @@ mutual
         Vᴵ Vᴾ
     → ValueImprecision W q j
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Vᴾ
-  imp-alias-value ext fuel zero W s shape eq′ {notSelf} p′
+  imp-alias-value fuel zero W s shape eq′ {notSelf} p′
       leaf av′ size′ sourceᴵ q targetᴵ related =
     imp-reveal-endpoints W s (I.alias eq′ {notSelf = notSelf} p′)
       sourceᴵ q targetᴵ related
       (imprecise-value related ↑ reveal-value-of shape)
-  imp-alias-value ext fuel (suc m) W s {Bᴵ = Bᴵ} shape
+  imp-alias-value fuel (suc m) W s {Bᴵ = Bᴵ} shape
       {X = X} {Aᴵ = Aᴵ} eq′ {notSelf} p′ leaf av′ size′ sourceᴵ
       q targetᴵ (endpointsₚ , holds) =
     ClosureProof.value-imprecision-reindex q q̂c refl
@@ -1025,7 +1282,7 @@ mutual
         (imprecise-value endpointsₚ ↑ reveal-value-of shape) ,
       alias-holds-imp-map (semanticEntry W X) eq′
         (λ {Uᴾ} rel →
-          imp-value-go ext fuel (suc m) W s shape p′ av′ size′
+          imp-value-go fuel (suc m) W s shape p′ av′ size′
             c∉T sourceᴵ q̂′ target-eq rel)
         holds)
     where
@@ -1050,7 +1307,7 @@ mutual
   -- The two-sided universal source: cons the imprecise-only wrapper
   -- onto the stored family.
 
-  imp-universal-value : ∀ (ext : ImpreciseRightExtension) (j : ℕ)
+  imp-universal-value : ∀ (j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {B₀ᴵ : Ty (suc Δᴵ)} {Acᵇ : Ty (suc Δᶜ)}
       (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Acᵇ
@@ -1064,18 +1321,18 @@ mutual
     → ValueImprecision W (I.∀⊑∀ p₀) j Vᴵ Vᴾ
     → ValueImprecision W q j
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ B₀ᴵ 〗) Vᴾ
-  imp-universal-value ext zero W s p₀ avoid no-occur q targetᴵ
+  imp-universal-value zero W s p₀ avoid no-occur q targetᴵ
       related =
     imp-reveal-endpoints W s (I.∀⊑∀ p₀) refl q targetᴵ related
       (imprecise-value related ↑ reveal-value-of shape-all)
-  imp-universal-value ext (suc m) W s {B₀ᴵ = B₀ᴵ} {Acᵇ = Acᵇ}
+  imp-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ} {Acᵇ = Acᵇ}
       p₀ avoid (∉-all ∉ᵇ) q targetᴵ
       related@(endpointsₚ , Bᴾ* , Bᴵ* , embP* , embI* , fam)
       with ty-all-injective
              (renameᵗ-injective
                (toRenameᵗ-injective (impreciseEmbedding (core W)))
                embI*)
-  imp-universal-value ext (suc m) W s {B₀ᴵ = B₀ᴵ} {Acᵇ = Acᵇ}
+  imp-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ} {Acᵇ = Acᵇ}
       p₀ avoid (∉-all ∉ᵇ) q targetᴵ
       {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
       related@(endpointsₚ , Bᴾ* , .B₀ᴵ , embP* , embI* , fam)
@@ -1187,8 +1444,7 @@ mutual
 
   -- Wrapping a related computation on the imprecise endpoint.
 
-  imp-revealed-computations : ∀ (ext : ImpreciseRightExtension)
-      (fuel j : ℕ)
+  imp-revealed-computations : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -1203,7 +1459,7 @@ mutual
     → ComputationsRelated W (FutureValueRelation p) j Mᴵ Mᴾ
     → ComputationsRelated W (FutureValueRelation q) j
         (Mᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Mᴾ
-  imp-revealed-computations ext fuel j W s {Bᴵ = Bᴵ} p avoid size
+  imp-revealed-computations fuel j W s {Bᴵ = Bᴵ} p avoid size
       no-occur sourceᴵ q targetᴵ {Mᴵ = Mᴵ} {Mᴾ = Mᴾ} related =
     reveal-imprecise-composition
       {R = FutureValueRelation p} {S = FutureValueRelation q}
@@ -1228,7 +1484,7 @@ mutual
               (trans (lifted-reveal-imprecise s W≼W′ Mᴵ Bᴵ)
                 (cong (λ M → M ↑ _) (sym (termsᴵ Mᴵ))))) Uᴵ))
           refl
-          (imp-reveal-go ext fuel i W′ (slot-future s W≼W′)
+          (imp-reveal-go fuel i W′ (slot-future s W≼W′)
             (liftCenterImprecision W≼W′ p)
             (alias-avoid★-lift-center W≼W′ (center s) p avoid)
             (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p))
@@ -1246,8 +1502,7 @@ mutual
                 (cong (liftCenterTy W≼W′) targetᴵ)))
             value-related))
 
-  imp-concealed-computations : ∀ (ext : ImpreciseRightExtension)
-      (fuel j : ℕ)
+  imp-concealed-computations : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -1262,7 +1517,7 @@ mutual
     → ComputationsRelated W (FutureValueRelation q) j Mᴵ Mᴾ
     → ComputationsRelated W (FutureValueRelation p) j
         (Mᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Mᴾ
-  imp-concealed-computations ext fuel j W s {Bᴵ = Bᴵ} p avoid size
+  imp-concealed-computations fuel j W s {Bᴵ = Bᴵ} p avoid size
       no-occur sourceᴵ q targetᴵ {Mᴵ = Mᴵ} {Mᴾ = Mᴾ} related =
     conceal-imprecise-composition
       {R = FutureValueRelation q} {S = FutureValueRelation p}
@@ -1288,7 +1543,7 @@ mutual
               (trans (lifted-conceal-imprecise s W≼W′ Mᴵ Bᴵ)
                 (cong (λ M → M ↓ _) (sym (termsᴵ Mᴵ))))) Uᴵ))
           refl
-          (imp-conceal-go ext fuel i W′ (slot-future s W≼W′)
+          (imp-conceal-go fuel i W′ (slot-future s W≼W′)
             (liftCenterImprecision W≼W′ p)
             (alias-avoid★-lift-center W≼W′ (center s) p avoid)
             (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p))
@@ -1306,8 +1561,7 @@ mutual
                 (cong (liftCenterTy W≼W′) targetᴵ)))
             value-related))
 
-  imp-conceal-value-go : ∀ (ext : ImpreciseRightExtension)
-      (fuel j : ℕ)
+  imp-conceal-value-go : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
       (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -1322,91 +1576,94 @@ mutual
     → ValueImprecision W q j Vᴵ Vᴾ
     → ValueImprecision W p j
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Vᴾ
-  imp-conceal-value-go ext fuel zero W s shape p avoid size
+  imp-conceal-value-go fuel zero W s shape p avoid size
       no-occur sourceᴵ q targetᴵ related =
     imp-conceal-endpoints W s p sourceᴵ q targetᴵ related
       (imprecise-value related ↓ conceal-value-of shape)
-  imp-conceal-value-go ext (suc fuel) (suc m) W s
+  imp-conceal-value-go (suc fuel) (suc m) W s
       (shape-fun {A₀ᴵ} {B₀ᴵ}) (I.⇒⊑⇒ p₁ p₂) (avoid₁ , avoid₂)
       size (∉-fun ∉₁ ∉₂) sourceᴵ q targetᴵ related with sourceᴵ
-  imp-conceal-value-go ext (suc fuel) (suc m) W s
+  imp-conceal-value-go (suc fuel) (suc m) W s
       (shape-fun {A₀ᴵ} {B₀ᴵ}) (I.⇒⊑⇒ p₁ p₂) (avoid₁ , avoid₂)
       size (∉-fun ∉₁ ∉₂) sourceᴵ q targetᴵ related | refl =
-    imp-conceal-arrow-value ext fuel (suc m) W s p₁ p₂
+    imp-conceal-arrow-value fuel (suc m) W s p₁ p₂
       avoid₁ avoid₂ (sizeᵖ-bound-left size)
       (sizeᵖ-bound-right size) ∉₁ ∉₂ q targetᴵ related
-  imp-conceal-value-go ext zero (suc m) W s
+  imp-conceal-value-go zero (suc m) W s
       (shape-fun {A₀ᴵ} {B₀ᴵ}) (I.⇒⊑⇒ p₁ p₂) avoid ()
       no-occur sourceᴵ q targetᴵ related
-  imp-conceal-value-go ext (suc fuel) (suc m) W s shape
+  imp-conceal-value-go (suc fuel) (suc m) W s shape
       (I.alias eq′ {notSelf} p′) (leaf , av′) (s≤s size′) no-occur
       sourceᴵ q targetᴵ related =
-    imp-conceal-alias-value ext fuel (suc m) W s shape eq′
+    imp-conceal-alias-value fuel (suc m) W s shape eq′
       {notSelf} p′ leaf av′ size′ sourceᴵ q targetᴵ related
-  imp-conceal-value-go ext zero (suc m) W s shape
+  imp-conceal-value-go zero (suc m) W s shape
       (I.alias eq′ p′) avoid () no-occur sourceᴵ q targetᴵ
       related
-  imp-conceal-value-go ext fuel (suc m) W s shape
+  imp-conceal-value-go fuel (suc m) W s shape
       (I.∀⊑ nonvar occurs p₀) avoid size no-occur
-      sourceᴵ q targetᴵ related =
-    imprecise-right-conceal-value ext W s p₀ avoid no-occur
-      shape sourceᴵ q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+      sourceᴵ q targetᴵ related
+      with sourceᴵ
+  imp-conceal-value-go fuel (suc m) W s shape
+      (I.∀⊑ nonvar occurs p₀) avoid size no-occur
+      sourceᴵ q targetᴵ related | refl =
+    imp-conceal-right-universal-value (suc m) W s p₀ avoid
+      no-occur shape q targetᴵ related
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.∀⊑∀ p₀) avoid size no-occur sourceᴵ q targetᴵ related
       with sourceᴵ
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.∀⊑∀ p₀) avoid size no-occur sourceᴵ q targetᴵ related
       | refl =
-    imp-conceal-universal-value ext (suc m) W s p₀ avoid no-occur
+    imp-conceal-universal-value (suc m) W s p₀ avoid no-occur
       q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.bot-elim avoid size no-occur sourceᴵ q targetᴵ related =
     ⊥-elim (no-precise-bottom-value {p = q} {k = suc m} related)
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.★⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.ι⊑ι avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.X⊑X avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.∀⊑∀ p₀) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.⇒⊑★ p₀₁ p₀₂) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.ι⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.X⊑★ mode) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.∀★⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       (I.∀⊑★ nonstar p₀) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.bot-elim avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-fun {A₀ᴵ} {B₀ᴵ})
       I.bot⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.★⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.ι⊑ι avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.X⊑X avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.⇒⊑⇒ p₀₁ p₀₂) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.⇒⊑★ p₀₁ p₀₂) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.ι⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.X⊑★ mode) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.∀★⊑★ avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       (I.∀⊑★ nonstar p₀) avoid size no-occur () q targetᴵ related
-  imp-conceal-value-go ext fuel (suc m) W s (shape-all {B₀ᴵ})
+  imp-conceal-value-go fuel (suc m) W s (shape-all {B₀ᴵ})
       I.bot⊑★ avoid size no-occur () q targetᴵ related
 
-  imp-conceal-arrow-value : ∀ (ext : ImpreciseRightExtension)
-      (fuel j : ℕ)
+  imp-conceal-arrow-value : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {A₀ᴵ B₀ᴵ : Ty Δᴵ} {P₁ P₂ : Ty Δᶜ}
       (p₁ : impEnv (core W) I.⊢ P₁
@@ -1427,12 +1684,12 @@ mutual
     → ValueImprecision W q j Vᴵ Vᴾ
     → ValueImprecision W (I.⇒⊑⇒ p₁ p₂) j
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (A₀ᴵ ⇒ B₀ᴵ)) Vᴾ
-  imp-conceal-arrow-value ext fuel zero W s p₁ p₂ avoid₁ avoid₂
+  imp-conceal-arrow-value fuel zero W s p₁ p₂ avoid₁ avoid₂
       size₁ size₂ ∉₁ ∉₂ q targetᴵ related =
     imp-conceal-endpoints W s (I.⇒⊑⇒ p₁ p₂) refl q targetᴵ
       related
       (imprecise-value related ↓ conceal-value-of shape-fun)
-  imp-conceal-arrow-value ext fuel (suc i) W s
+  imp-conceal-arrow-value fuel (suc i) W s
       {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
       p₁ p₂ avoid₁ avoid₂ size₁ size₂ ∉₁ ∉₂
       q targetᴵ {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related =
@@ -1462,7 +1719,7 @@ mutual
     functions zero n≤ rel = tt
     functions (suc n) sn≤ rel =
       (λ W′ W≼W′ argument-related →
-        imp-conceal-arrow-head ext fuel n W s p₁ p₂
+        imp-conceal-arrow-head fuel n W s p₁ p₂
           avoid₁ avoid₂ size₁ size₂ ∉₁ ∉₂ q̂₁ q̂₂
           (embI-replace-eq W s A₀ᴵ) (embI-replace-eq W s B₀ᴵ)
           rel W′ W≼W′ argument-related) ,
@@ -1471,8 +1728,7 @@ mutual
           {W = W} {p = q̂c} {j = n} {k = suc n}
           {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} (n≤1+n n) rel)
 
-  imp-conceal-arrow-head : ∀ (ext : ImpreciseRightExtension)
-      (fuel m : ℕ)
+  imp-conceal-arrow-head : ∀ (fuel m : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {A₀ᴵ B₀ᴵ : Ty Δᴵ} {P₁ P₂ : Ty Δᶜ}
       (p₁ : impEnv (core W) I.⊢ P₁
@@ -1505,7 +1761,7 @@ mutual
           (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (A₀ᴵ ⇒ B₀ᴵ))
           · Uᴵ)
         (liftPreciseTerm W≼W′ Vᴾ · Uᴾ)
-  imp-conceal-arrow-head ext fuel m W s {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
+  imp-conceal-arrow-head fuel m W s {A₀ᴵ = A₀ᴵ} {B₀ᴵ = B₀ᴵ}
       p₁ p₂ avoid₁ avoid₂ size₁ size₂ ∉₁ ∉₂
       q₁ q₂ target₁ target₂ {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} function-related
       W′ W≼W′ {Uᴵ = Uᴵ} {Uᴾ = Uᴾ} argument-related =
@@ -1549,7 +1805,7 @@ mutual
     revealed : ComputationsRelated W′
         (FutureValueRelation (liftCenterImprecision W≼W′ q₁))
         (suc m) (Uᴵ ↑ cᴵ) Uᴾ
-    revealed = imp-reveal-go ext fuel (suc m) W′ s′
+    revealed = imp-reveal-go fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₁)
       (alias-avoid★-lift-center W≼W′ (center s) p₁ avoid₁)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₁)) size₁)
@@ -1574,7 +1830,7 @@ mutual
     framed : ComputationsRelated W′
         (FutureValueRelation (liftCenterImprecision W≼W′ p₂))
         (suc m) ((Vᴵ′ · (Uᴵ ↑ cᴵ)) ↓ dᴵ) (Vᴾ′ · Uᴾ)
-    framed = imp-concealed-computations ext fuel (suc m) W′ s′
+    framed = imp-concealed-computations fuel (suc m) W′ s′
       (liftCenterImprecision W≼W′ p₂)
       (alias-avoid★-lift-center W≼W′ (center s) p₂ avoid₂)
       (subst≡ (_≤ fuel) (sym (lift-center-size W≼W′ p₂)) size₂)
@@ -1610,8 +1866,7 @@ mutual
         (conceal-fun-app-value-none cᴵ dᴵ)
         (pure-step (β-conceal-⇒ vVᴵ vUᴵ)) step-eqᴵ framed
 
-  imp-conceal-alias-value : ∀ (ext : ImpreciseRightExtension)
-      (fuel j : ℕ)
+  imp-conceal-alias-value : ∀ (fuel j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ)
       {X : TyVar Δᶜ} {T Aᴵ : Ty Δᶜ}
@@ -1629,13 +1884,13 @@ mutual
     → ValueImprecision W q j Vᴵ Vᴾ
     → ValueImprecision W (I.alias eq′ {notSelf = notSelf} p′) j
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Vᴾ
-  imp-conceal-alias-value ext fuel zero W s shape eq′ {notSelf}
+  imp-conceal-alias-value fuel zero W s shape eq′ {notSelf}
       p′ leaf av′ size′ sourceᴵ q targetᴵ related =
     imp-conceal-endpoints W s
       (I.alias eq′ {notSelf = notSelf} p′) sourceᴵ q targetᴵ
       related
       (imprecise-value related ↓ conceal-value-of shape)
-  imp-conceal-alias-value ext fuel (suc m) W s {Bᴵ = Bᴵ} shape
+  imp-conceal-alias-value fuel (suc m) W s {Bᴵ = Bᴵ} shape
       {X = X} {Aᴵ = Aᴵ} eq′ {notSelf} p′ leaf av′ size′ sourceᴵ
       q targetᴵ related =
     imp-conceal-endpoints W s
@@ -1644,7 +1899,7 @@ mutual
       (imprecise-value endpoints-q ↓ conceal-value-of shape) ,
     alias-holds-imp-map (semanticEntry W X) eq′
       (λ {Uᴾ} rel →
-        imp-conceal-value-go ext fuel (suc m) W s shape p′ av′
+        imp-conceal-value-go fuel (suc m) W s shape p′ av′
           size′ c∉T sourceᴵ q̂′ target-eq rel)
       (proj₂ related′)
     where
@@ -1674,8 +1929,7 @@ mutual
     endpoints-q = ClosureProof.value-imprecision-endpoints
       {W = W} {p = q} {k = suc m} related
 
-  imp-conceal-universal-value : ∀ (ext : ImpreciseRightExtension)
-      (j : ℕ)
+  imp-conceal-universal-value : ∀ (j : ℕ)
       {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
       {B₀ᴵ : Ty (suc Δᴵ)} {Acᵇ : Ty (suc Δᶜ)}
       (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Acᵇ
@@ -1689,11 +1943,11 @@ mutual
     → ValueImprecision W q j Vᴵ Vᴾ
     → ValueImprecision W (I.∀⊑∀ p₀) j
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ B₀ᴵ)) Vᴾ
-  imp-conceal-universal-value ext zero W s p₀ avoid no-occur
+  imp-conceal-universal-value zero W s p₀ avoid no-occur
       q targetᴵ related =
     imp-conceal-endpoints W s (I.∀⊑∀ p₀) refl q targetᴵ related
       (imprecise-value related ↓ conceal-value-of shape-all)
-  imp-conceal-universal-value ext (suc m) W s {B₀ᴵ = B₀ᴵ}
+  imp-conceal-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ}
       {Acᵇ = Acᵇ} p₀ avoid (∉-all ∉ᵇ) q targetᴵ
       {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
       with ClosureProof.value-imprecision-reindex
@@ -1703,7 +1957,7 @@ mutual
                  (embI-replace-body-eq W s B₀ᴵ)))
                targetᴵ)
              related
-  imp-conceal-universal-value ext (suc m) W s {B₀ᴵ = B₀ᴵ}
+  imp-conceal-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ}
       {Acᵇ = Acᵇ} p₀ avoid (∉-all ∉ᵇ) q targetᴵ
       {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
       | (endpointsʳ , Bᴾ* , Bᴵ*ʳ , embP* , embI*ʳ , fam-r)
@@ -1713,7 +1967,7 @@ mutual
                (trans embI*ʳ
                  (sym (cong (λ Bʳ → `∀ Bʳ)
                    (embI-replace-body-eq W s B₀ᴵ)))))
-  imp-conceal-universal-value ext (suc m) W s {B₀ᴵ = B₀ᴵ}
+  imp-conceal-universal-value (suc m) W s {B₀ᴵ = B₀ᴵ}
       {Acᵇ = Acᵇ} p₀ avoid (∉-all ∉ᵇ) q targetᴵ
       {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
       | (endpointsʳ ,
@@ -1827,22 +2081,19 @@ mutual
 -- instantiated
 ------------------------------------------------------------------------
 
-imprecise-reveal : ∀ {k : ℕ}
-  → ImpreciseRightExtension → ImpreciseRevealAt k
-imprecise-reveal {k = k} ext W s {Bᴵ = Bᴵ} p avoid no-occur
+imprecise-reveal : ∀ {k : ℕ} → ImpreciseRevealAt k
+imprecise-reveal {k = k} W s {Bᴵ = Bᴵ} p avoid no-occur
     sourceᴵ q targetᴵ related =
-  imp-reveal-go ext (sizeᵖ p) k W s p avoid ≤-refl no-occur
+  imp-reveal-go (sizeᵖ p) k W s p avoid ≤-refl no-occur
     sourceᴵ q targetᴵ related
 
-imprecise-conceal : ∀ {k : ℕ}
-  → ImpreciseRightExtension → ImpreciseConcealAt k
-imprecise-conceal {k = k} ext W s {Bᴵ = Bᴵ} p avoid no-occur
+imprecise-conceal : ∀ {k : ℕ} → ImpreciseConcealAt k
+imprecise-conceal {k = k} W s {Bᴵ = Bᴵ} p avoid no-occur
     sourceᴵ q targetᴵ related =
-  imp-conceal-go ext (sizeᵖ p) k W s p avoid ≤-refl no-occur
+  imp-conceal-go (sizeᵖ p) k W s p avoid ≤-refl no-occur
     sourceᴵ q targetᴵ related
 
 imprecise-reveal-value : ∀ {k : ℕ}
-    (ext : ImpreciseRightExtension)
     {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
     {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -1856,13 +2107,12 @@ imprecise-reveal-value : ∀ {k : ℕ}
   → ValueImprecision W p k Vᴵ Vᴾ
   → ValueImprecision W q k
       (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Vᴾ
-imprecise-reveal-value {k = k} ext W s shape p avoid no-occur
+imprecise-reveal-value {k = k} W s shape p avoid no-occur
     sourceᴵ q targetᴵ related =
-  imp-value-go ext (sizeᵖ p) k W s shape p avoid ≤-refl no-occur
+  imp-value-go (sizeᵖ p) k W s shape p avoid ≤-refl no-occur
     sourceᴵ q targetᴵ related
 
 imprecise-conceal-value : ∀ {k : ℕ}
-    (ext : ImpreciseRightExtension)
     {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
     {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
@@ -1876,7 +2126,7 @@ imprecise-conceal-value : ∀ {k : ℕ}
   → ValueImprecision W q k Vᴵ Vᴾ
   → ValueImprecision W p k
       (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Vᴾ
-imprecise-conceal-value {k = k} ext W s shape p avoid no-occur
+imprecise-conceal-value {k = k} W s shape p avoid no-occur
     sourceᴵ q targetᴵ related =
-  imp-conceal-value-go ext (sizeᵖ p) k W s shape p avoid ≤-refl
+  imp-conceal-value-go (sizeᵖ p) k W s shape p avoid ≤-refl
     no-occur sourceᴵ q targetᴵ related

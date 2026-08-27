@@ -963,6 +963,46 @@ openRelatedBodyImprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
   star Fin.zero ()
   star (Fin.suc X) eq = I.X⊑★ (I.lift-star-inv eq)
 
+-- The right-universal mirror: the bound variable is discharged at ★
+-- on the right, so the body derivation instantiates the left endpoint
+-- alone and leaves the shifted right endpoint fixed.
+
+openRightBodyImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Aᴾ : Ty (suc Δᴾ)} {Aᴵ : Ty Δᴵ}
+    {Rᴾ : Ty Δᴾ}
+  → I.instᵐ (impEnv (core W)) I.⊢
+      renameᵗ (extᵗ (toRenameᵗ (preciseEmbedding (core W)))) Aᴾ
+      ⊑ ⇑ᵗ (embedImprecise (core W) Aᴵ)
+  → impEnv (core W) I.⊢ embedPrecise (core W) Rᴾ ⊑ ★
+  → Aᴾ [ Rᴾ ]ᵗ ⊑ᵂ⟨ core W ⟩ Aᴵ
+openRightBodyImprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
+    {Rᴾ = Rᴾ} body-related r★ =
+  subst (λ L → impEnv (core W) I.⊢ L
+      ⊑ embedImprecise (core W) Aᴵ)
+    (sym (rename-openᵗ (toRenameᵗ (preciseEmbedding (core W))) Aᴾ Rᴾ))
+    (subst (λ R → impEnv (core W) I.⊢ opened-left ⊑ R)
+      (shift-openᵗ (embedImprecise (core W) Aᴵ) ★)
+      (subst₂-⊑ same star
+        (open-head-alias-map (embedPrecise (core W) Rᴾ) (λ ()))
+        body-related))
+  where
+  opened-left = renameᵗ (extᵗ
+    (toRenameᵗ (preciseEmbedding (core W)))) Aᴾ
+    [ embedPrecise (core W) Rᴾ ]ᵗ
+
+  same : ∀ X → impEnv (core W) I.⊢
+      singleSubᵗ (embedPrecise (core W) Rᴾ) X
+      ⊑ singleSubᵗ ★ X
+  same Fin.zero = r★
+  same (Fin.suc X) = I.X⊑X
+
+  star : ∀ X → I.instᵐ (impEnv (core W)) X ≡ I.X⊑★
+    → impEnv (core W) I.⊢
+        singleSubᵗ (embedPrecise (core W) Rᴾ) X ⊑ ★
+  star Fin.zero eq = r★
+  star (Fin.suc X) eq = I.X⊑★ (I.lift-star-inv eq)
+
 openFreshDynamicImprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ (suc Δᶜ)} {Aᴾ Aᴵ : Ty (suc (suc Δᶜ))}
   → impEnv (core W) Fin.zero ≡ I.X⊑★

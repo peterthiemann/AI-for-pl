@@ -282,6 +282,22 @@ data UniWrap {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → slotXᴾ s ∉ᵗ `∀ B
     → BodyImprecision W B C
     → UniWrap W B C B C
+  reveal-imprecise : (s : PairedSlot W) (B : Ty (suc Δᴾ))
+      (C : Ty Δᴵ)
+    → UniShape C
+    → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
+    → BodyImprecision W B (replaceTy (slotXᴵ s) (slotRᴵ s) C)
+    → ((j : BodyImprecision W B C)
+        → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyP j))
+    → UniWrap W B C B (replaceTy (slotXᴵ s) (slotRᴵ s) C)
+  conceal-imprecise : (s : PairedSlot W) (B : Ty (suc Δᴾ))
+      (C : Ty Δᴵ)
+    → UniShape C
+    → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
+    → BodyImprecision W B C
+    → ((j : BodyImprecision W B C)
+        → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyP j))
+    → UniWrap W B (replaceTy (slotXᴵ s) (slotRᴵ s) C) B C
 
 -- Sequences, innermost wrapper first.
 
@@ -314,10 +330,13 @@ wrapTermᴾ₁ (reveal-inert s B C avoid i) V =
   V ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗
 wrapTermᴾ₁ (conceal-inert s B C avoid i) V =
   V ↓ makeConceal (slotXᴾ s) (slotRᴾ s) (`∀ B)
+wrapTermᴾ₁ (reveal-imprecise s B C sh ∉ᵇ i av) V = V
+wrapTermᴾ₁ (conceal-imprecise s B C sh ∉ᵇ i av) V = V
 
--- The action on the imprecise endpoint: only the paired wrappers
--- touch it, since the dynamic and inert slots have no imprecise
--- occupant, respectively leave the imprecise type alone.
+-- The action on the imprecise endpoint: the paired wrappers convert
+-- both endpoints, the imprecise-only wrappers convert this endpoint
+-- alone, and the dynamic and inert slots have no imprecise occupant,
+-- respectively leave the imprecise type alone.
 
 wrapTermᴵ₁ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     {B C B′ C′}
@@ -330,6 +349,10 @@ wrapTermᴵ₁ (reveal-dyn d B C i) V = V
 wrapTermᴵ₁ (conceal-dyn d B C i) V = V
 wrapTermᴵ₁ (reveal-inert s B C avoid i) V = V
 wrapTermᴵ₁ (conceal-inert s B C avoid i) V = V
+wrapTermᴵ₁ (reveal-imprecise s B C sh ∉ᵇ i av) V =
+  V ↑ 〖 slotXᴵ s , slotRᴵ s ↑ C 〗
+wrapTermᴵ₁ (conceal-imprecise s B C sh ∉ᵇ i av) V =
+  V ↓ makeConceal (slotXᴵ s) (slotRᴵ s) C
 
 wrapTermᴾ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ} {B C B′ C′}
   → UniWraps W B C B′ C′ → Term Δᴾ → Term Δᴾ
