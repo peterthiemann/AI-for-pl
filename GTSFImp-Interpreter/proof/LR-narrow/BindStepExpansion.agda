@@ -570,3 +570,143 @@ related-precise-bind-step-expand {W = W} {Rᴾ = Rᴾ} {r★ = r★}
     suc m , step-blame-expand {Σ = preciseStore (core W)}
       {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind Rᴾ}
       Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ
+
+------------------------------------------------------------------------
+-- The alias variant: a precise-only re-binding of an existing name
+------------------------------------------------------------------------
+
+-- An alias bind allocates a precise slot holding the representative
+-- variable and needs no imprecision premise: the fresh center is
+-- alias-mode and unfolds to the representative's embedding.
+
+alias-step : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (rep : TyVar Δᴾ)
+  → Future W (aliasBindWorld W rep)
+alias-step W rep = future-alias (future-refl {W = W})
+
+paired-returns-alias-bind-step : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {rep : TyVar Δᴾ}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Mᴵ : Term Δᴵ}
+    {Mᴾ : Term Δᴾ} {Nᴾ : Term (suc Δᴾ)}
+    {stepᴾ : Mᴾ —→[ bind (＇ rep) ] Nᴾ}
+    {resultᴵ : E.EvalResult Mᴵ} {resultᴾ : E.EvalResult Nᴾ}
+    {k : ℕ}
+  → PairedReturns (aliasBindWorld W rep)
+      (FutureValueRelation
+        (liftCenterImprecision (alias-step W rep) p))
+      k resultᴵ resultᴾ
+  → PairedReturns W
+      (PostBindValueRelation (alias-step W rep) p) k
+      resultᴵ (prepend-result stepᴾ resultᴾ)
+paired-returns-alias-bind-step {W = W} {rep = rep}
+    {stepᴾ = stepᴾ} {resultᴵ = resultᴵ} {resultᴾ = resultᴾ}
+    (paired-returns W′ bound≼W′ storeᴵ storeᴾ termsᴵ termsᴾ related) =
+  paired-returns W′ W≼W′ storeᴵ storeᴾ termsᴵ′ termsᴾ′
+    (bound≼W′ , refl , final-related)
+  where
+  step = alias-step W rep
+  W≼W′ = future-trans step bound≼W′
+
+  termsᴵ′ : ∀ M → E.changes resultᴵ ▶ᵀ M ≡ liftImpreciseTerm W≼W′ M
+  termsᴵ′ M = trans (termsᴵ M)
+    (sym (liftImpreciseTerm-trans step bound≼W′ M))
+
+  termsᴾ′ : ∀ M
+    → E.changes (prepend-result stepᴾ resultᴾ) ▶ᵀ M
+      ≡ liftPreciseTerm W≼W′ M
+  termsᴾ′ M = trans (termsᴾ (⇑ᵗᵐ M))
+    (sym (liftPreciseTerm-trans step bound≼W′ M))
+
+  final-related = ClosureProof.value-imprecision-reindex
+    (liftCenterImprecision W≼W′ _)
+    (liftCenterImprecision bound≼W′
+      (liftCenterImprecision step _))
+    (liftCenterTy-trans step bound≼W′ _)
+    (liftCenterTy-trans step bound≼W′ _) related
+
+related-alias-bind-step-expand : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {rep : TyVar Δᴾ}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ} {k : ℕ}
+    {Mᴵ : Term Δᴵ}
+    {Mᴾ : Term Δᴾ} {Nᴾ : Term (suc Δᴾ)}
+  → Mᴾ ≢ blame
+  → E.value? Mᴾ ≡ nothing
+  → (stepᴾ : Mᴾ —→[ bind (＇ rep) ] Nᴾ)
+  → E.step? (preciseStore (core W)) Mᴾ ≡
+      just (E.step-result (bind (＇ rep)) Nᴾ stepᴾ)
+  → ComputationsRelated (aliasBindWorld W rep)
+      (FutureValueRelation
+        (liftCenterImprecision (alias-step W rep) p)) k
+      Mᴵ Nᴾ
+  → ComputationsRelated W
+      (PostBindValueRelation (alias-step W rep) p) k Mᴵ Mᴾ
+related-alias-bind-step-expand {W = W} {rep = rep}
+    {p = p} {k = k} {Mᴵ = Mᴵ} {Mᴾ = Mᴾ} {Nᴾ = Nᴾ}
+    Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ related = record
+  { forward-return = forward
+  ; backward-return = backward
+  ; forward-blame = blame-forward
+  }
+  where
+  forward : ∀ {n} {resultᴵ : E.EvalResult Mᴵ}
+    → n < k
+    → interpretFrom (impreciseStore (core W)) n Mᴵ ≡ returned resultᴵ
+    → (Σ[ m ∈ ℕ ] Σ[ resultᴾ ∈ E.EvalResult Mᴾ ]
+        interpretFrom (preciseStore (core W)) m Mᴾ ≡ returned resultᴾ
+        × PairedReturns W
+          (PostBindValueRelation (alias-step W rep) p)
+          (k ∸ n) resultᴵ resultᴾ)
+      ⊎ (Σ[ m ∈ ℕ ] BlamesFrom (preciseStore (core W)) m Mᴾ)
+  forward {n = n} n<k result-eq
+      with forward-return related n<k result-eq
+  forward {n = n} n<k result-eq
+      | inj₁ (m , resultᴾ′ , returnᴾ , paired) =
+    inj₁ (suc m , prepend-result stepᴾ resultᴾ′ ,
+      step-return-expand {Σ = preciseStore (core W)} {gas = m}
+        {M = Mᴾ} {N = Nᴾ} {χ = bind (＇ rep)}
+        Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ returnᴾ ,
+      paired-returns-alias-bind-step {rep = rep} paired)
+  forward {n = n} n<k result-eq | inj₂ (m , blameᴾ) =
+    inj₂ (suc m , step-blame-expand {Σ = preciseStore (core W)}
+      {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind (＇ rep)}
+      Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ)
+
+  backward : ∀ {n} {resultᴾ : E.EvalResult Mᴾ}
+    → n < k
+    → interpretFrom (preciseStore (core W)) n Mᴾ ≡ returned resultᴾ
+    → Σ[ m ∈ ℕ ] Σ[ resultᴵ ∈ E.EvalResult Mᴵ ]
+        interpretFrom (impreciseStore (core W)) m Mᴵ ≡ returned resultᴵ
+        × PairedReturns W
+          (PostBindValueRelation (alias-step W rep) p)
+          (k ∸ n) resultᴵ resultᴾ
+  backward {n = n} n<k result-eq
+      with step-return-invert
+        {Σ = preciseStore (core W)} {n = n}
+        Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ result-eq
+  backward {n = suc n} sn<k result-eq
+      | step-return resultᴾ′ returnᴾ resultᴾ-eq
+      with backward-return related
+        (≤-trans (n≤1+n (suc n)) sn<k) returnᴾ
+  backward {n = suc n} sn<k result-eq
+      | step-return resultᴾ′ returnᴾ resultᴾ-eq
+      | m , resultᴵ , returnᴵ , paired =
+    m , resultᴵ , returnᴵ ,
+    paired-returns-reindex refl resultᴾ-eq
+      (paired-returns-alias-bind-step {rep = rep}
+        (paired-returns-downward (∸-monoʳ-≤ k (n≤1+n n)) paired))
+
+  blame-forward : ∀ {n}
+    → n < k
+    → BlamesFrom (impreciseStore (core W)) n Mᴵ
+    → Σ[ m ∈ ℕ ] BlamesFrom (preciseStore (core W)) m Mᴾ
+  blame-forward {n = n} n<k blameᴵ
+      with forward-blame related n<k blameᴵ
+  blame-forward {n = n} n<k blameᴵ | m , blameᴾ =
+    suc m , step-blame-expand {Σ = preciseStore (core W)}
+      {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind (＇ rep)}
+      Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ
