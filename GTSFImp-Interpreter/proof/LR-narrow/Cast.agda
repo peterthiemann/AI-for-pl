@@ -20,14 +20,15 @@ open import Data.Empty using (⊥; ⊥-elim)
 import Data.Fin as Fin
 open import Data.List using ([]; _∷_)
 open import Data.Maybe using (just; nothing)
-open import Data.Product using (_×_; _,_; Σ-syntax)
-open import Data.Sum using (inj₁; inj₂)
+open import Data.Product using (_×_; _,_; Σ-syntax; proj₁; proj₂)
+open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Data.Unit.Polymorphic.Base using (tt)
 import Relation.Binary.HeterogeneousEquality as HE
 open import Relation.Binary.PropositionalEquality
   using (_≡_; _≢_; refl; sym; trans; cong; cong₂)
   renaming (subst to subst≡)
 open import Relation.Nullary using (yes; no)
+open import Relation.Nullary.Decidable using (fromWitnessFalse)
 
 open import Types
 open import TyStore
@@ -48,14 +49,15 @@ open import proof.LR-narrow.TypeRenamingComposition using
 open import proof.ImprecisionConsistency using
   (expand-cast-source⊑; ground-cast-target⊑;
    ground-target-nonvar-to-star⊑;
-   ground-targets-unique⊑; nonvar-occurs-nonstar;
+   ground-targets-unique⊑-nonvar;
+   nonvar-occurs-nonstar;
    consistency-target-occurs-source; source-occurs-target;
    target-occurs-source;
-   NoAliases; ext-no-aliases; inst-no-aliases;
    ext-injective; rename-occurs; renameᵗ-injective; shift-ground;
    shift-injectiveᵗ; ty-all-injective;
    toRenameᵗ-injective; ty-var-injective)
 open import proof.Imprecision using (ext-aliases-avoid-zero)
+open import proof.LR-narrow.ImprecisionSize using (sizeᵖ)
 import proof.TypeSafety.Progress as Progress
 open import proof.TypeSafety.Progress using (no-bot-value)
 open import proof.Consistency using (gen-safe)
@@ -105,6 +107,9 @@ open import proof.LR-narrow.TypeApplication using
 open import proof.LR-narrow.Closure using
   (value-imprecision-downward-to)
 import proof.LR-narrow.Closure as ClosureProof
+open import proof.LR-narrow.AliasWorld using
+  (world-alias-atom; alias-mode-no-paired-holds;
+   alias-holds-chain; alias-no-imprecise-target)
 
 reindex-center-imprecision : ∀ {Δ} {μ : I.ImpEnv Δ}
     {A B A′ B′ : Ty Δ}
@@ -412,21 +417,121 @@ star-left-nonstar-impossible : ∀ {Δ} {μ : I.ImpEnv Δ} {A : Ty Δ}
   → ⊥
 star-left-nonstar-impossible I.★⊑★ ()
 
+star-mode-not-alias : ∀ {Δ} {T : Ty Δ} → I.X⊑★ ≡ I.X⊑ᵗ T → ⊥
+star-mode-not-alias ()
+
+alias-rep-injective : ∀ {Δ} {T T′ : Ty Δ}
+  → I.X⊑ᵗ T ≡ I.X⊑ᵗ T′ → T ≡ T′
+alias-rep-injective refl = refl
+
+-- Inverting a derivation whose source is an alias-mode variable:
+-- either it is the reflexivity derivation, or its target is reached
+-- from the recorded representative.
+
+variable-alias-premise : ∀ {Δ} {μ : I.ImpEnv Δ} {Z : TyVar Δ}
+    {T B : Ty Δ}
+  → μ Z ≡ I.X⊑ᵗ T
+  → μ I.⊢ ＇ Z ⊑ B
+  → (B ≡ ＇ Z) ⊎ (μ I.⊢ T ⊑ B)
+variable-alias-premise eq I.X⊑X = inj₁ refl
+variable-alias-premise eq (I.X⊑★ mode) =
+  ⊥-elim (star-mode-not-alias (trans (sym mode) eq))
+variable-alias-premise {μ = μ} {B = B} eq (I.alias eq′ w) =
+  inj₂ (subst≡ (λ S → μ I.⊢ S ⊑ B)
+    (alias-rep-injective (trans (sym eq′) eq)) w)
+
+size-reindex-center : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {A B A′ B′ : Ty Δ}
+    (p : μ I.⊢ A ⊑ B) (e₁ : A ≡ A′) (e₂ : B ≡ B′)
+  → sizeᵖ (reindex-center-imprecision p e₁ e₂) ≡ sizeᵖ p
+size-reindex-center p refl refl = refl
+
+-- Two derivations from one embedded precise ground to embedded
+-- imprecise targets agree on the target: the alias chains both
+-- follow the environment's representatives, which coincide.
+
+ground-imprecise-targets-agree : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (fuel : ℕ)
+    {Gᴾ : Ty Δᴾ} (g : Ground Gᴾ)
+    {B₁ B₂ : Ty Δᶜ} {Hᴵ Dᴵ : Ty Δᴵ}
+  → (p : impEnv (core W) I.⊢ embedPrecise (core W) Gᴾ ⊑ B₁)
+  → (q : impEnv (core W) I.⊢ embedPrecise (core W) Gᴾ ⊑ B₂)
+  → sizeᵖ p ≤ fuel
+  → B₁ ≡ embedImprecise (core W) Hᴵ
+  → B₂ ≡ embedImprecise (core W) Dᴵ
+  → NonStar B₁ → NonStar B₂
+  → B₁ ≡ B₂
+ground-imprecise-targets-agree W fuel (＇ X)
+    I.X⊑X I.X⊑X size≤ e₁ e₂ ns₁ ns₂ = refl
+ground-imprecise-targets-agree W fuel (＇ X)
+    I.X⊑X (I.X⊑★ mode) size≤ e₁ e₂ ns₁ ()
+ground-imprecise-targets-agree W fuel (＇ X)
+    I.X⊑X (I.alias eq w₂) size≤ e₁ e₂ ns₁ ns₂ =
+  ⊥-elim (alias-no-imprecise-target W eq (sym e₁))
+ground-imprecise-targets-agree W fuel (＇ X)
+    (I.X⊑★ mode) q size≤ e₁ e₂ () ns₂
+ground-imprecise-targets-agree W fuel (＇ X)
+    (I.alias eq w) I.X⊑X size≤ e₁ e₂ ns₁ ns₂ =
+  ⊥-elim (alias-no-imprecise-target W eq (sym e₂))
+ground-imprecise-targets-agree W fuel (＇ X)
+    (I.alias eq w) (I.X⊑★ mode) size≤ e₁ e₂ ns₁ ()
+ground-imprecise-targets-agree W fuel (＇ X)
+    (I.alias {T = T} eq w) (I.alias {T = T₂} eq₂ w₂)
+    (s≤s le) e₁ e₂ ns₁ ns₂ =
+  ground-imprecise-targets-agree W _
+    (＇ aliasRepName atom)
+    (reindex-center-imprecision w (sym rep-eq) refl)
+    (reindex-center-imprecision w₂
+      (trans (alias-rep-injective (trans (sym eq₂) eq))
+        (sym rep-eq))
+      refl)
+    (subst≡ (_≤ _)
+      (sym (size-reindex-center w (sym rep-eq) refl)) le)
+    e₁ e₂ ns₁ ns₂
+  where
+  atom = world-alias-atom W _ eq
+  rep-eq = aliasRep-eq atom
+ground-imprecise-targets-agree W fuel (‵ ι)
+    I.ι⊑ι I.ι⊑ι size≤ e₁ e₂ ns₁ ns₂ = refl
+ground-imprecise-targets-agree W fuel (‵ ι)
+    I.ι⊑ι I.ι⊑★ size≤ e₁ e₂ ns₁ ()
+ground-imprecise-targets-agree W fuel (‵ ι)
+    I.ι⊑★ q size≤ e₁ e₂ () ns₂
+ground-imprecise-targets-agree W fuel ★⇒★
+    (I.⇒⊑⇒ I.★⊑★ I.★⊑★) (I.⇒⊑⇒ I.★⊑★ I.★⊑★)
+    size≤ e₁ e₂ ns₁ ns₂ = refl
+ground-imprecise-targets-agree W fuel ★⇒★
+    (I.⇒⊑⇒ I.★⊑★ I.★⊑★) (I.⇒⊑★ q₁ q₂) size≤ e₁ e₂ ns₁ ()
+ground-imprecise-targets-agree W fuel ★⇒★
+    (I.⇒⊑★ p₁ p₂) q size≤ e₁ e₂ () ns₂
+ground-imprecise-targets-agree W fuel ∀★
+    (I.∀⊑∀ I.★⊑★) (I.∀⊑∀ I.★⊑★) size≤ e₁ e₂ ns₁ ns₂ = refl
+ground-imprecise-targets-agree W fuel ∀★
+    (I.∀⊑∀ I.★⊑★) I.∀★⊑★ size≤ e₁ e₂ ns₁ ()
+ground-imprecise-targets-agree W fuel ∀★
+    (I.∀⊑∀ I.★⊑★) (I.∀⊑★ nonstar q₀) size≤ e₁ e₂ ns₁ ()
+ground-imprecise-targets-agree W fuel ∀★
+    I.∀★⊑★ q size≤ e₁ e₂ () ns₂
+ground-imprecise-targets-agree W fuel ∀★
+    (I.∀⊑★ nonstar p₀) q size≤ e₁ e₂ () ns₂
+
+
 variable-left-nonstar-target : ∀ {Δ} {μ : I.ImpEnv Δ}
     {X : TyVar Δ} {A : Ty Δ}
-  → NoAliases μ
+  → μ X ≡ I.X⊑★
   → μ I.⊢ ＇ X ⊑ A
   → NonStar A
   → A ≡ ＇ X
-variable-left-nonstar-target na I.X⊑X nonstar = refl
-variable-left-nonstar-target na (I.X⊑★ mode) ()
-variable-left-nonstar-target na (I.alias eq p) nonstar =
-  ⊥-elim (na _ eq)
+variable-left-nonstar-target mode I.X⊑X nonstar = refl
+variable-left-nonstar-target mode (I.X⊑★ eq) ()
+variable-left-nonstar-target mode (I.alias eq p) nonstar =
+  ⊥-elim (star-mode-not-alias (trans (sym mode) eq))
 
 dynamic-atom-target-occupant : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ}
     {Gᴾ : Ty Δᴾ} {Dᴵ : Ty Δᴵ} {Bᴾ Bᴵ : Ty Δᶜ}
   → embedPrecise (core W) Gᴾ ≡ ＇ Z
+  → impEnv (core W) Z ≡ I.X⊑★
   → NonStar Dᴵ
   → (q : impEnv (core W) I.⊢ Bᴾ ⊑ Bᴵ)
   → embedPrecise (core W) Gᴾ ≡ Bᴾ
@@ -434,9 +539,9 @@ dynamic-atom-target-occupant : ∀ {Δᴾ Δᴵ Δᶜ}
   → Σ[ Y ∈ TyVar Δᴵ ]
       C.toRenameᵗ (impreciseEmbedding (core W)) Y ≡ Z
 dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = ★}
-    ground-center () q targetᴾ targetᴵ
+    ground-center mode () q targetᴾ targetᴵ
 dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = ‵ ι}
-    ground-center nonstar q targetᴾ targetᴵ
+    ground-center mode nonstar q targetᴾ targetᴵ
     with center-target
   where
   center-q : impEnv (core W) I.⊢ ＇ Z
@@ -445,14 +550,14 @@ dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = ‵ ι}
     (trans (sym targetᴾ) ground-center) (sym targetᴵ)
 
   center-target : embedImprecise (core W) (‵ ι) ≡ ＇ Z
-  center-target = variable-left-nonstar-target (noAlias W)
+  center-target = variable-left-nonstar-target mode
     center-q
     (C.renameNonStar
       (C.toRenameᵗ (impreciseEmbedding (core W))) nonstar)
 dynamic-atom-target-occupant {Dᴵ = ‵ ι}
-    ground-center nonstar q targetᴾ targetᴵ | ()
+    ground-center mode nonstar q targetᴾ targetᴵ | ()
 dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = ＇ Y}
-    ground-center nonstar q targetᴾ targetᴵ =
+    ground-center mode nonstar q targetᴾ targetᴵ =
   Y , ty-var-injective center-target
   where
   center-q : impEnv (core W) I.⊢ ＇ Z
@@ -461,12 +566,12 @@ dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = ＇ Y}
     (trans (sym targetᴾ) ground-center) (sym targetᴵ)
 
   center-target : embedImprecise (core W) (＇ Y) ≡ ＇ Z
-  center-target = variable-left-nonstar-target (noAlias W)
+  center-target = variable-left-nonstar-target mode
     center-q
     (C.renameNonStar
       (C.toRenameᵗ (impreciseEmbedding (core W))) nonstar)
 dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = A ⇒ B}
-    ground-center nonstar q targetᴾ targetᴵ
+    ground-center mode nonstar q targetᴾ targetᴵ
     with center-target
   where
   center-q : impEnv (core W) I.⊢ ＇ Z
@@ -475,14 +580,14 @@ dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = A ⇒ B}
     (trans (sym targetᴾ) ground-center) (sym targetᴵ)
 
   center-target : embedImprecise (core W) (A ⇒ B) ≡ ＇ Z
-  center-target = variable-left-nonstar-target (noAlias W)
+  center-target = variable-left-nonstar-target mode
     center-q
     (C.renameNonStar
       (C.toRenameᵗ (impreciseEmbedding (core W))) nonstar)
 dynamic-atom-target-occupant {Dᴵ = A ⇒ B}
-    ground-center nonstar q targetᴾ targetᴵ | ()
+    ground-center mode nonstar q targetᴾ targetᴵ | ()
 dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = `∀ A}
-    ground-center nonstar q targetᴾ targetᴵ
+    ground-center mode nonstar q targetᴾ targetᴵ
     with center-target
   where
   center-q : impEnv (core W) I.⊢ ＇ Z
@@ -491,12 +596,12 @@ dynamic-atom-target-occupant {W = W} {Z = Z} {Dᴵ = `∀ A}
     (trans (sym targetᴾ) ground-center) (sym targetᴵ)
 
   center-target : embedImprecise (core W) (`∀ A) ≡ ＇ Z
-  center-target = variable-left-nonstar-target (noAlias W)
+  center-target = variable-left-nonstar-target mode
     center-q
     (C.renameNonStar
       (C.toRenameᵗ (impreciseEmbedding (core W))) nonstar)
 dynamic-atom-target-occupant {Dᴵ = `∀ A}
-    ground-center nonstar q targetᴾ targetᴵ | ()
+    ground-center mode nonstar q targetᴾ targetᴵ | ()
 
 base-consistency-no-generated-variable : ∀ {Δ} {μ : C.Env∼ Δ}
     {ι : Base} {B : Ty Δ} {X : TyVar Δ}
@@ -571,66 +676,45 @@ variable-ground-other-impossible
     ((C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c) A≢★) nonstar B≢X =
   variable-consistency-no-generated-variable (λ ()) c occurs
 
-ground-cast-target-unique⊑ : ∀ {Δ} {μ : I.ImpEnv Δ}
-    {ν : C.Env∼ Δ} {A B H G : Ty Δ}
-  → NoAliases μ
-  → Ground A
-  → (h : Ground H)
-  → (g : Ground G)
-  → NonStar B
-  → ν C.⊢ B ∼ G
-  → μ I.⊢ A ⊑ H
-  → μ I.⊢ A ⊑ B
-  → H ≡ G
-ground-cast-target-unique⊑ {G = G} na
-    (＇ X) h g Bns c I.X⊑X I.X⊑X
-    with G ≟Ty ＇ X
-ground-cast-target-unique⊑ {G = G} na
-    (＇ X) h g Bns c I.X⊑X I.X⊑X
-    | yes G≡X = sym G≡X
-ground-cast-target-unique⊑ {G = G} na
-    (＇ X) h g Bns c I.X⊑X I.X⊑X
-    | no G≢X =
+-- Consistent grounds are equal.
+
+grounds-consistent-equal : ∀ {Δ} {ν : C.Env∼ Δ} {G H : Ty Δ}
+  → Ground G → Ground H
+  → ν C.⊢ G ∼ H
+  → G ≡ H
+grounds-consistent-equal {H = H} (＇ X) h c with H ≟Ty ＇ X
+grounds-consistent-equal {H = H} (＇ X) h c | yes H≡X = sym H≡X
+grounds-consistent-equal {H = H} (＇ X) h c | no H≢X =
   ⊥-elim (variable-ground-other-impossible c
-    (C.ground-nonstar g) G≢X)
-ground-cast-target-unique⊑ na
-    (＇ X) h g Bns c (I.alias eq p) q =
-  ⊥-elim (na _ eq)
-ground-cast-target-unique⊑ na
-    (＇ X) h g Bns c I.X⊑X (I.alias eq q) =
-  ⊥-elim (na _ eq)
-ground-cast-target-unique⊑ na (‵ ι) h g Bns c p q =
-  ground-targets-unique⊑ na h g p
-    (ground-cast-target⊑ g Bns c q
-      (ground-target-nonvar-to-star⊑ h nonvar-base p))
-ground-cast-target-unique⊑ na ★⇒★ h g Bns c p q =
-  ground-targets-unique⊑ na h g p
-    (ground-cast-target⊑ g Bns c q
-      (ground-target-nonvar-to-star⊑ h nonvar-fun p))
-ground-cast-target-unique⊑ na ∀★ h g Bns c p q =
-  ground-targets-unique⊑ na h g p
-    (ground-cast-target⊑ g Bns c q
-      (ground-target-nonvar-to-star⊑ h nonvar-all p))
+    (C.ground-nonstar h) H≢X)
+grounds-consistent-equal (‵ ι) h (C.id x) = refl
+grounds-consistent-equal (‵ ι) ∀★
+    ((C.gen_ ⦃ Bnv ⦄ ⦃ () ⦄ c) A≢★)
+grounds-consistent-equal ★⇒★ ★⇒★ (c₁ C.↦ c₂) = refl
+grounds-consistent-equal ★⇒★ ∀★
+    ((C.gen_ ⦃ Bnv ⦄ ⦃ () ⦄ c) A≢★)
+grounds-consistent-equal ∀★ ∀★ (C.∀ᶜ c) = refl
+grounds-consistent-equal ∀★ h
+    (C.inst_ ⦃ Anv ⦄ ⦃ () ⦄ c B≢★)
+grounds-consistent-equal ∀★ ∀★
+    ((C.gen_ ⦃ Bnv ⦄ ⦃ () ⦄ c) A≢★)
 
 ground-left-nonstar-target : ∀ {Δ} {μ : I.ImpEnv Δ}
     {G B : Ty Δ}
-  → NoAliases μ
+  → NonVar G
   → Ground G
   → μ I.⊢ G ⊑ B
   → NonStar B
   → G ≡ B
-ground-left-nonstar-target na (＇ X) I.X⊑X nonstar = refl
-ground-left-nonstar-target na (＇ X) (I.X⊑★ eq) ()
-ground-left-nonstar-target na (＇ X) (I.alias eq p) nonstar =
-  ⊥-elim (na _ eq)
-ground-left-nonstar-target na (‵ ι) I.ι⊑ι nonstar = refl
-ground-left-nonstar-target na (‵ ι) I.ι⊑★ ()
-ground-left-nonstar-target na ★⇒★
+ground-left-nonstar-target () (＇ X) p nonstar
+ground-left-nonstar-target nv (‵ ι) I.ι⊑ι nonstar = refl
+ground-left-nonstar-target nv (‵ ι) I.ι⊑★ ()
+ground-left-nonstar-target nv ★⇒★
     (I.⇒⊑⇒ I.★⊑★ I.★⊑★) nonstar = refl
-ground-left-nonstar-target na ★⇒★ (I.⇒⊑★ p q) ()
-ground-left-nonstar-target na ∀★ (I.∀⊑∀ I.★⊑★) nonstar = refl
-ground-left-nonstar-target na ∀★ I.∀★⊑★ ()
-ground-left-nonstar-target na ∀★ (I.∀⊑★ Ans p) ()
+ground-left-nonstar-target nv ★⇒★ (I.⇒⊑★ p q) ()
+ground-left-nonstar-target nv ∀★ (I.∀⊑∀ I.★⊑★) nonstar = refl
+ground-left-nonstar-target nv ∀★ I.∀★⊑★ ()
+ground-left-nonstar-target nv ∀★ (I.∀⊑★ Ans p) ()
 
 nonvar-left-variable-impossible : ∀ {Δ} {μ : I.ImpEnv Δ}
     {A : Ty Δ} {X : TyVar Δ}
@@ -646,7 +730,7 @@ nonvar-left-variable-impossible (I.alias eq p) ()
 ground-cast-square-tags-agree : ∀ {Δ}
     {μ : I.ImpEnv Δ} {ν₁ ν₂ : C.Env∼ Δ}
     {G₁ G₂ A₁ A₂ : Ty Δ}
-  → NoAliases μ
+  → NonVar G₁
   → Ground G₁
   → Ground G₂
   → NonStar A₁
@@ -655,139 +739,125 @@ ground-cast-square-tags-agree : ∀ {Δ}
   → ν₂ C.⊢ G₂ ∼ A₂
   → μ I.⊢ A₁ ⊑ A₂
   → G₁ ≡ G₂
-ground-cast-square-tags-agree {G₂ = G₂} na (＇ X) g₂ ns₁ ns₂
-    (C.id x) c₂ I.X⊑X with G₂ ≟Ty ＇ X
-ground-cast-square-tags-agree na (＇ X) g₂ ns₁ ns₂
-    (C.id x) c₂ I.X⊑X | yes G₂≡X = sym G₂≡X
-ground-cast-square-tags-agree na (＇ X) g₂ ns₁ ns₂
-    (C.id x) c₂ I.X⊑X | no G₂≢X =
-  ⊥-elim (variable-ground-other-impossible (C.sym∼ c₂)
-    (C.ground-nonstar g₂) G₂≢X)
-ground-cast-square-tags-agree na (＇ X) g₂ ns₁ ns₂
-    (C.id x) c₂ (I.alias eq q) =
-  ⊥-elim (na _ eq)
-ground-cast-square-tags-agree na (＇ X) g₂ ns₁ ns₂
-    (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★) c₂ q =
-  ⊥-elim (variable-consistency-no-generated-variable
-    (λ ()) c₁ occurs)
-ground-cast-square-tags-agree {G₂ = G₂} na (‵ ι) g₂ ns₁ ns₂
+ground-cast-square-tags-agree () (＇ X) g₂ ns₁ ns₂ c₁ c₂ q
+ground-cast-square-tags-agree {G₂ = G₂} nv (‵ ι) g₂ ns₁ ns₂
     (C.id x) c₂ I.ι⊑ι with G₂ ≟Ty ‵ ι
-ground-cast-square-tags-agree na (‵ ι) g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv (‵ ι) g₂ ns₁ ns₂
     (C.id x) c₂ I.ι⊑ι | yes G₂≡ι = sym G₂≡ι
-ground-cast-square-tags-agree na (‵ ι) g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv (‵ ι) g₂ ns₁ ns₂
     (C.id x) c₂ I.ι⊑ι | no G₂≢ι =
   ⊥-elim (base-ground-other-impossible (C.sym∼ c₂)
     (C.ground-nonstar g₂) G₂≢ι)
-ground-cast-square-tags-agree na (‵ ι) g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv (‵ ι) g₂ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★) c₂ q =
   ⊥-elim (base-generalization-impossible c₁ Bnv occurs)
-ground-cast-square-tags-agree na ★⇒★ (＇ X) ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ (＇ X) ns₁ ns₂
     (c₁ C.↦ c₃) () (I.⇒⊑⇒ q q₁)
-ground-cast-square-tags-agree na ★⇒★ (‵ ι) ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ (‵ ι) ns₁ ns₂
     (c₁ C.↦ c₃) () (I.⇒⊑⇒ q q₁)
-ground-cast-square-tags-agree na ★⇒★ ★⇒★ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ ★⇒★ ns₁ ns₂
     (c₁ C.↦ c₃) c₂ (I.⇒⊑⇒ q q₁) = refl
-ground-cast-square-tags-agree na ★⇒★ ∀★ ns₁ ns₂ (c₁ C.↦ c₃)
+ground-cast-square-tags-agree nv ★⇒★ ∀★ ns₁ ns₂ (c₁ C.↦ c₃)
     (C.inst_ ⦃ Anv ⦄ ⦃ () ⦄ c₂ B≢★) (I.⇒⊑⇒ q q₁)
-ground-cast-square-tags-agree na ★⇒★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     (C.∀ᶜ c₂) (I.∀⊑∀ q)
     with source-occurs-target refl q occurs
-ground-cast-square-tags-agree na ★⇒★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     (C.∀ᶜ c₂) (I.∀⊑∀ q) | target-occurs
     with consistency-target-occurs-source refl c₂ target-occurs
-ground-cast-square-tags-agree na ★⇒★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     (C.∀ᶜ c₂) (I.∀⊑∀ q) | target-occurs | ()
-ground-cast-square-tags-agree na ★⇒★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     (C.inst_ ⦃ Anv ⦄ ⦃ () ⦄ c₂ B≢★) (I.∀⊑∀ q)
-ground-cast-square-tags-agree na ★⇒★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ g₂ ns₁ ns₂
     (C.gen_ ⦃ Bnv₁ ⦄ ⦃ occurs₁ ⦄ c₁ A₁≢★)
     (C.gen_ ⦃ Bnv₂ ⦄ ⦃ occurs₂ ⦄ c₂ A₂≢★)
     (I.∀⊑∀ q) =
   shift-injectiveᵗ (ground-cast-square-tags-agree
-    (ext-no-aliases na)
+    nonvar-fun
     (shift-ground ★⇒★) (shift-ground g₂)
     (nonvar-occurs-nonstar Bnv₁ occurs₁)
     (nonvar-occurs-nonstar Bnv₂ occurs₂) c₁ c₂ q)
-ground-cast-square-tags-agree na ★⇒★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ★⇒★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     C.bot-intro (I.∀⊑∀ q) =
   ⊥-elim (nonvar-left-variable-impossible q Bnv)
-ground-cast-square-tags-agree {ν₂ = ν₂} na ★⇒★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree {ν₂ = ν₂} nv ★⇒★ g₂ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★) c₂
     (I.∀⊑ Anv occurs₂ q) =
   shift-injectiveᵗ (ground-cast-square-tags-agree
-    (inst-no-aliases na)
+    nonvar-fun
     (shift-ground ★⇒★) (shift-ground g₂)
     (nonvar-occurs-nonstar Bnv occurs)
     (C.renameNonStar Fin.suc ns₂) c₁
     (C.rename∼ {μ = ν₂} {μ′ = C.extᵐ ν₂}
       Fin.suc (λ Y → refl) c₂) q)
-ground-cast-square-tags-agree na ∀★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ ∀★ ns₁ ns₂
     (C.∀ᶜ c₁) (C.∀ᶜ c₂) (I.∀⊑∀ q) = refl
-ground-cast-square-tags-agree na ∀★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ ∀★ ns₁ ns₂
     (C.∀ᶜ c₁) (C.inst_ ⦃ Anv ⦄ ⦃ () ⦄ c₂ B≢★)
     (I.∀⊑∀ q)
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂
     (C.∀ᶜ c₁)
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₂ A≢★)
     (I.∀⊑∀ q)
     with target-occurs-source (ext-aliases-avoid-zero _) q
            occurs
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂
     (C.∀ᶜ c₁)
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₂ A≢★)
     (I.∀⊑∀ q) | source-occurs
     with consistency-target-occurs-source refl c₁ source-occurs
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂
     (C.∀ᶜ c₁)
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₂ A≢★)
     (I.∀⊑∀ q) | source-occurs | ()
-ground-cast-square-tags-agree na ∀★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ ∀★ ns₁ ns₂
     (C.∀ᶜ c₁) C.bot-intro (I.∀⊑∀ q) = refl
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
     (I.∀⊑ Bnv occurs q)
     with consistency-target-occurs-source refl c₁ occurs
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
     (I.∀⊑ Bnv occurs q) | ()
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
     I.bot-elim
     with consistency-target-occurs-source refl c₁ var-∈
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂ (C.∀ᶜ c₁) c₂
     I.bot-elim | ()
-ground-cast-square-tags-agree na ∀★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     (C.∀ᶜ c₂) (I.∀⊑∀ q) = refl
-ground-cast-square-tags-agree na ∀★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     (C.inst_ ⦃ Anv₂ ⦄ ⦃ () ⦄ c₂ B≢★) (I.∀⊑∀ q)
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂
     (C.gen_ ⦃ Bnv₁ ⦄ ⦃ occurs₁ ⦄ c₁ A₁≢★)
     (C.gen_ ⦃ Bnv₂ ⦄ ⦃ occurs₂ ⦄ c₂ A₂≢★)
     (I.∀⊑∀ q) =
   shift-injectiveᵗ (ground-cast-square-tags-agree
-    (ext-no-aliases na)
+    nonvar-all
     (shift-ground ∀★) (shift-ground g₂)
     (nonvar-occurs-nonstar Bnv₁ occurs₁)
     (nonvar-occurs-nonstar Bnv₂ occurs₂) c₁ c₂ q)
-ground-cast-square-tags-agree na ∀★ ∀★ ns₁ ns₂
+ground-cast-square-tags-agree nv ∀★ ∀★ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★)
     C.bot-intro (I.∀⊑∀ q) = refl
-ground-cast-square-tags-agree {ν₂ = ν₂} na ∀★ g₂ ns₁ ns₂
+ground-cast-square-tags-agree {ν₂ = ν₂} nv ∀★ g₂ ns₁ ns₂
     (C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c₁ A≢★) c₂
     (I.∀⊑ Anv occurs₂ q) =
   shift-injectiveᵗ (ground-cast-square-tags-agree
-    (inst-no-aliases na)
+    nonvar-all
     (shift-ground ∀★) (shift-ground g₂)
     (nonvar-occurs-nonstar Bnv occurs)
     (C.renameNonStar Fin.suc ns₂) c₁
     (C.rename∼ {μ = ν₂} {μ′ = C.extᵐ ν₂}
       Fin.suc (λ Y → refl) c₂) q)
-ground-cast-square-tags-agree na ∀★ g₂ ns₁ ns₂ C.bot-intro c₂ q =
-  ground-targets-unique⊑ na ∀★ g₂ I.bot-elim
+ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂ C.bot-intro c₂ q =
+  ground-targets-unique⊑-nonvar nonvar-all ∀★ g₂ I.bot-elim
     (expand-cast-source⊑ g₂ ns₂ c₂ I.bot⊑★ q)
 
 dynamic-payload-projection-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
@@ -811,8 +881,8 @@ dynamic-payload-projection-tags-agree {W = W} {Hᴾ = Hᴾ}
     {Gᴾ = Gᴾ} {Hᴵ = Hᴵ} {Gᴵ = Gᴵ} {Dᴵ = Dᴵ}
     {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {μᴵ = μᴵ}
     hᴵ gᴾ gᴵ Hᴾ≡Gᴾ payload-q cᴵ nsᴵ q targetᴾ targetᴵ =
-  renameᵗ-injective
-    (toRenameᵗ-injective (impreciseEmbedding (core W))) center-eq
+  sym (grounds-consistent-equal gᴵ hᴵ
+    (subst≡ (λ D → μᴵ C.⊢ Gᴵ ∼ D) (sym Hᴵ≡Dᴵ) cᴵ))
   where
   ρᴾ = C.toRenameᵗ (preciseEmbedding (core W))
   ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
@@ -824,21 +894,13 @@ dynamic-payload-projection-tags-agree {W = W} {Hᴾ = Hᴾ}
   target-q : impEnv (core W) I.⊢ renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Dᴵ
   target-q = reindex-center-imprecision q (sym targetᴾ) (sym targetᴵ)
 
-  embedded-cᴵ :
-      C.renameEnv∼ (impreciseEmbedding (core W)) (C.flipᵐ μᴵ) C.⊢
-        renameᵗ ρᴵ Dᴵ ∼ renameᵗ ρᴵ Gᴵ
-  embedded-cᴵ = C.rename∼ {μ = C.flipᵐ μᴵ}
-    {μ′ = C.renameEnv∼ (impreciseEmbedding (core W)) (C.flipᵐ μᴵ)}
-    ρᴵ
-    (C.renameEnv∼-preserves
-      (impreciseEmbedding (core W)) (C.flipᵐ μᴵ))
-    (C.sym∼ cᴵ)
-
-  center-eq : renameᵗ ρᴵ Hᴵ ≡ renameᵗ ρᴵ Gᴵ
-  center-eq = ground-cast-target-unique⊑ (noAlias W)
-    (C.renameGround ρᴾ gᴾ) (C.renameGround ρᴵ hᴵ)
-    (C.renameGround ρᴵ gᴵ) (C.renameNonStar ρᴵ nsᴵ)
-    embedded-cᴵ payload-q′ target-q
+  Hᴵ≡Dᴵ : Hᴵ ≡ Dᴵ
+  Hᴵ≡Dᴵ = renameᵗ-injective
+    (toRenameᵗ-injective (impreciseEmbedding (core W)))
+    (ground-imprecise-targets-agree W (sizeᵖ payload-q′) gᴾ
+      payload-q′ target-q ≤-refl refl refl
+      (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
+      (C.renameNonStar ρᴵ nsᴵ))
 
 dynamic-payload-projection-target-agrees : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -871,17 +933,12 @@ dynamic-payload-projection-target-agrees {W = W} {Hᴾ = Hᴾ}
   target-q : impEnv (core W) I.⊢ renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Dᴵ
   target-q = reindex-center-imprecision q (sym targetᴾ) (sym targetᴵ)
 
-  payload-eq : renameᵗ ρᴾ Gᴾ ≡ renameᵗ ρᴵ Hᴵ
-  payload-eq = ground-left-nonstar-target (noAlias W)
-    (C.renameGround ρᴾ gᴾ) payload-q′
-    (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
-
-  target-eq : renameᵗ ρᴾ Gᴾ ≡ renameᵗ ρᴵ Dᴵ
-  target-eq = ground-left-nonstar-target (noAlias W)
-    (C.renameGround ρᴾ gᴾ) target-q (C.renameNonStar ρᴵ nsᴵ)
-
   center-eq : renameᵗ ρᴵ Dᴵ ≡ renameᵗ ρᴵ Hᴵ
-  center-eq = trans (sym target-eq) payload-eq
+  center-eq = sym
+    (ground-imprecise-targets-agree W (sizeᵖ payload-q′) gᴾ
+      payload-q′ target-q ≤-refl refl refl
+      (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
+      (C.renameNonStar ρᴵ nsᴵ))
 
 dynamic-payload-cast-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -902,10 +959,30 @@ dynamic-payload-cast-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
   → embedPrecise (core W) Dᴾ ≡ Bᴾ
   → embedImprecise (core W) Dᴵ ≡ Bᴵ
   → Hᴵ ≡ Gᴵ
-dynamic-payload-cast-tags-agree {W = W} {Hᴾ = Hᴾ}
+dynamic-payload-cast-tags-agree-nonvar : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Hᴾ Gᴾ Dᴾ : Ty Δᴾ} {Hᴵ Gᴵ Dᴵ : Ty Δᴵ}
+    {Bᴾ Bᴵ : Ty Δᶜ}
+    {μᴾ : C.Env∼ Δᴾ} {μᴵ : C.Env∼ Δᴵ}
+  → NonVar Gᴾ
+  → (hᴵ : Ground Hᴵ)
+  → (gᴾ : Ground Gᴾ)
+  → (gᴵ : Ground Gᴵ)
+  → Hᴾ ≡ Gᴾ
+  → impEnv (core W) I.⊢ embedPrecise (core W) Hᴾ
+      ⊑ embedImprecise (core W) Hᴵ
+  → (cᴾ : μᴾ C.⊢ Gᴾ ∼ Dᴾ)
+  → (nsᴾ : NonStar Dᴾ)
+  → (cᴵ : μᴵ C.⊢ Gᴵ ∼ Dᴵ)
+  → (nsᴵ : NonStar Dᴵ)
+  → (q : impEnv (core W) I.⊢ Bᴾ ⊑ Bᴵ)
+  → embedPrecise (core W) Dᴾ ≡ Bᴾ
+  → embedImprecise (core W) Dᴵ ≡ Bᴵ
+  → Hᴵ ≡ Gᴵ
+dynamic-payload-cast-tags-agree-nonvar {W = W} {Hᴾ = Hᴾ}
     {Gᴾ = Gᴾ} {Dᴾ = Dᴾ} {Hᴵ = Hᴵ} {Gᴵ = Gᴵ} {Dᴵ = Dᴵ}
     {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {μᴾ = μᴾ} {μᴵ = μᴵ}
-    hᴵ gᴾ gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ
+    nv hᴵ gᴾ gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ
     q targetᴾ targetᴵ =
   renameᵗ-injective
     (toRenameᵗ-injective (impreciseEmbedding (core W))) center-eq
@@ -935,18 +1012,64 @@ dynamic-payload-cast-tags-agree {W = W} {Hᴾ = Hᴾ}
     ρᴵ (C.renameEnv∼-preserves (impreciseEmbedding (core W)) μᴵ) cᴵ
 
   payload-eq : renameᵗ ρᴾ Gᴾ ≡ renameᵗ ρᴵ Hᴵ
-  payload-eq = ground-left-nonstar-target (noAlias W)
+  payload-eq = ground-left-nonstar-target (renameNonVar ρᴾ nv)
     (C.renameGround ρᴾ gᴾ) payload-q′
     (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
 
   cast-eq : renameᵗ ρᴾ Gᴾ ≡ renameᵗ ρᴵ Gᴵ
-  cast-eq = ground-cast-square-tags-agree (noAlias W)
+  cast-eq = ground-cast-square-tags-agree (renameNonVar ρᴾ nv)
     (C.renameGround ρᴾ gᴾ) (C.renameGround ρᴵ gᴵ)
     (C.renameNonStar ρᴾ nsᴾ) (C.renameNonStar ρᴵ nsᴵ)
     embedded-cᴾ embedded-cᴵ target-q
 
   center-eq : renameᵗ ρᴵ Hᴵ ≡ renameᵗ ρᴵ Gᴵ
   center-eq = trans (sym payload-eq) cast-eq
+
+dynamic-payload-cast-tags-agree {W = W}
+    {Hᴵ = Hᴵ} {Gᴵ = Gᴵ} {Dᴵ = Dᴵ} {μᴵ = μᴵ}
+    hᴵ (＇ X) gᴵ Hᴾ≡Gᴾ payload-q (C.id x) nsᴾ cᴵ nsᴵ
+    q targetᴾ targetᴵ =
+  sym (grounds-consistent-equal gᴵ hᴵ
+    (subst≡ (λ D → μᴵ C.⊢ Gᴵ ∼ D) (sym Hᴵ≡Dᴵ) cᴵ))
+  where
+  ρᴾ = C.toRenameᵗ (preciseEmbedding (core W))
+  ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
+
+  payload-q′ : impEnv (core W) I.⊢
+      renameᵗ ρᴾ (＇ X) ⊑ renameᵗ ρᴵ Hᴵ
+  payload-q′ = reindex-center-imprecision payload-q
+    (cong (renameᵗ ρᴾ) Hᴾ≡Gᴾ) refl
+
+  target-q : impEnv (core W) I.⊢
+      renameᵗ ρᴾ (＇ X) ⊑ renameᵗ ρᴵ Dᴵ
+  target-q = reindex-center-imprecision q (sym targetᴾ)
+    (sym targetᴵ)
+
+  Hᴵ≡Dᴵ : Hᴵ ≡ Dᴵ
+  Hᴵ≡Dᴵ = renameᵗ-injective
+    (toRenameᵗ-injective (impreciseEmbedding (core W)))
+    (ground-imprecise-targets-agree W (sizeᵖ payload-q′) (＇ X)
+      payload-q′ target-q ≤-refl refl refl
+      (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
+      (C.renameNonStar ρᴵ nsᴵ))
+dynamic-payload-cast-tags-agree {W = W}
+    hᴵ (＇ X) gᴵ Hᴾ≡Gᴾ payload-q
+    ((C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c) A≢★) nsᴾ cᴵ nsᴵ
+    q targetᴾ targetᴵ =
+  ⊥-elim (variable-consistency-no-generated-variable
+    (λ ()) c occurs)
+dynamic-payload-cast-tags-agree {W = W}
+    hᴵ (‵ ι) gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ q targetᴾ targetᴵ =
+  dynamic-payload-cast-tags-agree-nonvar {W = W} nonvar-base
+    hᴵ (‵ ι) gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ q targetᴾ targetᴵ
+dynamic-payload-cast-tags-agree {W = W}
+    hᴵ ★⇒★ gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ q targetᴾ targetᴵ =
+  dynamic-payload-cast-tags-agree-nonvar {W = W} nonvar-fun
+    hᴵ ★⇒★ gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ q targetᴾ targetᴵ
+dynamic-payload-cast-tags-agree {W = W}
+    hᴵ ∀★ gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ q targetᴾ targetᴵ =
+  dynamic-payload-cast-tags-agree-nonvar {W = W} nonvar-all
+    hᴵ ∀★ gᴵ Hᴾ≡Gᴾ payload-q cᴾ nsᴾ cᴵ nsᴵ q targetᴾ targetᴵ
 
 center-ground-other-impossible : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {G B : Ty Δᴾ} {Z : TyVar Δᶜ}
@@ -1410,7 +1533,10 @@ right-dynamic-ground-tag-value-at zero (＇ X) gᴵ Gᴵ∼★ payload-q
       (I.X⊑★ mode) {k = zero} related)
 right-dynamic-ground-tag-value-at {W = W} zero (＇ X) gᴵ Gᴵ∼★
     payload-q output-q left-eq related | I.alias eq w =
-  ⊥-elim (noAlias W _ eq)
+  ClosureProof.value-imprecision-reindex output-q (I.alias eq w)
+    {k = zero} (sym left-eq) refl
+    (right-dynamic-tag-endpoints gᴵ Gᴵ∼★ payload-q
+      (I.alias eq w) {k = zero} related)
 right-dynamic-ground-tag-value-at zero (‵ ι) gᴵ Gᴵ∼★ payload-q
     output-q left-eq related
     with reindex-center-imprecision output-q (sym left-eq) refl
@@ -1440,32 +1566,66 @@ right-dynamic-ground-tag-value-at zero ∀★ gᴵ Gᴵ∼★ payload-q
       related)
 right-dynamic-ground-tag-value-at {W = W} (suc j) (＇ X)
     {Gᴵ = Gᴵ} gᴵ Gᴵ∼★ payload-q
-    output-q left-eq related
-    with reindex-center-imprecision output-q (sym left-eq) refl
+    output-q refl related
+    with output-q
 right-dynamic-ground-tag-value-at {W = W} (suc j) (＇ X)
     {Gᴵ = Gᴵ} gᴵ Gᴵ∼★ payload-q
-    output-q left-eq related | I.X⊑★ mode =
+    output-q refl related | I.X⊑★ mode =
   let paired-endpoints , paired-holds = paired-related
-  in ClosureProof.value-imprecision-reindex output-q (I.X⊑★ mode)
-       (sym left-eq) refl
-       (right-dynamic-tag-endpoints gᴵ Gᴵ∼★ payload-q
-         (I.X⊑★ mode) related ,
-       inj₂ (aligned-dynamic-atom-related Gᴵ gᴵ target-eq _ Gᴵ∼★
-         _ refl paired-holds))
+  in right-dynamic-tag-endpoints gᴵ Gᴵ∼★ payload-q
+       (I.X⊑★ mode) related ,
+     inj₂ (aligned-dynamic-atom-related Gᴵ gᴵ target-eq _ Gᴵ∼★
+       _ refl paired-holds)
   where
   target-nonstar = C.renameNonStar
     (C.toRenameᵗ (impreciseEmbedding (core W)))
     (C.ground-nonstar gᴵ)
 
-  target-eq = variable-left-nonstar-target (noAlias W) payload-q
+  target-eq = variable-left-nonstar-target mode payload-q
     target-nonstar
 
   paired-related = ClosureProof.value-imprecision-reindex I.X⊑X
     payload-q refl (sym target-eq) related
 right-dynamic-ground-tag-value-at {W = W} (suc j) (＇ X)
     {Gᴵ = Gᴵ} gᴵ Gᴵ∼★ payload-q
-    output-q left-eq related | I.alias eq w =
-  ⊥-elim (noAlias W _ eq)
+    output-q refl related | I.alias {T = T} eq w
+    with variable-alias-premise eq payload-q
+right-dynamic-ground-tag-value-at {W = W} (suc j) (＇ X)
+    {Gᴵ = Gᴵ} gᴵ Gᴵ∼★ payload-q
+    output-q refl related | I.alias {T = T} eq w | inj₁ tgt≡ =
+  ⊥-elim (alias-no-imprecise-target W eq tgt≡)
+right-dynamic-ground-tag-value-at {W = W} (suc j) (＇ X)
+    {Gᴵ = Gᴵ} gᴵ Gᴵ∼★ payload-q
+    output-q refl {Uᴵ = Uᴵ} {Vᴾ = Vᴾ} related
+    | I.alias {T = T} eq w | inj₂ w₀ =
+  right-dynamic-tag-endpoints gᴵ Gᴵ∼★ payload-q
+    (I.alias eq w) related ,
+  alias-holds-chain (semanticEntry W _) eq chain-step
+    (proj₂ split)
+  where
+  canonical : impEnv (core W) I.⊢
+      embedPrecise (core W) (＇ X) ⊑ embedImprecise (core W) Gᴵ
+  canonical = I.alias eq
+    {notSelf = fromWitnessFalse (alias-no-imprecise-target W eq)}
+    w₀
+
+  split : ValueImprecision W canonical (suc j) Uᴵ Vᴾ
+  split = ClosureProof.value-imprecision-reindex canonical
+    payload-q refl refl related
+
+  chain-step : ∀ (rep : TyVar _)
+    → embedPrecise (core W) (＇ rep) ≡ T
+    → ∀ {Uᴾ : Term _}
+    → ValueImprecision W w₀ (suc j) Uᴵ Uᴾ
+    → ValueImprecision W w (suc j)
+        (Uᴵ ⟨ groundInjection gᴵ Gᴵ∼★ ⟩) Uᴾ
+  chain-step rep rep-eq {Uᴾ} rel =
+    right-dynamic-ground-tag-value-at (suc j) (＇ rep) gᴵ Gᴵ∼★
+      (reindex-center-imprecision w₀ (sym rep-eq) refl)
+      w rep-eq
+      (ClosureProof.value-imprecision-reindex
+        (reindex-center-imprecision w₀ (sym rep-eq) refl)
+        w₀ rep-eq refl rel)
 right-dynamic-ground-tag-value-at (suc j) (‵ ι) gᴵ Gᴵ∼★ payload-q
     output-q left-eq related
     with reindex-center-imprecision output-q (sym left-eq) refl
@@ -4046,7 +4206,7 @@ related-value-casts {W = W} I.★⊑★ sourceᴾ sourceᴵ
   ⊥-elim (dynamic-atom-no-target (semanticEntry W Z) mode
     holds
     (dynamic-atom-target-occupant {W = W} {Z = Z} {Gᴾ = Gᴾ}
-      ground-center nsᴵ q targetᴾ targetᴵ))
+      ground-center mode nsᴵ q targetᴾ targetᴵ))
 related-value-casts {W = W} I.★⊑★ sourceᴾ sourceᴵ
     (C.？_ {G = Gᴾ} ⦃ Gᵍ = gᴾ ⦄ ⦃ ★∼G = ★∼Gᴾ ⦄
       cᴾ ⦃ Bns = nsᴾ ⦄)
@@ -4390,10 +4550,29 @@ related-value-casts {W = W} I.X⊑X sourceᴾ sourceᴵ (C.id aᴾ)
 related-value-casts {W = W} I.X⊑X sourceᴾ sourceᴵ (C.id aᴾ)
     (C._! {G = Gᴵ} ⦃ Gᵍ = gᴵ ⦄ ⦃ G∼★ = Gᴵ∼★ ⦄
       (C.id aᴵ) ⦃ Ans = nsᴵ ⦄)
-    q targetᴾ targetᴵ {k = zero}
+    q targetᴾ targetᴵ {k = zero} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
     related
     | I.alias eq w =
-  ⊥-elim (noAlias W _ eq)
+  ClosureProof.computations-related-reindex (I.alias eq w) q
+    (trans (sym sourceᴾ) targetᴾ) targetᴵ
+    (cong (λ c → Vᴵ ⟨ c ⟩) (sym injection-eq)) refl
+    (related-precise-identity tagged-related)
+  where
+  payload-q = subst≡
+    (λ A → impEnv (core W) I.⊢ _ ⊑ A)
+    (sym sourceᴵ) I.X⊑X
+
+  payload-related : ValueImprecision W payload-q zero Vᴵ Vᴾ
+  payload-related = ClosureProof.value-imprecision-reindex
+    payload-q I.X⊑X {k = zero} refl sourceᴵ related
+
+  tagged-related : ValueImprecision W (I.alias eq w) zero
+      (Vᴵ ⟨ groundInjection gᴵ Gᴵ∼★ ⟩) Vᴾ
+  tagged-related = right-dynamic-tag-endpoints {W = W} gᴵ
+    Gᴵ∼★ payload-q (I.alias eq w) {k = zero} payload-related
+
+  injection-eq = ground-identity-injection-eq
+    gᴵ Gᴵ∼★ nsᴵ aᴵ
 related-value-casts {W = W} I.X⊑X sourceᴾ sourceᴵ (C.id aᴾ)
     (C._! {G = Gᴵ} ⦃ Gᵍ = gᴵ ⦄ ⦃ G∼★ = Gᴵ∼★ ⦄
       (C.id aᴵ) ⦃ Ans = nsᴵ ⦄)
@@ -4432,9 +4611,9 @@ related-value-casts {W = W} I.X⊑X sourceᴾ sourceᴵ (C.id aᴾ)
 related-value-casts {W = W} I.X⊑X sourceᴾ sourceᴵ (C.id aᴾ)
     (C._! {G = Gᴵ} ⦃ Gᵍ = gᴵ ⦄ ⦃ G∼★ = Gᴵ∼★ ⦄
       (C.id aᴵ) ⦃ Ans = nsᴵ ⦄)
-    q targetᴾ targetᴵ {k = suc k} related
+    q targetᴾ targetᴵ {k = suc k} (endpoints , paired-holds)
     | I.alias eq w =
-  ⊥-elim (noAlias W _ eq)
+  ⊥-elim (alias-mode-no-paired-holds W eq paired-holds)
 related-value-casts {W = W} I.X⊑X sourceᴾ sourceᴵ (C.id aᴾ)
     (C._! ((C.gen_ ⦃ Bnvᴵ ⦄ ⦃ occursᴵ ⦄ cᴵ) Aᴵ≢★))
     q targetᴾ targetᴵ related =

@@ -1880,6 +1880,57 @@ ground-targets-unique⊑ na gG gH I.X⊑X (I.alias eq q) =
 ground-targets-unique⊑ na gG gH (I.X⊑★ e) (I.alias eq q) =
   ⊥-elim (na _ eq)
 
+-- The alias-general variant: a non-variable source meets no alias
+-- leaf at the outermost layer, and the right-universal rule carries
+-- the non-variable premise for its body, so no alias-freeness is
+-- needed.
+
+ground-targets-unique⊑-nonvar : ∀ {Δ} {μ : I.ImpEnv Δ}
+    {A G H : Ty Δ}
+  → NonVar A
+  → Ground G
+  → Ground H
+  → μ ⊢ A ⊑ G
+  → μ ⊢ A ⊑ H
+  → G ≡ H
+ground-targets-unique⊑-nonvar nv () gH I.★⊑★ qH
+ground-targets-unique⊑-nonvar nv gG gH I.ι⊑ι I.ι⊑ι = refl
+ground-targets-unique⊑-nonvar nv gG () I.ι⊑ι I.ι⊑★
+ground-targets-unique⊑-nonvar () gG gH I.X⊑X qH
+ground-targets-unique⊑-nonvar nv ★⇒★ ★⇒★
+    (I.⇒⊑⇒ A⊑★ B⊑★) (I.⇒⊑⇒ A⊑★′ B⊑★′) =
+  refl
+ground-targets-unique⊑-nonvar nv ∀★ ∀★ (I.∀⊑∀ A⊑★)
+    (I.∀⊑∀ A⊑★′) =
+  refl
+ground-targets-unique⊑-nonvar nv ∀★ gH (I.∀⊑∀ A⊑★)
+    (I.∀⊑ Anv zero∈A A⊑H)
+    with source-occurs-target refl A⊑★ zero∈A
+ground-targets-unique⊑-nonvar nv ∀★ gH (I.∀⊑∀ A⊑★)
+    (I.∀⊑ Anv zero∈A A⊑H) | ()
+ground-targets-unique⊑-nonvar nv ∀★ ∀★ (I.∀⊑∀ A⊑★) I.bot-elim =
+  refl
+ground-targets-unique⊑-nonvar nv gG ∀★ (I.∀⊑ Anv zero∈A A⊑G)
+    (I.∀⊑∀ A⊑★)
+    with source-occurs-target refl A⊑★ zero∈A
+ground-targets-unique⊑-nonvar nv gG ∀★ (I.∀⊑ Anv zero∈A A⊑G)
+    (I.∀⊑∀ A⊑★) | ()
+ground-targets-unique⊑-nonvar nv gG gH (I.∀⊑ Anv zero∈A A⊑G)
+    (I.∀⊑ Anv′ zero∈A′ A⊑H) =
+  shift-injectiveᵗ
+    (ground-targets-unique⊑-nonvar Anv
+      (shift-ground gG) (shift-ground gH) A⊑G A⊑H)
+ground-targets-unique⊑-nonvar nv gG gH (I.∀⊑ () zero∈A A⊑G)
+  I.bot-elim
+ground-targets-unique⊑-nonvar nv ∀★ ∀★ I.bot-elim (I.∀⊑∀ A⊑★) =
+  refl
+ground-targets-unique⊑-nonvar nv gG gH I.bot-elim
+    (I.∀⊑ Anv zero∈A A⊑H) =
+  ⊥-elim (nonVar-zero⊥ Anv)
+ground-targets-unique⊑-nonvar nv ∀★ ∀★ I.bot-elim I.bot-elim =
+  refl
+ground-targets-unique⊑-nonvar () gG gH (I.alias eq p) qH
+
 variable-ground-other-impossible : ∀ {Δ} {ν : Env∼ Δ}
     {X : TyVar Δ} {G : Ty Δ}
   → Ground G
