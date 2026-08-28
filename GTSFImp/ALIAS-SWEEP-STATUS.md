@@ -567,3 +567,24 @@ before the record flip: rewrite the three
 the `gen_` and `bot-intro` routes to a ∀-shaped projection target
 (their binder modes are not paired, so `paired-fork-excluded` does
 not apply to them).
+
+Step 6, item 1 — the two residual consistency routes checked
+(2026-08-27).  Neither is refutable (Finding J.5):
+
+* `gen_` — its binder mode is `★∼X`, not paired, so ★ crosses it.
+  `gen-crosses-paired-witness` (proof/LR-narrow/ConsistencyAvoid)
+  proves `★ ⇒ ★ ∼ ∀(＇0 ⇒ ＇0)`.  With a general representative
+  this makes the branch at proof/LR-narrow/Cast.agda:3937 live:
+  precise projects at its ground and stops while imprecise projects
+  at its own matching ground and expands through the
+  generalization.  The branch is currently discharged by refutation
+  and now needs a real proof.
+* `bot-intro` — reaches the uninhabited `∀(＇0)`.  Unreachable for
+  a fun-bodied representative (`fun ⊑ var` and `fun ⊑ ∀` have no
+  rules, both checked); a general argument is still owed, and this
+  one matters more, since a reachable instance would falsify
+  `related-value-casts` rather than merely leave it unproved.
+
+So the call-site rewrite is NOT a straight substitution.  Order of
+work: bottom-target unreachability, then the `gen_` branch, then
+the ground-level rewrite and the record sweep.

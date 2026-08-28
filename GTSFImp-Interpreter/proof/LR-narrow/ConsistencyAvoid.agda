@@ -141,3 +141,42 @@ paired-fork-excluded : ∀ {Δ} {μ : I.ImpEnv Δ}
 paired-fork-excluded eq occurs q₀ c =
   PI.∈∉-⊥ (avoid-target eq ∉-star c)
     (source-occurs-target refl q₀ occurs)
+
+------------------------------------------------------------------------
+-- The `gen_` route is NOT blocked
+------------------------------------------------------------------------
+
+-- `paired-fork-excluded` covers a `∀`-shaped projection target
+-- reached through `∀ᶜ`, whose binder is paired.  The `gen_`
+-- constructor reaches one too, and its binder carries the mode
+-- `★∼X` instead — where ★ crosses the variable freely.  The
+-- following witness shows the resulting consistency really is
+-- inhabited: the FUN ground is consistent with the polymorphic
+-- identity's type, whose binder occurs.
+--
+-- Consequence (Finding J.5 of REPLACEMENT-CLOSURE-DESIGN.md): with a
+-- general alias representative the imprecise side of a `★`-value
+-- cast pair can project at its own matching ground and then EXPAND
+-- through this generalization, while the precise side projects at
+-- its ground and stops.  That branch of `related-value-casts` is
+-- currently discharged by refutation, and the refutation is no
+-- longer available: the branch needs a proof relating the precise
+-- payload to the generalized imprecise one.
+
+gen-crosses-paired-witness : ∀ {Δ} {ν : Env∼ Δ}
+  → ν ⊢ (★ ⇒ ★) ∼ `∀ (＇ Fin.zero ⇒ ＇ Fin.zero)
+gen-crosses-paired-witness {ν = ν} =
+  (gen_ ⦃ nonvar-fun ⦄ ⦃ ∈-fun-left var-∈ ⦄ inner) (λ ())
+  where
+  argument : flipᵐ (genᵐ ν) ⊢ ＇ Fin.zero ∼ ★
+  argument =
+    _! ⦃ ＇ Fin.zero ⦄ ⦃ X∼★ᵍ refl ⦄ (id (＇ Fin.zero))
+      ⦃ nonstar-X ⦄
+
+  result : genᵐ ν ⊢ ★ ∼ ＇ Fin.zero
+  result =
+    ？_ ⦃ ＇ Fin.zero ⦄ ⦃ ★∼Xᵍ refl ⦄ (id (＇ Fin.zero))
+      ⦃ nonstar-X ⦄
+
+  inner : genᵐ ν ⊢ ⇑ᵗ (★ ⇒ ★) ∼ (＇ Fin.zero ⇒ ＇ Fin.zero)
+  inner = argument ↦ result

@@ -1459,3 +1459,61 @@ that list is withdrawn.  What remains before item 1's record flip:
    `bot-intro`.  Both put the bound variable back in scope, so each
    needs its own argument or a refutation from the `⊑` side.
 3. Then the mechanical record sweep of I.4 item 1.
+
+### J.5  The two residual routes, resolved (2026-08-27)
+
+J.4 left two ways for a cast to reach a `∀`-shaped projection
+target that `paired-fork-excluded` does not cover.  Both are now
+settled, and NEITHER is refutable — so step 1 of J.4's plan (the
+call-site rewrite) is not a straight substitution.
+
+**`gen_` is real.**  Its binder carries the mode `★∼X`, not the
+paired `X∼X`, so ★ crosses it freely and the avoidance argument
+does not apply.  The consistency really is inhabited:
+`gen-crosses-paired-witness` in
+`proof/LR-narrow/ConsistencyAvoid.agda` proves
+`★ ⇒ ★ ∼ ∀(＇0 ⇒ ＇0)`, a FUN ground consistent with a `∀` type
+whose binder occurs.
+
+With a general alias representative this assembles into a live
+configuration of `related-value-casts`' `★⊑★` case.  Take the
+alias representative `T = ∀(＇0 ⇒ ＇0)`:
+
+* the precise value is sealed at the alias and injected at its own
+  ground `＇X`; its cast projects at `＇X`, the tag matches, and the
+  projection does not expand;
+* the imprecise value is a function injected at `★ ⇒ ★`; its cast
+  projects at `★ ⇒ ★` — the tag ALSO matches — and then expands
+  through `gen_` into `T`.
+
+Both readings of the alias variable are derivable (`＇X ⊑ ★ ⇒ ★`
+by `alias` + `∀⊑`; `＇X ⊑ T` by `alias` + `∀⊑∀`), so the pair is
+related and neither side blames.  This is exactly the branch
+`projection-same`/`tag-matched` × `projection-expanded` at
+`proof/LR-narrow/Cast.agda:3937`, which today is discharged by
+refuting `Dᴵ ≢ Gᴵ`.  That refutation rests on target agreement,
+which holds only for variable representatives.  So the branch needs
+real content: the precise payload related to the imprecise payload
+after its generalization cast.  This is a proof obligation, not a
+counterexample — the two results are plausibly related (a sealed
+polymorphic value against a `Λ`-generalized one at the alias
+premise), but it must be proved.
+
+**`bot-intro` is a different risk.**  It reaches the target
+`∀(＇0)`, the UNINHABITED bottom type.  If that branch were
+reachable, `related-value-casts` would be false rather than
+unproved: the precise side returns a value while the imprecise side
+cannot.  For the canonical representative it is unreachable, by two
+facts checked in Agda — from a fun-bodied `∀`, `∀⊑∀` would need
+`fun ⊑ var` and `∀⊑` would need `fun ⊑ ∀`, and neither has a rule.
+A general argument still has to cover representatives whose bodies
+are themselves `∀`-towers.
+
+**Revised remaining work for item 1.**
+
+1. An unreachability argument for a bottom projection target,
+   general in the representative.
+2. The `gen_` branch of the `★⊑★` case: relate the precise payload
+   to the generalized imprecise payload.
+3. Then the call-site rewrite of J.4 (ground-level agreement via
+   `ground-readings-unique`) and the mechanical record sweep.
