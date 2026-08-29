@@ -26,8 +26,7 @@ open import proof.LR-narrow.FrameComposition
 open import proof.LR-narrow.RevealFrames using
   (revealFrame; reveal-frm)
 open import proof.LR-narrow.SlotLifting using (transported-reveal-eq)
-open import proof.LR-narrow.TargetSlot using
-  (target-slot-future; lifted-target-reveal)
+open import proof.LR-narrow.TargetSlot using (lifted-target-reveal)
 open import proof.LR-narrow.PendingTarget
 
 open ImpreciseComposition revealFrame using () renaming

@@ -22,6 +22,7 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
 open import Types
 open import CastTerms
+open import Conversion using (〖_,_↑_〗)
 open import Primitives
 import Consistency as C
 open C using (Env∼; _⊢_∼★; _⊢_∼_; idᵍ; _!; ground-nonstar)
@@ -30,6 +31,7 @@ import NarrowWiden as NW
 open import NarrowWidenIsomorphism using (narrowing→imprecision)
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
+open import LR-narrow.PendingTarget
 open import LR-narrow.Computation
 
 ------------------------------------------------------------------------
@@ -298,6 +300,18 @@ mutual
   FutureValueRelation p W′ W≼W′ k Vᴵ Vᴾ =
     ValueImprecisionᵏ k W′ (liftCenterImprecision W≼W′ p) Vᴵ Vᴾ
 
+  PendingTargetValueRelation : ∀ {Δᴾ Δᴵ Δᶜ}
+      {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
+      {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
+    → TargetTransparent W t Aᴾ Aᴵ
+    → IndexedValueRelation W
+  PendingTargetValueRelation t {Aᴵ = Aᴵ} p W′ W≼W′ k Vᴵ Vᴾ =
+    ValueImprecisionᵏ k W′ (liftCenterImprecision W≼W′ p)
+      (Vᴵ ↑ 〖 tslotXᴵ (target-slot-future t W≼W′) ,
+        tslotRᴵ (target-slot-future t W≼W′)
+        ↑ liftImpreciseTy W≼W′ Aᴵ 〗)
+      Vᴾ
+
   PostBindValueRelation : ∀
       {Δᴾ Δᴵ Δᶜ Δᴾᵇ Δᴵᵇ Δᶜᵇ Aᴾ Aᴵ}
       {W : World Δᴾ Δᴵ Δᶜ}
@@ -359,6 +373,29 @@ mutual
             ⦂∀ liftPreciseBody W≼W′ Bᴾ [ Rᴾ ]))
     × UniversalsRelated W p Bᴾ Bᴵ k Vᴵ Vᴾ
 
+  PendingTargetUniversalsRelated : ∀ {Δᴾ Δᴵ Δᶜ}
+    → (W : World Δᴾ Δᴵ Δᶜ)
+    → Ty (suc Δᴾ)
+    → Ty (suc Δᴵ)
+    → ℕ
+    → Term Δᴵ
+    → Term Δᴾ
+    → Set
+
+  PendingTargetUniversalsRelated W Bᴾ Bᴵ zero Vᴵ Vᴾ = ⊤
+
+  PendingTargetUniversalsRelated W Bᴾ Bᴵ (suc k) Vᴵ Vᴾ =
+    ((t : TargetSlot W) (Rᴾ : Ty _) (Rᴵ : Ty _)
+        (r : TargetTransparent W t Rᴾ Rᴵ)
+        (s : TargetTransparent W t
+          (Bᴾ [ Rᴾ ]ᵗ) (Bᴵ [ Rᴵ ]ᵗ))
+      → ComputationsRelated W
+          (PendingTargetValueRelation t
+            {Aᴾ = Bᴾ [ Rᴾ ]ᵗ} {Aᴵ = Bᴵ [ Rᴵ ]ᵗ} s)
+          (suc k)
+          (Vᴵ ⦂∀ Bᴵ [ Rᴵ ]) (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
+    × PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
+
   RightUniversalsRelated : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     → (W : World Δᴾ Δᴵ Δᶜ)
     → I.instᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ
@@ -413,10 +450,13 @@ mutual
       (σ : UniWrapsᵇ W′ (liftPreciseBody W≼W′ Bᴾ)
              (liftImpreciseBody W≼W′ Bᴵ) Bᴾ′ Bᴵ′)
     → UniversalsRelated W′
-        (liftCenterBodyImprecision W≼W′ p)
-        Bᴾ′ Bᴵ′ k
-        (wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ))
-        (wrapTermᴾᵇ σ (liftPreciseTerm W≼W′ Vᴾ))
+          (liftCenterBodyImprecision W≼W′ p)
+          Bᴾ′ Bᴵ′ k
+          (wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ))
+          (wrapTermᴾᵇ σ (liftPreciseTerm W≼W′ Vᴾ))
+      × PendingTargetUniversalsRelated W′ Bᴾ′ Bᴵ′ k
+          (wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ))
+          (wrapTermᴾᵇ σ (liftPreciseTerm W≼W′ Vᴾ))
 
   RightUniversalFamily : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     → (W : World Δᴾ Δᴵ Δᶜ)

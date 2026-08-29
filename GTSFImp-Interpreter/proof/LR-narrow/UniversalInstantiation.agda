@@ -39,7 +39,7 @@ related-universal-instantiation {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W}
     {r = r}
     (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
   Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
-  (λ s → proj₁ (fam (future-refl {W = W}) []) W
+  (λ s → proj₁ (proj₁ (fam (future-refl {W = W}) [])) W
            (future-refl {W = W}) Rᴾ Rᴵ r s)
 
 right-related-universal-instantiation : ∀

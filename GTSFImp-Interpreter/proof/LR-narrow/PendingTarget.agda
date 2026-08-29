@@ -12,82 +12,15 @@ open import Relation.Binary.PropositionalEquality
   using (_≡_; cong; refl; subst; sym; trans)
 
 open import Types
-open import CastTerms using (Term; _↑_)
-open import Conversion using (replaceTy; 〖_,_↑_〗)
-open import Consistency using (toRenameᵗ)
+open import Conversion using (replaceTy)
 import Imprecision as I
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import LR-narrow.PendingTarget
-open import LR-narrow.Computation using (IndexedValueRelation)
-open import LR-narrow.LogicalRelation using (ValueImprecisionᵏ)
-open import proof.ImprecisionConsistency using (toRenameᵗ-injective)
-open import proof.LR-narrow.RevealLifting using
-  (renameᵗ-replaceTy; shift-replace)
+open import LR-narrow.LogicalRelation
 open import proof.LR-narrow.ReplaceImprecision using (replace-zero-open)
-open import proof.LR-narrow.TargetSlot
-
-liftCenterTy-replace : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
-    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-    (W≼W′ : Future W W′) (X : TyVar Δᶜ) (R B : Ty Δᶜ)
-  → liftCenterTy W≼W′ (replaceTy X R B)
-    ≡ replaceTy (liftCenterVariable W≼W′ X)
-        (liftCenterTy W≼W′ R) (liftCenterTy W≼W′ B)
-liftCenterTy-replace future-refl X R B = refl
-liftCenterTy-replace (future-paired W≼W′ r) X R B =
-  trans (cong ⇑ᵗ (liftCenterTy-replace W≼W′ X R B))
-    (shift-replace (liftCenterVariable W≼W′ X)
-      (liftCenterTy W≼W′ R) (liftCenterTy W≼W′ B))
-liftCenterTy-replace (future-precise W≼W′ r) X R B =
-  trans (cong ⇑ᵗ (liftCenterTy-replace W≼W′ X R B))
-    (shift-replace (liftCenterVariable W≼W′ X)
-      (liftCenterTy W≼W′ R) (liftCenterTy W≼W′ B))
-liftCenterTy-replace (future-alias W≼W′) X R B =
-  trans (cong ⇑ᵗ (liftCenterTy-replace W≼W′ X R B))
-    (shift-replace (liftCenterVariable W≼W′ X)
-      (liftCenterTy W≼W′ R) (liftCenterTy W≼W′ B))
-liftCenterTy-replace (future-imprecise W≼W′) X R B =
-  trans (cong ⇑ᵗ (liftCenterTy-replace W≼W′ X R B))
-    (shift-replace (liftCenterVariable W≼W′ X)
-      (liftCenterTy W≼W′ R) (liftCenterTy W≼W′ B))
-
-target-rep-embedding-future : ∀
-    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
-    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-    (t : TargetSlot W) (W≼W′ : Future W W′)
-  → embedImprecise (core W′) (tslotRᴵ (target-slot-future t W≼W′))
-    ≡ liftCenterTy W≼W′ (embedImprecise (core W) (tslotRᴵ t))
-target-rep-embedding-future {W′ = W′} t W≼W′ =
-  trans (cong (embedImprecise (core W′))
-      (target-slot-imprecise-rep-lift t W≼W′))
-    (embedImprecise-lift W≼W′ (tslotRᴵ t))
-
-target-normalize-future : ∀
-    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
-    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-    (t : TargetSlot W) (W≼W′ : Future W W′) (B : Ty Δᶜ)
-  → targetNormalize W′ (target-slot-future t W≼W′)
-      (liftCenterTy W≼W′ B)
-    ≡ liftCenterTy W≼W′ (targetNormalize W t B)
-target-normalize-future {W = W} {W′ = W′} t W≼W′ B =
-  trans (cong (λ R → replaceTy
-      (liftCenterVariable W≼W′ (tcenter t)) R (liftCenterTy W≼W′ B))
-      (target-rep-embedding-future t W≼W′))
-    (sym (liftCenterTy-replace W≼W′ (tcenter t)
-      (embedImprecise (core W) (tslotRᴵ t)) B))
-
-target-transparent-center-future : ∀
-    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′} {A B : Ty Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-    (t : TargetSlot W) (W≼W′ : Future W W′)
-  → TargetTransparentCenter W t A B
-  → TargetTransparentCenter W′ (target-slot-future t W≼W′)
-      (liftCenterTy W≼W′ A) (liftCenterTy W≼W′ B)
-target-transparent-center-future {A = A} {B = B} {W′ = W′}
-    t W≼W′ p =
-  subst (λ R → impEnv (core W′) I.⊢ liftCenterTy W≼W′ A ⊑ R)
-    (sym (target-normalize-future t W≼W′ B))
-    (liftCenterImprecision W≼W′ p)
+open import proof.LR-narrow.TargetSlot using
+  (target-replace-imprecise-lift)
 
 target-transparent-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -99,30 +32,18 @@ target-transparent-future : ∀
       (liftPreciseTy W≼W′ Aᴾ) (liftImpreciseTy W≼W′ Aᴵ)
 target-transparent-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {W = W} {W′ = W′}
     t W≼W′ p =
-  subst (λ L → impEnv (core W′) I.⊢ L ⊑ targetNormalize W′
-      (target-slot-future t W≼W′)
-      (embedImprecise (core W′) (liftImpreciseTy W≼W′ Aᴵ)))
+  subst (λ L → impEnv (core W′) I.⊢ L ⊑ embedImprecise (core W′)
+      (replaceTy (tslotXᴵ (target-slot-future t W≼W′))
+        (tslotRᴵ (target-slot-future t W≼W′))
+        (liftImpreciseTy W≼W′ Aᴵ)))
     (sym (embedPrecise-lift W≼W′ Aᴾ))
     (subst (λ R → impEnv (core W′) I.⊢
         liftCenterTy W≼W′ (embedPrecise (core W) Aᴾ) ⊑ R)
-      (sym (cong (targetNormalize W′ (target-slot-future t W≼W′))
-        (embedImprecise-lift W≼W′ Aᴵ)))
-      (target-transparent-center-future t W≼W′ p))
-
-target-normalize-embedding : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : World Δᴾ Δᴵ Δᶜ) (t : TargetSlot W) (B : Ty Δᴵ)
-  → targetNormalize W t (embedImprecise (core W) B)
-    ≡ embedImprecise (core W)
-        (replaceTy (tslotXᴵ t) (tslotRᴵ t) B)
-target-normalize-embedding W t B =
-  trans (cong (λ Z → replaceTy Z
-      (embedImprecise (core W) (tslotRᴵ t))
-      (embedImprecise (core W) B))
-      (sym (targetImpreciseAligned (tatom t))))
-    (sym (renameᵗ-replaceTy
-      (toRenameᵗ (impreciseEmbedding (core W)))
-      (toRenameᵗ-injective (impreciseEmbedding (core W)))
-      (tslotXᴵ t) (tslotRᴵ t) B))
+      (sym (trans (cong (embedImprecise (core W′))
+          (target-replace-imprecise-lift t W≼W′ Aᴵ))
+        (embedImprecise-lift W≼W′
+          (replaceTy (tslotXᴵ t) (tslotRᴵ t) Aᴵ))))
+      (liftCenterImprecision W≼W′ p))
 
 target-transparent-derivation : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
@@ -132,22 +53,7 @@ target-transparent-derivation : ∀ {Δᴾ Δᴵ Δᶜ}
       ⊑ embedImprecise (core W)
           (replaceTy (tslotXᴵ t) (tslotRᴵ t) Aᴵ)
 target-transparent-derivation {W = W} t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p =
-  subst (λ R → impEnv (core W) I.⊢ embedPrecise (core W) Aᴾ ⊑ R)
-    (target-normalize-embedding W t Aᴵ) p
-
-PendingTargetValueRelation : ∀ {Δᴾ Δᴵ Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
-    {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
-  → TargetTransparent W t Aᴾ Aᴵ
-  → IndexedValueRelation W
-PendingTargetValueRelation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p W′ W≼W′ k Vᴵ Vᴾ =
-  ValueImprecisionᵏ k W′
-    (liftCenterImprecision W≼W′
-      (target-transparent-derivation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p))
-    (Vᴵ ↑ 〖 tslotXᴵ (target-slot-future t W≼W′) ,
-      tslotRᴵ (target-slot-future t W≼W′)
-      ↑ liftImpreciseTy W≼W′ Aᴵ 〗)
-    Vᴾ
+  p
 
 fresh-target-variable-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
     {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
@@ -157,9 +63,7 @@ fresh-target-variable-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
       (fresh-target-slot W Rᴵ) Rᴾ (＇ Fin.zero)
 fresh-target-variable-transparent {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W} r =
   subst (λ L → impEnv (core (impreciseBindWorld W Rᴵ)) I.⊢ L
-      ⊑ targetNormalize (impreciseBindWorld W Rᴵ)
-        (fresh-target-slot W Rᴵ)
-        (embedImprecise (core (impreciseBindWorld W Rᴵ)) (＇ Fin.zero)))
+      ⊑ embedImprecise (core (impreciseBindWorld W Rᴵ)) (⇑ᵗ Rᴵ))
     (sym (embedPrecise-imprecise-shift (core W) Rᴵ Rᴾ))
     (subst (λ R → impEnv (core (impreciseBindWorld W Rᴵ)) I.⊢
         ⇑ᵗ (embedPrecise (core W) Rᴾ) ⊑ R)
@@ -178,7 +82,8 @@ fresh-target-open-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
 fresh-target-open-transparent {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
     {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W} body r =
   subst (λ L → impEnv (core W′) I.⊢ L
-      ⊑ targetNormalize W′ slot (embedImprecise (core W′) Bᴵ))
+      ⊑ embedImprecise (core W′)
+          (replaceTy Fin.zero (⇑ᵗ Rᴵ) Bᴵ))
     (sym (embedPrecise-lift step (Bᴾ [ Rᴾ ]ᵗ)))
     (subst (λ R → impEnv (core W′) I.⊢
         liftCenterTy step (embedPrecise (core W) (Bᴾ [ Rᴾ ]ᵗ)) ⊑ R)
@@ -190,11 +95,11 @@ fresh-target-open-transparent {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
   step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
   slot = fresh-target-slot W Rᴵ
 
-  right-eq : targetNormalize W′ slot (embedImprecise (core W′) Bᴵ)
+  right-eq : embedImprecise (core W′)
+      (replaceTy Fin.zero (⇑ᵗ Rᴵ) Bᴵ)
       ≡ liftCenterTy step
           (embedImprecise (core W) (Bᴵ [ Rᴵ ]ᵗ))
   right-eq =
-    trans (target-normalize-embedding W′ slot Bᴵ)
-      (trans (cong (embedImprecise (core W′))
-          (replace-zero-open Rᴵ Bᴵ))
-        (embedImprecise-lift step (Bᴵ [ Rᴵ ]ᵗ)))
+    trans (cong (embedImprecise (core W′))
+        (replace-zero-open Rᴵ Bᴵ))
+      (embedImprecise-lift step (Bᴵ [ Rᴵ ]ᵗ))

@@ -110,7 +110,9 @@ value-imprecision-downward {p = I.⇒⊑⇒ p q} {k = suc k}
 value-imprecision-downward {p = I.∀⊑∀ p} {k = suc k}
     (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
   endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
-  (λ W≼W′ σ → Data.Product.proj₂ (fam W≼W′ σ))
+  (λ W≼W′ σ →
+    Data.Product.proj₂ (Data.Product.proj₁ (fam W≼W′ σ)) ,
+    Data.Product.proj₂ (Data.Product.proj₂ (fam W≼W′ σ)))
 value-imprecision-downward {p = I.⇒⊑★ p q} {k = suc k}
     (endpoints , shape , payload) =
   endpoints , shape , value-imprecision-downward payload
@@ -674,6 +676,16 @@ universals-related-transport : ∀
   → UniversalsRelated W p Bᴾ Bᴵ k Vᴵ′ Vᴾ′
 universals-related-transport refl refl related = related
 
+pending-target-universals-related-transport : ∀
+    {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
+    {Vᴵ Vᴵ′ : Term Δᴵ} {Vᴾ Vᴾ′ : Term Δᴾ}
+  → Vᴵ ≡ Vᴵ′
+  → Vᴾ ≡ Vᴾ′
+  → PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
+  → PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ′ Vᴾ′
+pending-target-universals-related-transport refl refl related = related
+
 universal-family-reindex : ∀
     {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ Aᴾ′ Aᴵ′}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -685,9 +697,10 @@ universal-family-reindex : ∀
   → UniversalFamily W p Bᴾ Bᴵ k Vᴵ Vᴾ
 universal-family-reindex p q fam W≼W′ σ =
   universals-phantom
-    (liftCenterBodyImprecision W≼W′ q)
-    (liftCenterBodyImprecision W≼W′ p)
-    (fam W≼W′ σ)
+      (liftCenterBodyImprecision W≼W′ q)
+      (liftCenterBodyImprecision W≼W′ p)
+      (Data.Product.proj₁ (fam W≼W′ σ)) ,
+    Data.Product.proj₂ (fam W≼W′ σ)
 
 universal-family-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
@@ -702,7 +715,8 @@ universal-family-future : ∀
       (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
 universal-family-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
     {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {k = k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
-    W≼W′ fam {W′ = W″} W′≼W″ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ = final
+    W≼W′ fam {W′ = W″} W′≼W″ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
+  final , pending-final
   where
   composite = future-trans W≼W′ W′≼W″
 
@@ -760,7 +774,12 @@ universal-family-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
       (liftCenterBodyImprecision composite p) Bᴾ′ Bᴵ′ k
       (wrapTermᴵᵇ σ† (liftImpreciseTerm composite Vᴵ))
       (wrapTermᴾᵇ σ† (liftPreciseTerm composite Vᴾ))
-  base = fam composite σ†
+  base = Data.Product.proj₁ (fam composite σ†)
+
+  pending-base : PendingTargetUniversalsRelated W″ Bᴾ′ Bᴵ′ k
+      (wrapTermᴵᵇ σ† (liftImpreciseTerm composite Vᴵ))
+      (wrapTermᴾᵇ σ† (liftPreciseTerm composite Vᴾ))
+  pending-base = Data.Product.proj₂ (fam composite σ†)
 
   moved : UniversalsRelated W″
       (liftCenterBodyImprecision composite p) Bᴾ′ Bᴵ′ k
@@ -772,6 +791,14 @@ universal-family-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
     {W = W″} {p = liftCenterBodyImprecision composite p}
     {Bᴾ = Bᴾ′} {k = k}
     wrapᴵ-eq wrapᴾ-eq base
+
+  pending-final : PendingTargetUniversalsRelated W″ Bᴾ′ Bᴵ′ k
+      (wrapTermᴵᵇ σ
+        (liftImpreciseTerm W′≼W″ (liftImpreciseTerm W≼W′ Vᴵ)))
+      (wrapTermᴾᵇ σ
+        (liftPreciseTerm W′≼W″ (liftPreciseTerm W≼W′ Vᴾ)))
+  pending-final = pending-target-universals-related-transport
+    wrapᴵ-eq wrapᴾ-eq pending-base
 
   final : UniversalsRelated W″
       (liftCenterBodyImprecision W′≼W″
