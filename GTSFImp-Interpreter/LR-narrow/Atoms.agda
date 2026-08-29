@@ -8,7 +8,9 @@ module LR-narrow.Atoms where
 --     are related exactly when their payloads are related at the recorded
 --     imprecision: the slot relation is canonical, hence Kripke.
 --   * Records endpoint non-occupancy on one-sided slots.  A target-only slot
---     is semantically inert because imprecision has no ★⊑X clause.
+--     retains its runtime representative for scoped pending-bind proofs, but
+--     remains inert in the ordinary value relation because imprecision has no
+--     ★⊑X clause.
 --   * Reindexes slots through paired and either-sided fresh store bindings.
 --   * The payload relation is a parameter of the slot predicates; the
 --     logical relation supplies itself at the next lower index.
@@ -151,6 +153,9 @@ record TargetSemanticAtom {Δᴾ Δᴵ Δᶜ}
     targetNoPreciseOccupant :
       (Σ[ X ∈ TyVar Δᴾ ]
         toRenameᵗ (preciseEmbedding W) X ≡ Z) → ⊥
+    targetRep : Ty Δᴵ
+    targetBound :
+      impreciseStore W ∋ targetImpreciseVariable ⦂ targetRep
 
 open TargetSemanticAtom public
 
@@ -610,7 +615,7 @@ weaken-target-atom : ∀ {Δᴾ Δᴵ Δᶜ}
 weaken-target-atom {W = W} {Z = Z} Aᴾ Aᴵ a =
   target-semantic-atom (Fin.suc (targetImpreciseVariable a))
     (cong Fin.suc (targetImpreciseAligned a))
-    no-precise
+    no-precise (⇑ᵗ (targetRep a)) (S-bind∋ (targetBound a) refl)
   where
   no-precise :
       (Σ[ X ∈ TyVar _ ]
@@ -628,7 +633,7 @@ weaken-target-atom-precise : ∀ {Δᴾ Δᴵ Δᶜ}
 weaken-target-atom-precise {W = W} {Z = Z} Aᴾ a =
   target-semantic-atom (targetImpreciseVariable a)
     (cong Fin.suc (targetImpreciseAligned a))
-    no-precise
+    no-precise (targetRep a) (targetBound a)
   where
   no-precise :
       (Σ[ X ∈ TyVar _ ]
@@ -646,7 +651,7 @@ weaken-target-atom-imprecise : ∀ {Δᴾ Δᴵ Δᶜ}
 weaken-target-atom-imprecise {W = W} {Z = Z} Aᴵ a =
   target-semantic-atom (Fin.suc (targetImpreciseVariable a))
     (cong Fin.suc (targetImpreciseAligned a))
-    no-precise
+    no-precise (⇑ᵗ (targetRep a)) (S-bind∋ (targetBound a) refl)
   where
   no-precise :
       (Σ[ X ∈ TyVar _ ]
@@ -855,7 +860,7 @@ weaken-target-atom-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ}
 weaken-target-atom-aliasbind {W = W} {Z = Z} rep a =
   target-semantic-atom (targetImpreciseVariable a)
     (cong Fin.suc (targetImpreciseAligned a))
-    no-precise
+    no-precise (targetRep a) (targetBound a)
   where
   no-precise :
       (Σ[ X ∈ TyVar _ ]
@@ -982,3 +987,4 @@ fresh-target-semantic-atom : ∀ {Δᴾ Δᴵ Δᶜ}
   → TargetSemanticAtom (impreciseBindCore W Aᴵ) Fin.zero
 fresh-target-semantic-atom Aᴵ =
   target-semantic-atom Fin.zero refl (λ { (X , ()) })
+    (⇑ᵗ Aᴵ) (Z∋ refl)

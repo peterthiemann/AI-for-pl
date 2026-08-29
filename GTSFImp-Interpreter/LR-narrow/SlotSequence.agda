@@ -1,11 +1,11 @@
 module LR-narrow.SlotSequence where
 
 -- File Charter:
---   * Dynamic slots: center variables at mode `X⊑★` whose semantic
---     entry is an unoccupied dynamic atom, with the entry fact stored
---     as a mode-indexed view so that no transport along the mode
---     equality is ever needed.  (Moved here from the proof layer so
---     that the logical relation may quantify over them.)
+--   * One-sided slots: center variables at mode `X⊑★` whose semantic
+--     entry is either an unoccupied dynamic atom or a target atom.  The
+--     entry fact is stored as a mode-indexed view so that no transport
+--     along the mode equality is ever needed.  Target slots expose their
+--     stored representative only to scoped pending-bind developments.
 --   * Slot-conversion sequences: type-indexed lists of reveal and
 --     conceal wrappers on the precise side — at dynamic slots, and at
 --     arbitrary avoid variables — together with their action on
@@ -65,6 +65,50 @@ dslotXᴾ d = dynamicPreciseVariable (datom d)
 dslotRᴾ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
   → DynamicSlot W → Ty Δᴾ
 dslotRᴾ d = dynamicRep (datom d)
+
+------------------------------------------------------------------------
+-- Target slots
+------------------------------------------------------------------------
+
+data IsTargetEntry {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
+    {Z : TyVar Δᶜ} (a : TargetSemanticAtom W Z) :
+    ∀ {mode} → SemanticEntry W Z mode → Set where
+  is-target : IsTargetEntry a (target-entry a)
+
+record TargetSlot {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) : Set where
+  constructor target-slot
+  field
+    tcenter : TyVar Δᶜ
+    tatom : TargetSemanticAtom (core W) tcenter
+    tentry-is : IsTargetEntry tatom (semanticEntry W tcenter)
+
+open TargetSlot public
+
+is-target-mode : ∀ {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
+    {Z : TyVar Δᶜ} {a : TargetSemanticAtom W Z} {mode}
+    {e : SemanticEntry W Z mode}
+  → IsTargetEntry a e
+  → mode ≡ I.X⊑★
+is-target-mode is-target = refl
+
+tmode-eq : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    (t : TargetSlot W)
+  → impEnv (core W) (tcenter t) ≡ I.X⊑★
+tmode-eq t = is-target-mode (tentry-is t)
+
+tslotXᴵ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+  → TargetSlot W → TyVar Δᴵ
+tslotXᴵ t = targetImpreciseVariable (tatom t)
+
+tslotRᴵ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+  → TargetSlot W → Ty Δᴵ
+tslotRᴵ t = targetRep (tatom t)
+
+fresh-target-slot : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (rep : Ty Δᴵ)
+  → TargetSlot (impreciseBindWorld W rep)
+fresh-target-slot W rep = target-slot Fin.zero
+  (fresh-target-semantic-atom rep) is-target
 
 ------------------------------------------------------------------------
 -- Paired slots
