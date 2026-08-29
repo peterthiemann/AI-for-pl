@@ -22,6 +22,7 @@ import Consistency as C
 import proof.DGG.CtxImp as CTI
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
+open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 open import LR-narrow.ClosingSubstitution
 open import LR-narrow.ClosingSubstitutionProperties
@@ -128,7 +129,8 @@ record UniversalFamilyKitᵇ : Set where
     -- imprecise endpoint.  Stability under a further future is part of
     -- the interface because `UniversalDataᵇ` stores pending observations
     -- at every future of the world in which each wrapper prefix lives.
-    cast-pendingᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    cast-pending-headᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+        {W : World Δᴾ Δᴵ Δᶜ}
         {Aᴾc Aᴵc Bᴾc Bᴵc : Ty (suc Δᶜ)}
         {Aᴾ₀ Aᴾ₁ : Ty (suc Δᴾ)} {Aᴵ₀ Aᴵ₁ : Ty (suc Δᴵ)}
         (p₀ : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc)
@@ -154,14 +156,25 @@ record UniversalFamilyKitᵇ : Set where
       → ∀ {Δᴾ″ Δᴵ″ Δᶜ″}
           {W″ : World Δᴾ″ Δᴵ″ Δᶜ″}
           (W′≼W″ : Future W′ W″)
-      → PendingTargetUniversalsRelated W″
-          (liftPreciseBody W′≼W″ Bᴾ′)
-          (liftImpreciseBody W′≼W″ Bᴵ′) (suc k)
-          (liftImpreciseTerm W′≼W″
-            (wrapTermᴵᵇ σ
-              (liftImpreciseTerm W≼W′ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩))))
+      → ∀ {Bᴵ″ : Ty (suc Δᴵ″)}
+          (peel : ImprecisePeelᵇ W″
+            (liftPreciseBody W′≼W″ Bᴾ′)
+            (liftImpreciseBody W′≼W″ Bᴵ′) Bᴵ″)
+          (Rᴾ : Ty Δᴾ″) (Rᴵ : Ty Δᴵ″)
+          (r : Rᴾ ⊑ᵂ⟨ core W″ ⟩ Rᴵ)
+      → ComputationsRelated W″
+          (FutureValueRelation (openRelatedBodyImprecision {W = W″}
+            (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+          (suc k)
+          (imprecise-peel-termᴵᵇ peel
+              (liftImpreciseTerm W′≼W″
+                (wrapTermᴵᵇ σ
+                  (liftImpreciseTerm W≼W′
+                    (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩))))
+            ⦂∀ Bᴵ″ [ Rᴵ ])
           (liftPreciseTerm W′≼W″
-            (wrapTermᴾᵇ σ
-              (liftPreciseTerm W≼W′ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩))))
+              (wrapTermᴾᵇ σ
+                (liftPreciseTerm W≼W′ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)))
+            ⦂∀ liftPreciseBody W′≼W″ Bᴾ′ [ Rᴾ ])
 
 open UniversalFamilyKitᵇ public

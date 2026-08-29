@@ -8,7 +8,7 @@ open import LR-narrow.CastObligations using
    open-right-universal; open-universal-dynamic)
 
 open import LR-narrow.UniversalFamily using
-  (UniversalFamilyKitᵇ; cast-pendingᵇ; universal-dataᵇ;
+  (UniversalFamilyKitᵇ; cast-pending-headᵇ; universal-dataᵇ;
    data-chainᵇ; data-pendingᵇ)
 
 module proof.LR-narrow.Cast
@@ -5639,13 +5639,45 @@ related-value-casts {W = W}
       unwrapped-head i si≤sj ,
       unwrapped-chain i (≤-trans (n≤1+n i) si≤sj)
 
-    base-data = universal-dataᵇ casted-endpoints
-      (unwrapped-chain (suc j) ≤-refl)
-      (cast-pendingᵇ kitᵇ
+    pending-chain : ∀ n → n ≤ suc j
+      → ∀ {Δᴾ₂ Δᴵ₂ Δᶜ₂}
+        {W₂ : World Δᴾ₂ Δᴵ₂ Δᶜ₂}
+        (W≼W₂ : Future W W₂)
+        {B₂ : Ty (suc Δᴾ₂)} {C₂ : Ty (suc Δᴵ₂)}
+        (σᵇ : UniWrapsᵇ W₂ (liftPreciseBody W≼W₂ Aᴾ₁)
+          (liftImpreciseBody W≼W₂ Aᴵ₁) B₂ C₂)
+      → ∀ {Δᴾ₃ Δᴵ₃ Δᶜ₃}
+        {W₃ : World Δᴾ₃ Δᴵ₃ Δᶜ₃}
+        (W₂≼W₃ : Future W₂ W₃)
+      → PendingTargetUniversalsRelated W₃
+          (liftPreciseBody W₂≼W₃ B₂)
+          (liftImpreciseBody W₂≼W₃ C₂) n
+          (liftImpreciseTerm W₂≼W₃
+            (wrapTermᴵᵇ σᵇ
+              (liftImpreciseTerm W≼W₂ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩))))
+          (liftPreciseTerm W₂≼W₃
+            (wrapTermᴾᵇ σᵇ
+              (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩))))
+    pending-chain zero n≤sj W≼W₂ σᵇ W₂≼W₃ = tt
+    pending-chain (suc i) si≤sj W≼W₂ σᵇ W₂≼W₃ =
+      cast-pending-headᵇ kitᵇ
         {W = W} source-body refl refl cᴾ cᴵ
         target-body refl refl
-        {k = j} source-at-index casted-endpoints
-        future-refl Slots.[])
+        {k = i} source-at-head casted-endpoints
+        W≼W₂ σᵇ W₂≼W₃ ,
+      pending-chain i (≤-trans (n≤1+n i) si≤sj)
+        W≼W₂ σᵇ W₂≼W₃
+      where
+      source-at-head : ValueImprecision W source-local (suc i) Vᴵ Vᴾ
+      source-at-head = value-imprecision-downward-to
+        {W = W} {p = source-local} {j = suc i} {k = suc j}
+        {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+        si≤sj source-at-index
+
+    base-data = universal-dataᵇ casted-endpoints
+      (unwrapped-chain (suc j) ≤-refl)
+      (λ W≼W₂ → pending-chain (suc j) ≤-refl
+        future-refl Slots.[] W≼W₂)
 
     family-at-index : UniversalFamily W target-body Aᴾ₁ Aᴵ₁ (suc j)
         (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩) (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
@@ -5681,12 +5713,8 @@ related-value-casts {W = W}
             (liftPreciseTerm W₂≼W₃
               (wrapTermᴾᵇ τ
                 (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩))))
-      pending-prefix τ W₂≼W₃ =
-        cast-pendingᵇ kitᵇ
-          {W = W} source-body refl refl cᴾ cᴵ
-          target-body refl refl
-          {k = j} source-at-index casted-endpoints
-          W≼W₂ τ W₂≼W₃
+      pending-prefix τ W₂≼W₃ = pending-chain (suc j) ≤-refl
+        W≼W₂ τ W₂≼W₃
 
       built = extend-universal-data-sequenceᵇ
         initial-impᵇ σᵇ initial-data pending-prefix
