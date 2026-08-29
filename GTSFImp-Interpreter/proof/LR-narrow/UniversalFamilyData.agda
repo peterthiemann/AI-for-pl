@@ -17,6 +17,7 @@ open import Types
 open import CastTerms
 open import Conversion using (replaceTy; 〖_,_↑_〗; makeConceal)
 import Imprecision as I
+open import proof.ImprecisionComposition using (alias-rebuild)
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import LR-narrow.Computation
@@ -46,6 +47,29 @@ open import proof.LR-narrow.RevealStructural using
 
 outer-below-all : ∀ (k : ℕ) → OuterBelow k
 outer-below-all k j j<k n = statements-all j n
+
+------------------------------------------------------------------------
+-- Fresh precise instantiations as aliases
+------------------------------------------------------------------------
+
+fresh-alias-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+  → Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ
+  → ＇ Fin.zero ⊑ᵂ⟨ core (aliasBindWorld W Rᴾ) ⟩ Rᴵ
+fresh-alias-local-imprecision W {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} r =
+  alias-rebuild
+    (isVar? (acenter fresh) (embedImprecise (core bound) Rᴵ))
+    (amode-eq fresh) premise
+  where
+  bound = aliasBindWorld W Rᴾ
+  fresh = fresh-alias-slot W Rᴾ
+
+  premise : impEnv (core bound) I.⊢ arepresentative fresh ⊑
+      embedImprecise (core bound) Rᴵ
+  premise = subst≡
+    (λ L → impEnv (core bound) I.⊢ L ⊑ embedImprecise (core bound) Rᴵ)
+    (aliasRep-eq (aatom fresh))
+    (alias-local-imprecision {rep = Rᴾ} r)
 
 ------------------------------------------------------------------------
 -- Future lifting of imprecise-only peels
