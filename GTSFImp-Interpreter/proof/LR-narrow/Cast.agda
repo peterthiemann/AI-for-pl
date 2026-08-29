@@ -124,6 +124,8 @@ open import proof.LR-narrow.TypeApplication using
 open import proof.LR-narrow.UniversalFamilyData using
   (universal-dataᵇ-reindex; extend-universal-data-sequenceᵇ;
    universal-dataᵇ-future)
+open import proof.LR-narrow.PendingUniversal using
+  (pending-target-imprecise-peel-one)
 open import proof.LR-narrow.Closure using
   (value-imprecision-downward-to)
 import proof.LR-narrow.Closure as ClosureProof
@@ -5660,7 +5662,7 @@ related-value-casts {W = W}
           (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
             ⦂∀ liftPreciseBody W≼W₂ Aᴾ₁ [ Rᴾ ])
     bare-pending-head zero si≤sj W₂ W≼W₂ peel Rᴾ Rᴵ r =
-      nonvalue-computations-one (λ ()) (λ ()) refl refl
+      pending-target-imprecise-peel-one peel r
     bare-pending-head (suc i) ssi≤sj W₂ W≼W₂ peel Rᴾ Rᴵ r =
       cast-pending-headᵇ kitᵇ
         {W = W} source-body refl refl cᴾ cᴵ
@@ -5693,6 +5695,8 @@ related-value-casts {W = W}
             (wrapTermᴾᵇ σᵇ
               (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩))))
     pending-chain zero n≤sj W≼W₂ σᵇ W₂≼W₃ = tt
+    pending-chain (suc zero) s0≤sj W≼W₂ σᵇ W₂≼W₃ =
+      (λ peel Rᴾ Rᴵ r → pending-target-imprecise-peel-one peel r) , tt
     pending-chain (suc i) si≤sj future-refl Slots.[]
         {W₃ = W₃} W≼W₃ =
       bare-pending-head i si≤sj W₃ W≼W₃ ,

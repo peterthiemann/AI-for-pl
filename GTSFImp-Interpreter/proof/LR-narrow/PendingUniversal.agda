@@ -3,8 +3,9 @@ module proof.LR-narrow.PendingUniversal where
 -- File Charter:
 --   * Eliminates the exact pending application of an imprecise-only peel.
 
-open import Data.Nat using (ℕ; suc)
+open import Data.Nat using (ℕ; zero; suc)
 open import Data.Product using (proj₁)
+open import Relation.Binary.PropositionalEquality using (refl)
 
 open import Types
 open import CastTerms
@@ -12,6 +13,24 @@ open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
+open import proof.LR-narrow.StepExpansion using
+  (nonvalue-computations-one)
+
+pending-target-imprecise-peel-one : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ Bᴵ′ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+    (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
+    (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+  → ComputationsRelated W
+      (FutureValueRelation (openRelatedBodyImprecision {W = W}
+        (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+      (suc zero)
+      (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
+      (Vᴾ ⦂∀ Bᴾ [ Rᴾ ])
+pending-target-imprecise-peel-one peel r =
+  nonvalue-computations-one (λ ()) (λ ()) refl refl
 
 pending-target-imprecise-peel : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
