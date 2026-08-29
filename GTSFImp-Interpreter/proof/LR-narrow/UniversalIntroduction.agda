@@ -34,12 +34,15 @@ open import LR-narrow.ClosingSubstitution
 open import LR-narrow.ClosingSubstitutionProperties
 open import LR-narrow.TermRelation
 open import LR-narrow.Insertion
+open import LR-narrow.TypeBetaExpansion using (paired-step)
 import proof.LR-narrow.ClosingSubstitution as ClosingProof
 import proof.LR-narrow.Closure as Closure
 open import proof.LR-narrow.AliasAvoid using (env-aliases-avoidᵖ)
 open import proof.LR-narrow.ImprecisionSize using (sizeᵖ)
 open import proof.LR-narrow.ReplaceImprecision using (replace-zero-open)
 open import proof.LR-narrow.RevealStatements using (revealAt)
+open import proof.LR-narrow.TypeRenamingComposition using
+  (pack↑; apply↑)
 open import proof.LR-narrow.RevealStructural using
   (statements-all; revealed-computations)
 open import proof.LR-narrow.UniversalReveal using (fresh-slot)
@@ -74,7 +77,8 @@ insert-lift-context : ∀
     {Wᶜ : CTI.World Δᴾ Δᴵ Δᶜ}
     {Γ : CTI.CtxImp Wᶜ}
     {Γᵇ : CTI.CtxImp (CTI.liftWorldBoth I.X⊑X Wᶜ)}
-    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′} {π : Δᶜ ↪ᵗ Δᶜ′}
+    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′}
+    {π : Δᶜ ↪ᵗ Δᶜ′}
     {W : World Δᴾ′ Δᴵ′ Δᶜ′}
     (ins : WorldInsert ρᴾ ρᴵ π Wᶜ (forgetWorld W))
     (liftΓ : CTI.LiftCtx I.X⊑X Γ Γᵇ)
@@ -93,7 +97,7 @@ insert-lift-context {ρᴾ = ρᴾ} {ρᴵ = ρᴵ} {W = W} ins
   entry-eq = context-imp-entry-eq
       {W = pairedBindWorld W Rᴾ Rᴵ r}
       (insert⊑ (liftBoth-insert I.X⊑X Rᴾ Rᴵ ins) p′)
-      (liftLocalImprecision (future-paired future-refl r)
+      (liftLocalImprecision (future-paired (future-refl {W = W}) r)
       (insert⊑ ins p))
       (renameᵗ-keep-shift ρᴾ A) (renameᵗ-keep-shift ρᴵ B)
 
@@ -105,7 +109,8 @@ insert-context-after-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δᴾ″ Δᴵ″ Δᶜ″}
     {Wᶜ : CTI.World Δᴾ Δᴵ Δᶜ}
     {Γ : CTI.CtxImp Wᶜ}
-    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′} {π : Δᶜ ↪ᵗ Δᶜ′}
+    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′}
+    {π : Δᶜ ↪ᵗ Δᶜ′}
     {W : World Δᴾ′ Δᴵ′ Δᶜ′}
     {W′ : World Δᴾ″ Δᴵ″ Δᶜ″}
     (ins : WorldInsert ρᴾ ρᴵ π Wᶜ (forgetWorld W))
@@ -182,3 +187,162 @@ imprecise-closing-context-reindex-lookup : ∀ {Δᴾ Δᴵ Δᶜ}
       (related-closing-context-reindex eq γ)) x
     ≡ lookupClosing (impreciseClosingSubstitution γ) x
 imprecise-closing-context-reindex-lookup refl γ x = refl
+
+lift-context-imprecision-refl : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} (Γ : ContextImprecision W)
+  → liftContextImprecision (future-refl {W = W}) Γ ≡ Γ
+lift-context-imprecision-refl [] = refl
+lift-context-imprecision-refl {W = W} (context-imp Aᴾ Aᴵ p ∷ Γ) =
+  cong₂ _∷_ entry-eq (lift-context-imprecision-refl {W = W} Γ)
+  where
+  entry-eq = context-imp-entry-eq
+    (liftLocalImprecision (future-refl {W = W}) p) p refl refl
+
+------------------------------------------------------------------------
+-- The inserted body supplies every paired universal test
+------------------------------------------------------------------------
+
+inserted-universal-body-relation : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
+    {Wᶜ : CTI.World Δᴾ Δᴵ Δᶜ}
+    {Γ : CTI.CtxImp Wᶜ}
+    {Γᵇ : CTI.CtxImp (CTI.liftWorldBoth I.X⊑X Wᶜ)}
+    {p : Aᴾ CTI.⊑ᵂ⟨ CTI.liftWorldBoth I.X⊑X Wᶜ ⟩ Aᴵ}
+    {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
+    (liftΓ : CTI.LiftCtx I.X⊑X Γ Γᵇ)
+    (body : CTI.liftWorldBoth I.X⊑X Wᶜ ∣ Γᵇ ⊢² Vᴾ ⊑ Vᴵ ∶ p)
+    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′}
+    {π : Δᶜ ↪ᵗ Δᶜ′}
+    {W : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (ins : WorldInsert ρᴾ ρᴵ π Wᶜ (forgetWorld W))
+  → InsertedFundamentalProperty body
+  → (pᵇ : I.extᵐ (impEnv (core W)) I.⊢
+      renameᵗ (extᵗ (toRenameᵗ (preciseEmbedding (core W))))
+        (renameᵗ (extᵗ (toRenameᵗ ρᴾ)) Aᴾ)
+      ⊑ renameᵗ (extᵗ (toRenameᵗ (impreciseEmbedding (core W))))
+        (renameᵗ (extᵗ (toRenameᵗ ρᴵ)) Aᴵ))
+  → ∀ k → CompiledUniversalBodyRelation {W = W} pᵇ
+      (renameᵗ (extᵗ (toRenameᵗ ρᴾ)) Aᴾ)
+      (renameᵗ (extᵗ (toRenameᵗ ρᴵ)) Aᴵ) k
+      (insertCtx ins Γ) (renameᵗᵐ (keep ρᴾ) Vᴾ)
+      (renameᵗᵐ (keep ρᴵ) Vᴵ)
+inserted-universal-body-relation
+    {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {Γᵇ = Γᵇ} {p = p}
+    {Vᴾ = Vᴾ} {Vᴵ = Vᴵ}
+    liftΓ body {ρᴾ = ρᴾ} {ρᴵ = ρᴵ} {π = π} {W = W}
+    ins ih pᵇ k W′ W≼W′ γ Rᴾ Rᴵ r s =
+  Closure.computations-related-reindex
+    (liftCenterImprecision step s) (liftCenterImprecision step s)
+    refl refl imprecise-reveal-eq precise-reveal-eq revealed
+  where
+  step = paired-step W′ r
+  tested = pairedBindWorld W′ Rᴾ Rᴵ r
+  ins′ = insert-after-future ins W≼W′
+  body-ins = liftBoth-insert I.X⊑X Rᴾ Rᴵ ins′
+
+  ctx-eq = trans (insert-lift-context ins′ liftΓ Rᴾ Rᴵ r)
+    (cong (liftContextImprecision step)
+      (insert-context-after-future ins W≼W′))
+
+  γ-step = related-closing-future step γ
+  γ-body = related-closing-context-reindex (sym ctx-eq) γ-step
+  body-context = compiledContext tested (insertCtx body-ins Γᵇ)
+  γ-raw = related-closing-context-reindex
+    (sym (lift-context-imprecision-refl body-context)) γ-body
+
+  source = insert⊑ body-ins p
+
+  raw = inserted-relation ih tested body-ins k tested future-refl γ-raw
+
+  precise-body-eq : liftPreciseBody W≼W′
+      (renameᵗ (extᵗ (toRenameᵗ ρᴾ)) Aᴾ)
+    ≡ renameᵗ (toRenameᵗ (keep (afterPrecise W≼W′ ρᴾ))) Aᴾ
+  precise-body-eq = trans (liftPreciseBody-after W≼W′ ρᴾ Aᴾ)
+    (renameᵗ-cong Aᴾ (λ X → sym (toRename-keep-eq
+      (afterPrecise W≼W′ ρᴾ) X)))
+
+  imprecise-body-eq : liftImpreciseBody W≼W′
+      (renameᵗ (extᵗ (toRenameᵗ ρᴵ)) Aᴵ)
+    ≡ renameᵗ (toRenameᵗ (keep (afterImprecise W≼W′ ρᴵ))) Aᴵ
+  imprecise-body-eq = trans (liftImpreciseBody-after W≼W′ ρᴵ Aᴵ)
+    (renameᵗ-cong Aᴵ (λ X → sym (toRename-keep-eq
+      (afterImprecise W≼W′ ρᴵ) X)))
+
+  target-P = trans
+    (cong (embedPrecise (core tested))
+      (replace-zero-open Rᴾ
+        (renameᵗ (toRenameᵗ (keep (afterPrecise W≼W′ ρᴾ))) Aᴾ)))
+    (trans
+      (embedPrecise-paired-shift (core W′) Rᴾ Rᴵ
+        (renameᵗ (toRenameᵗ (keep (afterPrecise W≼W′ ρᴾ))) Aᴾ
+          [ Rᴾ ]ᵗ))
+      (cong (λ T → ⇑ᵗ (embedPrecise (core W′) (T [ Rᴾ ]ᵗ)))
+        (sym precise-body-eq)))
+
+  target-I = trans
+    (cong (embedImprecise (core tested))
+      (replace-zero-open Rᴵ
+        (renameᵗ (toRenameᵗ (keep (afterImprecise W≼W′ ρᴵ))) Aᴵ)))
+    (trans
+      (embedImprecise-paired-shift (core W′) Rᴾ Rᴵ
+        (renameᵗ (toRenameᵗ (keep (afterImprecise W≼W′ ρᴵ))) Aᴵ
+          [ Rᴵ ]ᵗ))
+      (cong (λ T → ⇑ᵗ (embedImprecise (core W′) (T [ Rᴵ ]ᵗ)))
+        (sym imprecise-body-eq)))
+
+  revealed = revealed-computations tested (fresh-slot W′ Rᴾ Rᴵ r)
+    source
+    (env-aliases-avoidᵖ
+      (PI.ext-aliases-avoid-zero (impEnv (core W′))) source)
+    refl refl (liftCenterImprecision step s) target-P target-I ≤-refl
+    (λ j j≤ → revealAt (statements-all j (sizeᵖ source))) raw
+
+  precise-env-eq : ∀ x → lookupClosing
+      (preciseClosingSubstitution γ-raw) x
+    ≡ liftˢ (closingSubstitution (preciseClosingSubstitution γ)) x
+  precise-env-eq x = trans
+    (precise-closing-context-reindex-lookup
+      (sym (lift-context-imprecision-refl body-context)) γ-body x)
+    (trans
+      (precise-closing-context-reindex-lookup (sym ctx-eq) γ-step x)
+      (ClosingProof.precise-related-future-lookup step γ x))
+
+  imprecise-env-eq : ∀ x → lookupClosing
+      (impreciseClosingSubstitution γ-raw) x
+    ≡ liftˢ (closingSubstitution (impreciseClosingSubstitution γ)) x
+  imprecise-env-eq x = trans
+    (imprecise-closing-context-reindex-lookup
+      (sym (lift-context-imprecision-refl body-context)) γ-body x)
+    (trans
+      (imprecise-closing-context-reindex-lookup (sym ctx-eq) γ-step x)
+      (ClosingProof.imprecise-related-future-lookup step γ x))
+
+  precise-close-eq = trans
+    (subst-cong precise-env-eq
+      (renameᵗᵐ (keep (afterPrecise W≼W′ ρᴾ)) Vᴾ))
+    (cong (closeTypeBody (preciseClosingSubstitution γ))
+      (sym (liftPreciseBodyTerm-after W≼W′ ρᴾ Vᴾ)))
+
+  imprecise-close-eq = trans
+    (subst-cong imprecise-env-eq
+      (renameᵗᵐ (keep (afterImprecise W≼W′ ρᴵ)) Vᴵ))
+    (cong (closeTypeBody (impreciseClosingSubstitution γ))
+      (sym (liftImpreciseBodyTerm-after W≼W′ ρᴵ Vᴵ)))
+
+  precise-reveal-eq = trans
+    (cong (λ M → M ↑ 〖 Fin.zero , ⇑ᵗ Rᴾ ↑
+      renameᵗ (toRenameᵗ (keep (afterPrecise W≼W′ ρᴾ))) Aᴾ 〗)
+      precise-close-eq)
+    (cong (apply↑ (closeTypeBody (preciseClosingSubstitution γ)
+      (liftPreciseBodyTerm W≼W′ (renameᵗᵐ (keep ρᴾ) Vᴾ))))
+      (cong (λ B → pack↑ 〖 Fin.zero , ⇑ᵗ Rᴾ ↑ B 〗)
+        (sym precise-body-eq)))
+
+  imprecise-reveal-eq = trans
+    (cong (λ M → M ↑ 〖 Fin.zero , ⇑ᵗ Rᴵ ↑
+      renameᵗ (toRenameᵗ (keep (afterImprecise W≼W′ ρᴵ))) Aᴵ 〗)
+      imprecise-close-eq)
+    (cong (apply↑ (closeTypeBody (impreciseClosingSubstitution γ)
+      (liftImpreciseBodyTerm W≼W′ (renameᵗᵐ (keep ρᴵ) Vᴵ))))
+      (cong (λ B → pack↑ 〖 Fin.zero , ⇑ᵗ Rᴵ ↑ B 〗)
+        (sym imprecise-body-eq)))
