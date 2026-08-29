@@ -56,6 +56,7 @@ import Data.Fin as Fin
 open import LR-narrow.World
 open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
+open import LR-narrow.UniversalFamily
 open import LR-narrow.Closure using (value-imprecision-downward-to)
 import proof.LR-narrow.Closure as ClosureProof
 open import proof.LR-narrow.ImmediateReturn using
@@ -934,7 +935,7 @@ reveal-universal-inner : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
   → (sourceᴵ : embedImprecise (core W) (`∀ B₀ᴵ) ≡ `∀ Aᴵ)
   → ∀ {k : ℕ} (below : OuterBelow (suc k))
       {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-  → ValueImprecision W (I.∀⊑∀ p) (suc k) Vᴵ Vᴾ
+  → UniversalDataᵇ W p B₀ᴾ B₀ᴵ (suc k) Vᴵ Vᴾ
   → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′) (W≼W′ : Future W W′)
       (Sᴾ : Ty Δᴾ′) (Sᴵ : Ty Δᴵ′) (r : Sᴾ ⊑ᵂ⟨ core W′ ⟩ Sᴵ)
       (t : liftPreciseBody W≼W′
@@ -969,30 +970,14 @@ reveal-universal-inner : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
               (liftPreciseBody W≼W′ B₀ᴾ) 〗)
 reveal-universal-inner W s p avoidᵇ sourceᴾ sourceᴵ {k = zero}
     below
-    related W′ W≼W′ Sᴾ Sᴵ r t =
+    dat W′ W≼W′ Sᴾ Sᴵ r t =
   ClosureProof.computations-related-zero
 reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
     {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p avoidᵇ sourceᴾ sourceᴵ {k = suc m} below
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t
-    with proj₂ related
-reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
-    {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p avoidᵇ sourceᴾ sourceᴵ {k = suc m} below
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t
-    | Bᴾ* , Bᴵ* , embP , embI , chain
-    with ty-all-injective
-           (renameᵗ-injective
-             (toRenameᵗ-injective (preciseEmbedding (core W)))
-             (trans embP (sym sourceᴾ)))
-       | ty-all-injective
-           (renameᵗ-injective
-             (toRenameᵗ-injective (impreciseEmbedding (core W)))
-             (trans embI (sym sourceᴵ)))
-reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
-    {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p avoidᵇ sourceᴾ sourceᴵ {k = suc m} below
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t
-    | .B₀ᴾ , .B₀ᴵ , embP , embI , chain
-    | refl | refl = revealed₂
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat W′ W≼W′ Sᴾ Sᴵ r t = revealed₂
   where
+  chain = data-chainᵇ dat
+
   Wb = pairedBindWorld W′ Sᴾ Sᴵ r
 
   W≼Wb : Future W Wb
@@ -1068,7 +1053,7 @@ reveal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
         ⦂∀ liftPreciseBody W≼Wb B₀ᴾ [ ＇ Fin.zero ])
   weakened = universals-head {W = W} {p = p} {Bᴾ = B₀ᴾ}
     {Bᴵ = B₀ᴵ} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
-    m (s≤s (n≤1+n m)) (chain future-refl [])
+    m (s≤s (n≤1+n m)) chain
     Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
 
   reindexed : ComputationsRelated Wb (FutureValueRelation t₀) (suc m)
@@ -1250,7 +1235,7 @@ reveal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
   → (sourceᴵ : embedImprecise (core W) (`∀ B₀ᴵ) ≡ `∀ Aᴵ)
   → ∀ {k : ℕ} (below : OuterBelow (suc k))
       {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-  → ValueImprecision W (I.∀⊑∀ p) (suc k) Vᴵ Vᴾ
+  → UniversalDataᵇ W p B₀ᴾ B₀ᴵ (suc k) Vᴵ Vᴾ
   → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′) (W≼W′ : Future W W′)
       (Sᴾ : Ty Δᴾ′) (Sᴵ : Ty Δᴵ′) (r : Sᴾ ⊑ᵂ⟨ core W′ ⟩ Sᴵ)
       (t : liftPreciseBody W≼W′
@@ -1272,7 +1257,7 @@ reveal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
           (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ) [ Sᴾ ])
 reveal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p avoidᵇ
     sourceᴾ sourceᴵ
-    {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t =
+    {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat W′ W≼W′ Sᴾ Sᴵ r t =
   ClosureProof.computations-related-reindex t t
     refl refl (sym imprecise-redex-eq) (sym precise-redex-eq)
     stepped
@@ -1339,8 +1324,7 @@ reveal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p avoidᵇ
          | reveal-type-app-step-question
              {Σ = preciseStore (core W′)} {A = Sᴾ} cᴾ vVᴾ′
     where
-    endpoints = ClosureProof.value-imprecision-endpoints
-      {W = W} {p = I.∀⊑∀ p} {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    endpoints = data-endpointsᵇ dat
     vVᴾ′ = ClosureProof.precise-value-future W≼W′
       (precise-value endpoints)
     vVᴵ′ = ClosureProof.imprecise-value-future W≼W′
@@ -1350,7 +1334,7 @@ reveal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p avoidᵇ
       (related-paired-bind-step-expand (λ ()) (λ ()) refl refl
         (β-reveal-∀ vVᴵ″) (β-reveal-∀ vVᴾ″) step-eqᴵ step-eqᴾ
         (reveal-universal-inner W s p avoidᵇ sourceᴾ sourceᴵ below
-          related W′ W≼W′ Sᴾ Sᴵ r t))
+          dat W′ W≼W′ Sᴾ Sᴵ r t))
 
 -- The residual of a concealed type application: the replaced source
 -- universal is instantiated at the freshly allocated paired name, the
@@ -1374,7 +1358,10 @@ conceal-universal-inner : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
       ≡ `∀ Aᴵʳ)
   → ∀ {k : ℕ} (below : OuterBelow (suc k))
       {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-  → ValueImprecision W (I.∀⊑∀ q₀) (suc k) Vᴵ Vᴾ
+  → UniversalDataᵇ W q₀
+      (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+      (suc k) Vᴵ Vᴾ
   → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′) (W≼W′ : Future W W′)
       (Sᴾ : Ty Δᴾ′) (Sᴵ : Ty Δᴵ′) (r : Sᴾ ⊑ᵂ⟨ core W′ ⟩ Sᴵ)
       (t : liftPreciseBody W≼W′ B₀ᴾ [ Sᴾ ]ᵗ
@@ -1404,35 +1391,15 @@ conceal-universal-inner : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
         ↑ 〖 Fin.zero , ⇑ᵗ Sᴾ ↑ liftPreciseBody W≼W′ B₀ᴾ 〗)
 conceal-universal-inner W s p q₀ avoidᵇ sourceᴾ sourceᴵ
     targetᴾ targetᴵ
-    {k = zero} below related W′ W≼W′ Sᴾ Sᴵ r t =
+    {k = zero} below dat W′ W≼W′ Sᴾ Sᴵ r t =
   ClosureProof.computations-related-zero
 conceal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
     {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {Aᴾʳ = Aᴾʳ} {Aᴵʳ = Aᴵʳ} p q₀ avoidᵇ
     sourceᴾ sourceᴵ targetᴾ targetᴵ {k = suc m} below
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t
-    with proj₂ related
-conceal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
-    {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {Aᴾʳ = Aᴾʳ} {Aᴵʳ = Aᴵʳ} p q₀ avoidᵇ
-    sourceᴾ sourceᴵ targetᴾ targetᴵ {k = suc m} below
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t
-    | Bᴾ* , Bᴵ* , embP , embI , chain
-    with ty-all-injective
-           (renameᵗ-injective
-             (toRenameᵗ-injective (preciseEmbedding (core W)))
-             (trans embP (sym targetᴾ)))
-       | ty-all-injective
-           (renameᵗ-injective
-             (toRenameᵗ-injective (impreciseEmbedding (core W)))
-             (trans embI (sym targetᴵ)))
-conceal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
-    {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {Aᴾʳ = Aᴾʳ} {Aᴵʳ = Aᴵʳ} p q₀ avoidᵇ
-    sourceᴾ sourceᴵ targetᴾ targetᴵ {k = suc m} below
-    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t
-    | .(replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
-    , .(replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
-    , embP , embI , chain
-    | refl | refl = final
+    {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat W′ W≼W′ Sᴾ Sᴵ r t = final
   where
+  chain = data-chainᵇ dat
+
   Wb = pairedBindWorld W′ Sᴾ Sᴵ r
 
   W≼Wb : Future W Wb
@@ -1551,7 +1518,7 @@ conceal-universal-inner W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ}
     {Bᴾ = replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ}
     {Bᴵ = replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ}
     {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} {n = suc (suc m)}
-    m (s≤s (n≤1+n m)) (chain future-refl [])
+    m (s≤s (n≤1+n m)) chain
     Wb W≼Wb (＇ Fin.zero) (＇ Fin.zero) r₀ s₀
 
   body-eq-P : Lᴾ ≡ replaceTy (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′) B₀ᴾ′
@@ -1724,7 +1691,10 @@ conceal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
       ≡ `∀ Aᴵʳ)
   → ∀ {k : ℕ} (below : OuterBelow (suc k))
       {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-  → ValueImprecision W (I.∀⊑∀ q₀) (suc k) Vᴵ Vᴾ
+  → UniversalDataᵇ W q₀
+      (replaceTy (Fin.suc (slotXᴾ s)) (⇑ᵗ (slotRᴾ s)) B₀ᴾ)
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) B₀ᴵ)
+      (suc k) Vᴵ Vᴾ
   → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′) (W≼W′ : Future W W′)
       (Sᴾ : Ty Δᴾ′) (Sᴵ : Ty Δᴵ′) (r : Sᴾ ⊑ᵂ⟨ core W′ ⟩ Sᴵ)
       (t : liftPreciseBody W≼W′ B₀ᴾ [ Sᴾ ]ᵗ
@@ -1739,7 +1709,7 @@ conceal-universal-head : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
         ⦂∀ liftPreciseBody W≼W′ B₀ᴾ [ Sᴾ ])
 conceal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p q₀ avoidᵇ
     sourceᴾ sourceᴵ targetᴾ targetᴵ
-    {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related W′ W≼W′ Sᴾ Sᴵ r t =
+    {k = k} below {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat W′ W≼W′ Sᴾ Sᴵ r t =
   ClosureProof.computations-related-reindex t t
     refl refl (sym imprecise-redex-eq) (sym precise-redex-eq)
     stepped
@@ -1784,8 +1754,7 @@ conceal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p q₀ avoid�
          | conceal-type-app-step-question
              {Σ = preciseStore (core W′)} {A = Sᴾ} dᴾ vVᴾ′
     where
-    endpoints = ClosureProof.value-imprecision-endpoints
-      {W = W} {p = I.∀⊑∀ q₀} {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} related
+    endpoints = data-endpointsᵇ dat
     vVᴾ′ = ClosureProof.precise-value-future W≼W′
       (precise-value endpoints)
     vVᴵ′ = ClosureProof.imprecise-value-future W≼W′
@@ -1795,7 +1764,7 @@ conceal-universal-head W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p q₀ avoid�
       (related-paired-bind-step-expand (λ ()) (λ ()) refl refl
         (β-conceal-∀ vVᴵ″) (β-conceal-∀ vVᴾ″) step-eqᴵ step-eqᴾ
         (conceal-universal-inner W s p q₀ avoidᵇ sourceᴾ sourceᴵ
-          targetᴾ targetᴵ below related W′ W≼W′ Sᴾ Sᴵ r t))
+          targetᴾ targetᴵ below dat W′ W≼W′ Sᴾ Sᴵ r t))
 
 -- The value relation of a revealed universal value.
 
@@ -1878,7 +1847,9 @@ reveal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
         {W = W′} {p = liftCenterBodyImprecision W≼W′ p₀}
         {Bᴾ = Bᴾ′} {k = suc j}
         termᴵ-eq termᴾ-eq
-        (fam-in W≼W′ (w ∷ σ‡)))
+        (proj₁ (fam-in W≼W′ (w ∷ σ‡)))) ,
+    ClosureProof.pending-target-universals-related-transport
+      termᴵ-eq termᴾ-eq (proj₂ (fam-in W≼W′ (w ∷ σ‡)))
     where
     open ClosureProof using (universals-phantom)
 
@@ -2054,7 +2025,9 @@ conceal-universal W s {B₀ᴾ = B₀ᴾ} {B₀ᴵ = B₀ᴵ} p₀ q₀ avoidᵇ
         {W = W′} {p = liftCenterBodyImprecision W≼W′ q₀}
         {Bᴾ = Bᴾ′} {k = suc j}
         termᴵ-eq termᴾ-eq
-        (fam-in W≼W′ σ‡))
+        (proj₁ (fam-in W≼W′ σ‡))) ,
+    ClosureProof.pending-target-universals-related-transport
+      termᴵ-eq termᴾ-eq (proj₂ (fam-in W≼W′ σ‡))
     where
     open ClosureProof using (universals-phantom)
 
