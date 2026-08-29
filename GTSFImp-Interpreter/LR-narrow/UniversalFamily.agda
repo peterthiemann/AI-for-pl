@@ -77,11 +77,17 @@ record UniversalDataᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
   field
     data-endpointsᵇ : TypedEndpoints W (I.∀⊑∀ p) Vᴵ Vᴾ
     data-chainᵇ : UniversalsRelated W p Bᴾ Bᴵ k Vᴵ Vᴾ
-    data-pendingᵇ : PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
+    data-pendingᵇ : ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
+        {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+      → (W≼W′ : Future W W′)
+      → PendingTargetUniversalsRelated W′
+          (liftPreciseBody W≼W′ Bᴾ) (liftImpreciseBody W≼W′ Bᴵ) k
+          (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
 
 open UniversalDataᵇ public
 
-universal-dataᵇ-downward : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+universal-dataᵇ-downward : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
     {Aᴾ Aᴵ : Ty (suc Δᶜ)}
     {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
     {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
@@ -90,9 +96,10 @@ universal-dataᵇ-downward : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δ�
   → UniversalDataᵇ W p Bᴾ Bᴵ k Vᴵ Vᴾ
 universal-dataᵇ-downward d = universal-dataᵇ
   (data-endpointsᵇ d) (proj₂ (data-chainᵇ d))
-  (proj₂ (data-pendingᵇ d))
+  (λ W≼W′ → proj₂ (data-pendingᵇ d W≼W′))
 
-universal-dataᵇ-of-family : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+universal-dataᵇ-of-family : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
     {Aᴾ Aᴵ : Ty (suc Δᶜ)}
     {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
     {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
@@ -101,7 +108,8 @@ universal-dataᵇ-of-family : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δ�
   → UniversalFamily W p Bᴾ Bᴵ k Vᴵ Vᴾ
   → UniversalDataᵇ W p Bᴾ Bᴵ k Vᴵ Vᴾ
 universal-dataᵇ-of-family endpoints family = universal-dataᵇ endpoints
-  (proj₁ (family future-refl [])) (proj₂ (family future-refl []))
+  (proj₁ (family future-refl []))
+  (λ W≼W′ → proj₂ (family W≼W′ []))
 
 -- The two-sided kit for the `∀⊑∀` clause.  A chain-in/family-out
 -- statement is UNPROVABLE here (Finding I in

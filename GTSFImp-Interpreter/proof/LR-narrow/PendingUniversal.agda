@@ -218,7 +218,7 @@ pending-target-imprecise-peel-reduct : ∀ {Δᴾ Δᴵ Δᶜ}
           ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])
 pending-target-imprecise-peel-reduct {W = W} {Rᴾ = Rᴾ}
     {Rᴵ = Rᴵ} peel r dat =
-  proj₂ (proj₁ (data-pendingᵇ dat)) peel Rᴾ Rᴵ r
+  proj₂ (proj₁ (data-pendingᵇ dat future-refl)) peel Rᴾ Rᴵ r
 
 pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
