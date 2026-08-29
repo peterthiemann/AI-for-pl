@@ -2099,6 +2099,44 @@ imprecise-conceal {k = k} W s {Bᴵ = Bᴵ} p avoid no-occur
   imp-conceal-go (sizeᵖ p) k W s p avoid ≤-refl no-occur
     sourceᴵ q targetᴵ related
 
+imprecise-revealed-computations : ∀ {k : ℕ}
+    { Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
+    {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
+    (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
+  → AliasAvoid★ᵖ (center s) p
+  → center s ∉ᵗ Aᴾ
+  → embedImprecise (core W) Bᴵ ≡ Aᴵ
+  → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Aᴾ ⊑ Cᴵ)
+  → embedImprecise (core W) (replaceTy (slotXᴵ s) (slotRᴵ s) Bᴵ)
+      ≡ Cᴵ
+  → ∀ {Mᴵ : Term Δᴵ} {Mᴾ : Term Δᴾ}
+  → ComputationsRelated W (FutureValueRelation p) k Mᴵ Mᴾ
+  → ComputationsRelated W (FutureValueRelation q) k
+      (Mᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ Bᴵ 〗) Mᴾ
+imprecise-revealed-computations {k = k} W s p avoid no-occur
+    sourceᴵ q targetᴵ related =
+  imp-revealed-computations (sizeᵖ p) k W s p avoid ≤-refl
+    no-occur sourceᴵ q targetᴵ related
+
+imprecise-concealed-computations : ∀ {k : ℕ}
+    { Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
+    {Bᴵ : Ty Δᴵ} {Aᴾ Aᴵ : Ty Δᶜ}
+    (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
+  → AliasAvoid★ᵖ (center s) p
+  → center s ∉ᵗ Aᴾ
+  → embedImprecise (core W) Bᴵ ≡ Aᴵ
+  → ∀ {Cᴵ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Aᴾ ⊑ Cᴵ)
+  → embedImprecise (core W) (replaceTy (slotXᴵ s) (slotRᴵ s) Bᴵ)
+      ≡ Cᴵ
+  → ∀ {Mᴵ : Term Δᴵ} {Mᴾ : Term Δᴾ}
+  → ComputationsRelated W (FutureValueRelation q) k Mᴵ Mᴾ
+  → ComputationsRelated W (FutureValueRelation p) k
+      (Mᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) Bᴵ) Mᴾ
+imprecise-concealed-computations {k = k} W s p avoid no-occur
+    sourceᴵ q targetᴵ related =
+  imp-concealed-computations (sizeᵖ p) k W s p avoid ≤-refl
+    no-occur sourceᴵ q targetᴵ related
+
 imprecise-reveal-value : ∀ {k : ℕ}
     {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
     {Bᴵ : Ty Δᴵ} (shape : UniShape Bᴵ) {Aᴾ Aᴵ : Ty Δᶜ}
