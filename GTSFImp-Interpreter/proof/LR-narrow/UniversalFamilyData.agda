@@ -2212,6 +2212,23 @@ extend-universal-dataᵇ {W = W} source
 -- Extending producer data through a wrapper sequence
 ------------------------------------------------------------------------
 
+universal-dataᵇ-reindex : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Aᴾ Aᴵ Aᴾ′ Aᴵ′ : Ty (suc Δᶜ)}
+    (p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ)
+    (q : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ′ ⊑ Aᴵ′)
+    {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
+    {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → Aᴾ ≡ Aᴾ′
+  → Aᴵ ≡ Aᴵ′
+  → UniversalDataᵇ W q B C k Vᴵ Vᴾ
+  → UniversalDataᵇ W p B C k Vᴵ Vᴾ
+universal-dataᵇ-reindex p q refl refl dat = universal-dataᵇ
+  (Closure.typed-endpoints-derivation-reindex
+    (I.∀⊑∀ q) (I.∀⊑∀ p) (data-endpointsᵇ dat))
+  (Closure.universals-phantom q p (data-chainᵇ dat))
+  (data-pendingᵇ dat)
+
 extend-universal-data-sequenceᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
     {B B′ : Ty (suc Δᴾ)} {C C′ : Ty (suc Δᴵ)}
