@@ -12,6 +12,7 @@ module LR-narrow.UniversalFamily where
 
 open import Data.Nat using (ℕ; suc; _≤_)
 import Data.Fin as Fin
+open import Data.Product using (proj₁; proj₂)
 open import Relation.Binary.PropositionalEquality using (_≡_)
 
 open import Types
@@ -79,6 +80,28 @@ record UniversalDataᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
     data-pendingᵇ : PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
 
 open UniversalDataᵇ public
+
+universal-dataᵇ-downward : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {Aᴾ Aᴵ : Ty (suc Δᶜ)}
+    {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W p Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+  → UniversalDataᵇ W p Bᴾ Bᴵ k Vᴵ Vᴾ
+universal-dataᵇ-downward d = universal-dataᵇ
+  (data-endpointsᵇ d) (proj₂ (data-chainᵇ d))
+  (proj₂ (data-pendingᵇ d))
+
+universal-dataᵇ-of-family : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {Aᴾ Aᴵ : Ty (suc Δᶜ)}
+    {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)} {k : ℕ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → TypedEndpoints W (I.∀⊑∀ p) Vᴵ Vᴾ
+  → UniversalFamily W p Bᴾ Bᴵ k Vᴵ Vᴾ
+  → UniversalDataᵇ W p Bᴾ Bᴵ k Vᴵ Vᴾ
+universal-dataᵇ-of-family endpoints family = universal-dataᵇ endpoints
+  (proj₁ (family future-refl [])) (proj₂ (family future-refl []))
 
 -- The two-sided kit for the `∀⊑∀` clause.  A chain-in/family-out
 -- statement is UNPROVABLE here (Finding I in
