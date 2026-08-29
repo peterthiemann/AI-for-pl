@@ -544,9 +544,11 @@ alias-universal-value (suc k) sz below W d {B₁ = B₁}
         {W = W′}
         {p = liftCenterBodyImprecision W≼W′ p₀}
         {Bᴾ = Bᴾ′} {k = suc k}
-        (wrapTermᴵᵇ-subst σ-eq σ (liftImpreciseTerm W≼W′ Vᴵ))
+        termᴵ-eq
         term-eq
-        (fam W≼W′ (w† ∷ σ†)))
+        (proj₁ (fam W≼W′ (w† ∷ σ†)))) ,
+    ClosureProof.pending-target-universals-related-transport
+      termᴵ-eq term-eq (proj₂ (fam W≼W′ (w† ∷ σ†)))
     where
     d′ = alias-slot-future d W≼W′
 
@@ -579,6 +581,11 @@ alias-universal-value (suc k) sz below W d {B₁ = B₁}
     σ† = subst≡
       (λ B → UniWrapsᵇ W′ B (liftImpreciseBody W≼W′ Bᴵ*)
         Bᴾ′ Bᴵ′) σ-eq σ
+
+    termᴵ-eq : wrapTermᴵᵇ (w† ∷ σ†) (liftImpreciseTerm W≼W′ Vᴵ)
+        ≡ wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ)
+    termᴵ-eq = wrapTermᴵᵇ-subst σ-eq σ
+      (liftImpreciseTerm W≼W′ Vᴵ)
 
     term-eq : wrapTermᴾᵇ (w† ∷ σ†) (liftPreciseTerm W≼W′ Vᴾ)
         ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
@@ -960,10 +967,11 @@ alias-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
           {W = W′}
           {p = liftCenterBodyImprecision W≼W′ inner}
           {Bᴾ = Bᴾ′} {k = suc k}
-          (wrapTermᴵᵇ-subst (sym σ-eq) (w† ∷ σ)
-            (liftImpreciseTerm W≼W′ Vᴵ))
+          termᴵ-eq
           term-eq
-          (famq W≼W′ σ‡))
+          (proj₁ (famq W≼W′ σ‡))) ,
+      ClosureProof.pending-target-universals-related-transport
+        termᴵ-eq term-eq (proj₂ (famq W≼W′ σ‡))
       where
       d′ = alias-slot-future d W≼W′
 
@@ -992,6 +1000,11 @@ alias-universal-conceal-value (suc k) sz below W d {B₁ = B₁}
       σ‡ = subst≡
         (λ B → UniWrapsᵇ W′ B (liftImpreciseBody W≼W′ Bᴵ*)
           Bᴾ′ Bᴵ′) (sym σ-eq) (w† ∷ σ)
+
+      termᴵ-eq : wrapTermᴵᵇ σ‡ (liftImpreciseTerm W≼W′ Vᴵ)
+          ≡ wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ)
+      termᴵ-eq = wrapTermᴵᵇ-subst (sym σ-eq) (w† ∷ σ)
+        (liftImpreciseTerm W≼W′ Vᴵ)
 
       term-eq : wrapTermᴾᵇ σ‡ (liftPreciseTerm W≼W′ Vᴾ)
           ≡ wrapTermᴾᵇ σ (liftPreciseTerm W≼W′
