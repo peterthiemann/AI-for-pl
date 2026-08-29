@@ -2302,3 +2302,51 @@ universal-dataᵇ-future {W′ = W′} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
         (liftPreciseBody-trans W≼W′ W′≼K Bᴾ)
         (liftImpreciseBody-trans W≼W′ W′≼K Bᴵ)
         (data-pendingᵇ dat (future-trans W≼W′ W′≼K)))
+
+------------------------------------------------------------------------
+-- Folding producer data into the stored family
+------------------------------------------------------------------------
+
+universal-family-from-dataᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+    (source : BodyImprecisionᵇ W Bᴾ Bᴵ)
+    {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W (bodyPᵇ source) Bᴾ Bᴵ k Vᴵ Vᴾ
+  → (∀ {Δᴾ′ Δᴵ′ Δᶜ′} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+        (W≼W′ : Future W W′)
+        {Bᴾ′ : Ty (suc Δᴾ′)} {Bᴵ′ : Ty (suc Δᴵ′)}
+        (σ : UniWrapsᵇ W′ (liftPreciseBody W≼W′ Bᴾ)
+          (liftImpreciseBody W≼W′ Bᴵ) Bᴾ′ Bᴵ′)
+        {Δᴾ″ Δᴵ″ Δᶜ″} {W″ : World Δᴾ″ Δᴵ″ Δᶜ″}
+        (W′≼W″ : Future W′ W″)
+      → PendingTargetUniversalsRelated W″
+          (liftPreciseBody W′≼W″ Bᴾ′)
+          (liftImpreciseBody W′≼W″ Bᴵ′) k
+          (liftImpreciseTerm W′≼W″
+            (wrapTermᴵᵇ σ (liftImpreciseTerm W≼W′ Vᴵ)))
+          (liftPreciseTerm W′≼W″
+            (wrapTermᴾᵇ σ (liftPreciseTerm W≼W′ Vᴾ))))
+  → UniversalFamily W (bodyPᵇ source) Bᴾ Bᴵ k Vᴵ Vᴾ
+universal-family-from-dataᵇ {W = W} {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
+    source dat pending W≼W′ σ = chain , pending-here
+  where
+  source′ = body-imprecisionᵇ-future W≼W′ source
+  dat′ = universal-dataᵇ-future W≼W′ dat
+
+  dat″ = universal-dataᵇ-reindex (bodyPᵇ source′)
+    (liftCenterBodyImprecision W≼W′ (bodyPᵇ source))
+    (embedPreciseBody-lift W≼W′ Bᴾ)
+    (embedImpreciseBody-lift W≼W′ Bᴵ) dat′
+
+  extended = extend-universal-data-sequenceᵇ source′ σ dat″
+    (λ τ W′≼W″ → pending W≼W′ τ W′≼W″)
+
+  target = proj₁ extended
+  target-data = Data.Product.proj₂ extended
+
+  chain = Closure.universals-phantom (bodyPᵇ target)
+    (liftCenterBodyImprecision W≼W′ (bodyPᵇ source))
+    (data-chainᵇ target-data)
+
+  pending-here = data-pendingᵇ target-data future-refl
