@@ -60,6 +60,26 @@ record RightUniversalFamilyKit : Set where
 
 open RightUniversalFamilyKit public
 
+-- Producer data for the two-sided universal cascade.  Unlike the
+-- unprovable chain-only interface ruled out by Finding I, this carries
+-- both observations needed to cross the asymmetric wrappers: the ordinary
+-- instantiation chain and the pending-target chain.  Ground producers
+-- construct this data from their concrete application reductions; wrapper
+-- extensions preserve it one step at a time.
+
+record UniversalDataᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    {Aᴾ Aᴵ : Ty (suc Δᶜ)}
+    (p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ)
+    (Bᴾ : Ty (suc Δᴾ)) (Bᴵ : Ty (suc Δᴵ)) (k : ℕ)
+    (Vᴵ : Term Δᴵ) (Vᴾ : Term Δᴾ) : Set where
+  constructor universal-dataᵇ
+  field
+    data-endpointsᵇ : TypedEndpoints W (I.∀⊑∀ p) Vᴵ Vᴾ
+    data-chainᵇ : UniversalsRelated W p Bᴾ Bᴵ k Vᴵ Vᴾ
+    data-pendingᵇ : PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
+
+open UniversalDataᵇ public
+
 -- The two-sided kit for the `∀⊑∀` clause.  A chain-in/family-out
 -- statement is UNPROVABLE here (Finding I in
 -- REPLACEMENT-CLOSURE-DESIGN.md): a chain undercharacterizes the
