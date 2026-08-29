@@ -64,7 +64,8 @@ open RightUniversalFamilyKit public
 -- Producer data for the two-sided universal cascade.  Unlike the
 -- unprovable chain-only interface ruled out by Finding I, this carries
 -- both observations needed to cross the asymmetric wrappers: the ordinary
--- instantiation chain and the exact reducts of imprecise-only first peels.
+-- instantiation chain and the exact applications of imprecise-only first
+-- peels.
 -- Ground producers construct this data from their concrete application
 -- reductions; wrapper extensions preserve it one step at a time.
 

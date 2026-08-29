@@ -62,7 +62,7 @@ open import proof.LR-narrow.AliasReveal using
    alias-lifted-conceal-precise; alias-embed-replace; alias-embed-∉;
    alias-revealed-computations; alias-concealed-computations)
 open import proof.LR-narrow.PendingUniversal using
-  (pending-target-imprecise-peel-bind-expand)
+  (pending-target-imprecise-peel)
 open import proof.LR-narrow.RevealStatements using (Below; OuterBelow)
 open import proof.LR-narrow.RevealStructural using
   (statements-all; reveal-universal-head; conceal-universal-head)
@@ -1959,8 +1959,8 @@ reveal-imprecise-chainᵇ W s {B = B} {C = C} no-occur source target
   head W′ W≼W′ Rᴾ Rᴵ r q =
     Closure.computations-related-reindex opened q
       refl (sym imprecise-result-eq) (sym termᴵ-eq) refl
-      (pending-target-imprecise-peel-bind-expand peel′ r
-        (data-pendingᵇ dat W≼W′) valueᴵ′)
+      (pending-target-imprecise-peel peel′ r
+        (data-pendingᵇ dat W≼W′))
     where
     s′ = slot-future s W≼W′
     B′ = liftPreciseBody W≼W′ B
@@ -2003,10 +2003,6 @@ reveal-imprecise-chainᵇ W s {B = B} {C = C} no-occur source target
               | liftImpreciseTy-universal W≼W′ C
               | body-eq = refl
 
-    valueᴵ′ : Value (liftImpreciseTerm W≼W′ Vᴵ)
-    valueᴵ′ = Closure.imprecise-value-future W≼W′
-      (imprecise-value (data-endpointsᵇ dat))
-
 conceal-imprecise-chainᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
     (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
     {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
@@ -2044,8 +2040,7 @@ conceal-imprecise-chainᵇ W s {B = B} {C = C} no-occur target source
   head W′ W≼W′ Rᴾ Rᴵ r q =
     Closure.computations-related-reindex opened q
       refl refl (sym termᴵ-eq) refl
-      (pending-target-imprecise-peel-bind-expand peel′ r
-        pending′ valueᴵ′)
+      (pending-target-imprecise-peel peel′ r pending′)
     where
     s′ = slot-future s W≼W′
     B′ = liftPreciseBody W≼W′ B
@@ -2081,10 +2076,6 @@ conceal-imprecise-chainᵇ W s {B = B} {C = C} no-occur target source
     termᴵ-eq
         rewrite lifted-conceal-imprecise s W≼W′ Vᴵ (`∀ C)
               | liftImpreciseTy-universal W≼W′ C = refl
-
-    valueᴵ′ : Value (liftImpreciseTerm W≼W′ Vᴵ)
-    valueᴵ′ = Closure.imprecise-value-future W≼W′
-      (imprecise-value (data-endpointsᵇ dat))
 
 universal-dataᵇ-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}

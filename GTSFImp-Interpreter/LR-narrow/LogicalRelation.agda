@@ -374,17 +374,13 @@ mutual
     ((∀ {Bᴵ′ : Ty _} (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
         (Rᴾ : Ty _) (Rᴵ : Ty _)
         (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
-      → let
-          step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
-          opened = openRelatedBodyImprecision {W = W}
-            (bodyPᵇ (imprecise-peel-targetᵇ peel)) r
-        in ComputationsRelated (impreciseBindWorld W Rᴵ)
-            (FutureValueRelation (liftCenterImprecision step opened))
-            (suc k)
-            (imprecise-peel-reductᴵᵇ peel Rᴵ Vᴵ)
-            (liftPreciseTerm step Vᴾ
-              ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])))
-    × PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
+      → ComputationsRelated W
+          (FutureValueRelation (openRelatedBodyImprecision {W = W}
+            (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+          (suc k)
+          (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
+          (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
+    × PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ)
 
   RightUniversalsRelated : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     → (W : World Δᴾ Δᴵ Δᶜ)

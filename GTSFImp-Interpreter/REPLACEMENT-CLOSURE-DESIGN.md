@@ -1601,3 +1601,24 @@ universal wrapper.  Step 6 must choose one of these repairs before
 
 Until that choice is made, moving `cast-familyᵇ` out of
 `RemainingObligations` would only relocate the same assumption.
+
+### J.9  Pending peels are observed before their first bind (2026-08-29)
+
+The expanded-imprecise-projection repair stores the complete first-peel
+application, not its post-bind reduct.  The reduct interface was still too
+late: after the imprecise wrapper allocates `Rᴵ`, the base world is already
+`impreciseBindWorld W Rᴵ`, so the remaining precise `Λ`-bind of `Rᴾ` can
+only be paired with the inner imprecise bind of `＇0`.  The required reading
+`Rᴾ ⊑ ＇0` is exactly the impossible judgment identified in J.8.
+
+At the complete application, the first operational binds are instead
+`Rᴾ` and `Rᴵ`, so the producer can allocate their paired world.  The inner
+imprecise bind of `＇0` is then genuinely surplus and is represented by a
+target-only future step.  Accordingly `PendingTargetUniversalsRelated`
+now records
+
+`(peel Vᴵ) ⦂∀ Bᴵ′ [ Rᴵ ]` related to `Vᴾ ⦂∀ Bᴾ [ Rᴾ ]`
+
+at `W`, for every exact imprecise peel and every `Rᴾ ⊑ Rᴵ`.  The
+imprecise-only wrapper chain extensions consume this observation directly;
+no target-transparent extension of ordinary type imprecision is involved.
