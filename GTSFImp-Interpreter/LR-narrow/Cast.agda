@@ -1,10 +1,5 @@
 open import LR-narrow.CastObligations using (CastValueObligations)
-open import LR-narrow.UniversalFamily using (UniversalFamilyKitᵇ)
-
-module LR-narrow.Cast
-  (ob : CastValueObligations)
-  (kitᵇ : UniversalFamilyKitᵇ)
-  where
+module LR-narrow.Cast (ob : CastValueObligations) where
 
 -- File Charter:
 --   * Exposes checked value- and open-term cast compatibility, relative
@@ -27,7 +22,7 @@ open import LR-narrow.World
 open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 open import LR-narrow.TermRelation
-import proof.LR-narrow.Cast ob kitᵇ as Proof
+import proof.LR-narrow.Cast ob as Proof
 
 related-imprecise-identity : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ Bᴵ}
     {W : World Δᴾ Δᴵ Δᶜ}

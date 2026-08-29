@@ -1653,3 +1653,25 @@ endpoint uniqueness and synthesizes the canonical traces represented by a
 `Future`.  Using those facts, `paired-returns-bind-step-contract` and
 `related-paired-bind-step-contract` remove a known first paired allocation and
 recover the residual relation at `pairedBindWorld W Rᴾ Rᴵ r`.
+
+### J.12  Retire the partial cast-family kit (2026-08-30)
+
+Contracting the first paired allocation exposes a staggered application:
+the precise endpoint has crossed the source universal's application bind,
+while the imprecise endpoint is still before the inner application introduced
+by its one-sided peel.  `UniversalFamily` does not record this intermediate
+observation, and `TargetComputationPhase` cannot reconstruct it because its
+precise endpoint must already be a value.  Thus the J.10 interface is still
+insufficient to derive `cast-pending-headᵇ` from an arbitrary related source
+value.
+
+The temporary `UniversalFamilyKitᵇ` was also redundant with the declared cast
+boundary: `CastValueObligations.open-universals` already names every paired
+cast under `∀⊑∀`.  The partial exact-`∀ᶜ` implementation is therefore removed,
+and exact universal casts consistently use that existing obligation together
+with the other open universal cast shapes.  This deletes the
+`universal-familyᵇ` field from `RemainingObligations` without pretending that
+the missing staggered observation follows from the current logical relation.
+Any future attempt to close `open-universals` internally must first strengthen
+the universal value clause with that producer-owned observation (or adopt an
+equivalent operational normalization theorem).
