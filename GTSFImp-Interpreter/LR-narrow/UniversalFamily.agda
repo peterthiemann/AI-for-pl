@@ -112,45 +112,17 @@ universal-dataᵇ-of-family endpoints family = universal-dataᵇ endpoints
   (proj₁ (family future-refl []))
   (λ W≼W′ → proj₂ (family W≼W′ []))
 
--- The two-sided kit for the `∀⊑∀` clause.  A chain-in/family-out
+-- The remaining cast-family obligation for the `∀⊑∀` clause.  A
+-- chain-in/family-out
 -- statement is UNPROVABLE here (Finding I in
 -- REPLACEMENT-CLOSURE-DESIGN.md): a chain undercharacterizes the
 -- value, and extending a chain across one wrapper is exactly the
--- blocked one-sided statement.  The kit therefore states the two
--- honest producer obligations — one per ground producer of `∀⊑∀`
--- values — with each field's premises drawn from its use site.
+-- blocked one-sided statement.  Universal introduction owns its producer
+-- directly; this temporary kit contains only the cast producer until Cast
+-- constructs it internally.
 
 record UniversalFamilyKitᵇ : Set where
   field
-    -- The `Λ` producer: the family of a closed type abstraction,
-    -- from the compiled body relation.  Mirrors
-    -- `universals-related-from-body` with the chain replaced by the
-    -- family; discharged by the same cascade as `universal-intro`
-    -- (every peel pairs with the imprecise `Λ`-β's bind, surplus
-    -- precise peels are alias binds).
-    lambda-familyᵇ : ∀ {Δᴾ Δᴵ Δᶜ Aᴾc Aᴵc}
-        {W : World Δᴾ Δᴵ Δᶜ} {k : ℕ}
-        {Γ : CTI.CtxImp (forgetWorld W)}
-        {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾc ⊑ Aᴵc}
-        {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
-        {Nᴾ : Term (suc Δᴾ)} {Nᴵ : Term (suc Δᴵ)}
-      → Value Nᴾ
-      → Value Nᴵ
-      → (∀ i → i ≤ k →
-          CompiledUniversalBodyRelation {W = W} p Bᴾ Bᴵ i Γ Nᴾ Nᴵ)
-      → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-          (W≼W′ : Future W W′)
-          (γ : RelatedClosingSubstitutions W′ k
-            (liftContextImprecision W≼W′ (compiledContext W Γ)))
-          (j : ℕ)
-      → j ≤ k
-      → UniversalFamily W′ (liftCenterBodyImprecision W≼W′ p)
-          (liftPreciseBody W≼W′ Bᴾ) (liftImpreciseBody W≼W′ Bᴵ) j
-          (close (impreciseClosingSubstitution γ)
-            (liftImpreciseTerm W≼W′ (Λ Nᴵ)))
-          (close (preciseClosingSubstitution γ)
-            (liftPreciseTerm W≼W′ (Λ Nᴾ)))
-
     -- The `∀ᶜ` cast producer: the family of a universally cast
     -- value, from the source value's clause (which carries the
     -- source FAMILY).  Discharged by the peel cascade of Finding I:

@@ -34,7 +34,7 @@ open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 open import LR-narrow.UniversalFamily using
   (RightUniversalFamilyKit; to-family; universal-data;
-   UniversalFamilyKitᵇ; lambda-familyᵇ)
+   UniversalDataᵇ)
 open import LR-narrow.Closure
 open import LR-narrow.ClosingSubstitution
 open import LR-narrow.ClosingSubstitutionProperties
@@ -1014,42 +1014,3 @@ universal-compatible {W = W} {k = k} {Γ = Γ}
             (PI.⊑-unique q (I.∀⊑∀ p-body))
             W′ W≼W′ γ (suc j) j≤k
             {W′ = W₂} W′≼W″ {Bᴾ′ = B₂} {Bᴵ′ = C₂} σ)
-
-universal-compatible-from-body : ∀ {Δᴾ Δᴵ Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ} {k : ℕ}
-    {Γ : CTI.CtxImp (forgetWorld W)}
-    {Aᴾ : Ty (suc Δᴾ)} {Aᴵ : Ty (suc Δᴵ)}
-    {p : Aᴾ CTI.⊑ᵂ⟨
-      CTI.liftWorldBoth I.X⊑X (forgetWorld W) ⟩ Aᴵ}
-    {Γ′ : CTI.CtxImp
-      (CTI.liftWorldBoth I.X⊑X (forgetWorld W))}
-    {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
-  → (kit : UniversalFamilyKitᵇ)
-  → (liftΓ : CTI.LiftCtx I.X⊑X Γ Γ′)
-  → (vVᴾ : Value Vᴾ)
-  → (vVᴵ : Value Vᴵ)
-  → CTI.liftWorldBoth I.X⊑X (forgetWorld W) ∣ Γ′
-      ⊢² Vᴾ ⊑ Vᴵ ∶ p
-  → (q : `∀ Aᴾ ⊑ᵂ⟨ core W ⟩ `∀ Aᴵ)
-  → (∀ i → i ≤ k → CompiledUniversalBodyRelation
-      (universal-body-imprecision {W = W} p) Aᴾ Aᴵ i Γ Vᴾ Vᴵ)
-  → CompiledTermRelation {W = W} q k Γ (Λ Vᴾ) (Λ Vᴵ)
-universal-compatible-from-body {W = W} {p = p}
-    kit liftΓ vVᴾ vVᴵ body q body-related =
-  universal-compatible liftΓ vVᴾ vVᴵ body q
-    (λ q-body q-eq W′ W≼W′ γ j j≤k →
-      subst≡
-        (λ r → UniversalFamily W′
-          (liftCenterBodyImprecision W≼W′ r)
-          (liftPreciseBody W≼W′ _)
-          (liftImpreciseBody W≼W′ _) j
-          (close (impreciseClosingSubstitution γ)
-            (liftImpreciseTerm W≼W′ (Λ _)))
-          (close (preciseClosingSubstitution γ)
-            (liftPreciseTerm W≼W′ (Λ _))))
-        (PI.⊑-unique p-body q-body)
-        (lambda-familyᵇ kit {p = p-body}
-          vVᴾ vVᴵ body-related
-          W≼W′ γ j j≤k))
-  where
-  p-body = universal-body-imprecision {W = W} p

@@ -21,7 +21,7 @@ open CTIR using (_∣_⊢²_⊑_∶_)
 open import LR-narrow.World
 open import LR-narrow.LogicalRelation
 open import LR-narrow.UniversalFamily using
-  (RightUniversalFamilyKit; UniversalFamilyKitᵇ)
+  (RightUniversalFamilyKit)
 open import LR-narrow.ClosingSubstitution
 open import LR-narrow.ClosingSubstitutionProperties
 open import LR-narrow.TermRelation
@@ -278,25 +278,3 @@ universal-compatible : ∀ {Δᴾ Δᴵ Δᶜ}
             (liftPreciseTerm W≼W′ (Λ Vᴾ))))
   → CompiledTermRelation {W = W} q k Γ (Λ Vᴾ) (Λ Vᴵ)
 universal-compatible = Proof.universal-compatible
-
-universal-compatible-from-body : ∀ {Δᴾ Δᴵ Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ} {k : ℕ}
-    {Γ : CTI.CtxImp (forgetWorld W)}
-    {Aᴾ : Ty (suc Δᴾ)} {Aᴵ : Ty (suc Δᴵ)}
-    {p : Aᴾ CTI.⊑ᵂ⟨
-      CTI.liftWorldBoth I.X⊑X (forgetWorld W) ⟩ Aᴵ}
-    {Γ′ : CTI.CtxImp
-      (CTI.liftWorldBoth I.X⊑X (forgetWorld W))}
-    {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
-  → (kit : UniversalFamilyKitᵇ)
-  → (liftΓ : CTI.LiftCtx I.X⊑X Γ Γ′)
-  → (vVᴾ : Value Vᴾ)
-  → (vVᴵ : Value Vᴵ)
-  → CTI.liftWorldBoth I.X⊑X (forgetWorld W) ∣ Γ′
-      ⊢² Vᴾ ⊑ Vᴵ ∶ p
-  → (q : `∀ Aᴾ ⊑ᵂ⟨ core W ⟩ `∀ Aᴵ)
-  → (∀ i → i ≤ k → CompiledUniversalBodyRelation
-      (universal-body-imprecision {W = W} p)
-      Aᴾ Aᴵ i Γ Vᴾ Vᴵ)
-  → CompiledTermRelation {W = W} q k Γ (Λ Vᴾ) (Λ Vᴵ)
-universal-compatible-from-body = Proof.universal-compatible-from-body

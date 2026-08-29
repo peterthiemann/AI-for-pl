@@ -250,8 +250,9 @@ equalities supplied by `CTI.LiftCtx`.
 `UniversalsRelated` obligation from that body premise. It reconciles composite
 and sequential futures, expands the contracta back across the selected
 type-beta step, and spends one step exactly at beta.
-`universal-compatible-from-body` combines this result with the endpoint typing
-derivation furnished by `CTI.Λ⊑Λ²`.
+`universal-compatible` combines a replacement-closed family producer with the
+endpoint typing derivation furnished by `CTI.Λ⊑Λ²`.  The producer belongs to
+the recursive universal-introduction case rather than to a global kit.
 
 `related-universal-instantiation` exposes the positive-index head of a
 structural `∀⊑∀` value relation. It selects the current world, a supplied
@@ -323,9 +324,9 @@ complete open-term relation.  The constructor-facing
 
 `FundamentalProperty` now indexes the ordinary open LR theorem by its exact
 CTI derivation.  `UniversalBodyFundamentalProperty` packages the paired,
-bind-first motive required immediately below `CTI.Λ⊑Λ²`, and
-`universal-fundamental` consumes it to prove the symmetric universal
-constructor.  `RightUniversalBodyFundamentalProperty` is the distinct
+bind-first motive required immediately below `CTI.Λ⊑Λ²`; the assembled
+universal-introduction case consumes the stronger insertion-generalized body
+induction hypothesis directly.  `RightUniversalBodyFundamentalProperty` is the distinct
 target-first motive for a derivation immediately below either one-sided
 universal constructor.  `right-universal-fundamental` and
 `right-universal-smart-fundamental` consume that motive and construct the

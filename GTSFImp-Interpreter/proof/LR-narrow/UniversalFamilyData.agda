@@ -98,7 +98,8 @@ fresh-alias-local-imprecision W {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} r =
   premise = subst≡
     (λ L → impEnv (core bound) I.⊢ L ⊑ embedImprecise (core bound) Rᴵ)
     (aliasRep-eq (aatom fresh))
-    (alias-local-imprecision {rep = Rᴾ} r)
+    (alias-local-imprecision {W = W} {Aᴾ = Rᴾ} {Aᴵ = Rᴵ}
+      {rep = Rᴾ} r)
 
 ------------------------------------------------------------------------
 -- Future lifting of imprecise-only peels
@@ -2093,7 +2094,8 @@ universal-dataᵇ-future {W′ = W′} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {p = p}
     {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {k = k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
     W≼W′ dat = universal-dataᵇ
   structural-endpoints
-  (Closure.universals-related-future W≼W′ (data-chainᵇ dat))
+  (Closure.universals-related-future {p = p} {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
+    W≼W′ (data-chainᵇ dat))
   pending
   where
   lifted-endpoints =

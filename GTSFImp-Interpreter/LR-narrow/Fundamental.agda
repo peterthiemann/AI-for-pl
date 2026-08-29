@@ -47,27 +47,6 @@ universal-body-fundamental-from-relation : ∀
 universal-body-fundamental-from-relation =
   Proof.universal-body-fundamental-from-relation
 
-universal-fundamental : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
-    {W : World Δᴾ Δᴵ Δᶜ}
-    {Γ : CTI.CtxImp (forgetWorld W)}
-    {Γᵇ : CTI.CtxImp
-      (CTI.liftWorldBoth I.X⊑X (forgetWorld W))}
-    {p : Aᴾ CTI.⊑ᵂ⟨
-      CTI.liftWorldBoth I.X⊑X (forgetWorld W) ⟩ Aᴵ}
-    {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
-    (kit : UniversalFamilyKitᵇ)
-    (liftΓ : CTI.LiftCtx I.X⊑X Γ Γᵇ)
-    (vVᴾ : Value Vᴾ)
-    (vVᴵ : Value Vᴵ)
-    (body : CTI.liftWorldBoth I.X⊑X (forgetWorld W) ∣ Γᵇ
-      ⊢² Vᴾ ⊑ Vᴵ ∶ p)
-    (q : `∀ Aᴾ ⊑ᵂ⟨ core W ⟩ `∀ Aᴵ)
-  → UniversalBodyFundamentalProperty {W = W} {Γ = Γ} {Γᵇ = Γᵇ}
-      {p = p} {Vᴾ = Vᴾ} {Vᴵ = Vᴵ}
-      (universal-body-imprecision {W = W} p) body
-  → FundamentalProperty (CTIR.Λ⊑Λ² liftΓ vVᴾ vVᴵ body q)
-universal-fundamental = Proof.universal-fundamental
-
 right-universal-body-fundamental-from-relation : ∀
     {Δᴾ Δᴵ Δᶜ Δᵇ Aᴾ Bᴵ}
     {W : World Δᴾ Δᴵ Δᶜ}
