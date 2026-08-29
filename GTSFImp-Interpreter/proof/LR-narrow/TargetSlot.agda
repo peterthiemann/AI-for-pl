@@ -8,14 +8,16 @@ module proof.LR-narrow.TargetSlot where
 --   * Supplies the scoped target-slot infrastructure for pending-bind proofs.
 
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; cong₂; sym; trans)
+  using (_≡_; cong; cong₂; sym; trans)
 
 open import Types
-open import Conversion using (replaceTy)
+open import CastTerms using (Term; _↑_)
+open import Conversion using (replaceTy; 〖_,_↑_〗)
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import proof.LR-narrow.RevealLifting using
-  (liftImpreciseTy-replace)
+  (liftImpreciseTy-replace; liftImpreciseTerm-reveal)
+open import proof.LR-narrow.TypeRenamingComposition using (pack↑; apply↑)
 
 record TargetEntryLift {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -106,3 +108,20 @@ target-replace-imprecise-lift t W≼W′ B =
     (target-slot-imprecise-rep-lift t W≼W′))
     (sym (liftImpreciseTy-replace W≼W′
       (tslotXᴵ t) (tslotRᴵ t) B))
+
+lifted-target-reveal : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (t : TargetSlot W) (W≼W′ : Future W W′) (V : Term Δᴵ) (B : Ty Δᴵ)
+  → liftImpreciseTerm W≼W′ (V ↑ 〖 tslotXᴵ t , tslotRᴵ t ↑ B 〗)
+    ≡ liftImpreciseTerm W≼W′ V
+        ↑ 〖 tslotXᴵ (target-slot-future t W≼W′)
+            , tslotRᴵ (target-slot-future t W≼W′)
+            ↑ liftImpreciseTy W≼W′ B 〗
+lifted-target-reveal t W≼W′ V B =
+  trans (liftImpreciseTerm-reveal W≼W′ V
+      (tslotXᴵ t) (tslotRᴵ t) B)
+    (cong (apply↑ (liftImpreciseTerm W≼W′ V))
+      (cong₂ (λ X R → pack↑
+          〖 X , R ↑ liftImpreciseTy W≼W′ B 〗)
+        (sym (target-slot-imprecise-variable-lift t W≼W′))
+        (sym (target-slot-imprecise-rep-lift t W≼W′))))

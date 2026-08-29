@@ -11,12 +11,18 @@ open import Relation.Binary.PropositionalEquality
   using (_≡_; cong; refl; subst; sym; trans)
 
 open import Types
-open import Conversion using (replaceTy)
+open import CastTerms using (Term; _↑_)
+open import Conversion using (replaceTy; 〖_,_↑_〗)
+open import Consistency using (toRenameᵗ)
 import Imprecision as I
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import LR-narrow.PendingTarget
-open import proof.LR-narrow.RevealLifting using (shift-replace)
+open import LR-narrow.Computation using (IndexedValueRelation)
+open import LR-narrow.LogicalRelation using (ValueImprecisionᵏ)
+open import proof.ImprecisionConsistency using (toRenameᵗ-injective)
+open import proof.LR-narrow.RevealLifting using
+  (renameᵗ-replaceTy; shift-replace)
 open import proof.LR-narrow.TargetSlot
 
 liftCenterTy-replace : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -100,6 +106,46 @@ target-transparent-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {W = W} {W′ = W′}
       (sym (cong (targetNormalize W′ (target-slot-future t W≼W′))
         (embedImprecise-lift W≼W′ Aᴵ)))
       (target-transparent-center-future t W≼W′ p))
+
+target-normalize-embedding : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (t : TargetSlot W) (B : Ty Δᴵ)
+  → targetNormalize W t (embedImprecise (core W) B)
+    ≡ embedImprecise (core W)
+        (replaceTy (tslotXᴵ t) (tslotRᴵ t) B)
+target-normalize-embedding W t B =
+  trans (cong (λ Z → replaceTy Z
+      (embedImprecise (core W) (tslotRᴵ t))
+      (embedImprecise (core W) B))
+      (sym (targetImpreciseAligned (tatom t))))
+    (sym (renameᵗ-replaceTy
+      (toRenameᵗ (impreciseEmbedding (core W)))
+      (toRenameᵗ-injective (impreciseEmbedding (core W)))
+      (tslotXᴵ t) (tslotRᴵ t) B))
+
+target-transparent-derivation : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
+    {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
+  → TargetTransparent W t Aᴾ Aᴵ
+  → impEnv (core W) I.⊢ embedPrecise (core W) Aᴾ
+      ⊑ embedImprecise (core W)
+          (replaceTy (tslotXᴵ t) (tslotRᴵ t) Aᴵ)
+target-transparent-derivation {W = W} t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p =
+  subst (λ R → impEnv (core W) I.⊢ embedPrecise (core W) Aᴾ ⊑ R)
+    (target-normalize-embedding W t Aᴵ) p
+
+PendingTargetValueRelation : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
+    {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
+  → TargetTransparent W t Aᴾ Aᴵ
+  → IndexedValueRelation W
+PendingTargetValueRelation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p W′ W≼W′ k Vᴵ Vᴾ =
+  ValueImprecisionᵏ k W′
+    (liftCenterImprecision W≼W′
+      (target-transparent-derivation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p))
+    (Vᴵ ↑ 〖 tslotXᴵ (target-slot-future t W≼W′) ,
+      tslotRᴵ (target-slot-future t W≼W′)
+      ↑ liftImpreciseTy W≼W′ Aᴵ 〗)
+    Vᴾ
 
 fresh-target-variable-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
     {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}

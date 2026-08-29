@@ -572,6 +572,153 @@ related-precise-bind-step-expand {W = W} {Rᴾ = Rᴾ} {r★ = r★}
       Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ
 
 ------------------------------------------------------------------------
+-- An imprecise-only allocation step
+------------------------------------------------------------------------
+
+imprecise-step : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (Rᴵ : Ty Δᴵ)
+  → Future W (impreciseBindWorld W Rᴵ)
+imprecise-step W Rᴵ = future-imprecise (future-refl {W = W})
+
+paired-returns-imprecise-bind-step : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {Rᴵ : Ty Δᴵ}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Mᴵ : Term Δᴵ} {Nᴵ : Term (suc Δᴵ)}
+    {Mᴾ : Term Δᴾ} {stepᴵ : Mᴵ —→[ bind Rᴵ ] Nᴵ}
+    {resultᴵ : E.EvalResult Nᴵ} {resultᴾ : E.EvalResult Mᴾ}
+    {k : ℕ}
+  → PairedReturns (impreciseBindWorld W Rᴵ)
+      (FutureValueRelation
+        (liftCenterImprecision (imprecise-step W Rᴵ) p))
+      k resultᴵ resultᴾ
+  → PairedReturns W
+      (PostBindValueRelation (imprecise-step W Rᴵ) p) k
+      (prepend-result stepᴵ resultᴵ) resultᴾ
+paired-returns-imprecise-bind-step {W = W} {Rᴵ = Rᴵ}
+    {stepᴵ = stepᴵ} {resultᴵ = resultᴵ} {resultᴾ = resultᴾ}
+    (paired-returns W′ bound≼W′ storeᴵ storeᴾ termsᴵ termsᴾ related) =
+  paired-returns W′ W≼W′ storeᴵ storeᴾ termsᴵ′ termsᴾ′
+    (bound≼W′ , refl , final-related)
+  where
+  step = imprecise-step W Rᴵ
+  W≼W′ = future-trans step bound≼W′
+
+  termsᴵ′ : ∀ M
+    → E.changes (prepend-result stepᴵ resultᴵ) ▶ᵀ M
+      ≡ liftImpreciseTerm W≼W′ M
+  termsᴵ′ M = trans (termsᴵ (⇑ᵗᵐ M))
+    (sym (liftImpreciseTerm-trans step bound≼W′ M))
+
+  termsᴾ′ : ∀ M
+    → E.changes resultᴾ ▶ᵀ M ≡ liftPreciseTerm W≼W′ M
+  termsᴾ′ M = trans (termsᴾ M)
+    (sym (liftPreciseTerm-trans step bound≼W′ M))
+
+  final-related = ClosureProof.value-imprecision-reindex
+    (liftCenterImprecision W≼W′ _)
+    (liftCenterImprecision bound≼W′
+      (liftCenterImprecision step _))
+    (liftCenterTy-trans step bound≼W′ _)
+    (liftCenterTy-trans step bound≼W′ _) related
+
+related-imprecise-bind-step-expand : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {Rᴵ : Ty Δᴵ}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ} {k : ℕ}
+    {Mᴵ : Term Δᴵ} {Nᴵ : Term (suc Δᴵ)} {Mᴾ : Term Δᴾ}
+  → Mᴵ ≢ blame
+  → E.value? Mᴵ ≡ nothing
+  → (stepᴵ : Mᴵ —→[ bind Rᴵ ] Nᴵ)
+  → E.step? (impreciseStore (core W)) Mᴵ ≡
+      just (E.step-result (bind Rᴵ) Nᴵ stepᴵ)
+  → ComputationsRelated (impreciseBindWorld W Rᴵ)
+      (FutureValueRelation
+        (liftCenterImprecision (imprecise-step W Rᴵ) p)) k
+      Nᴵ Mᴾ
+  → ComputationsRelated W
+      (PostBindValueRelation (imprecise-step W Rᴵ) p) k Mᴵ Mᴾ
+related-imprecise-bind-step-expand {W = W} {Rᴵ = Rᴵ}
+    {p = p} {k = k} {Mᴵ = Mᴵ} {Nᴵ = Nᴵ} {Mᴾ = Mᴾ}
+    Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ related = record
+  { forward-return = forward
+  ; backward-return = backward
+  ; forward-blame = blame-forward
+  }
+  where
+  forward : ∀ {n} {resultᴵ : E.EvalResult Mᴵ}
+    → n < k
+    → interpretFrom (impreciseStore (core W)) n Mᴵ ≡ returned resultᴵ
+    → (Σ[ m ∈ ℕ ] Σ[ resultᴾ ∈ E.EvalResult Mᴾ ]
+          interpretFrom (preciseStore (core W)) m Mᴾ
+            ≡ returned resultᴾ
+          × PairedReturns W
+              (PostBindValueRelation (imprecise-step W Rᴵ) p)
+              (k ∸ n) resultᴵ resultᴾ)
+       ⊎ (Σ[ m ∈ ℕ ]
+          BlamesFrom (preciseStore (core W)) m Mᴾ)
+  forward {n = zero} n<k returnᴵ
+      with step-return-invert {Σ = impreciseStore (core W)}
+        {n = zero} {M = Mᴵ} {N = Nᴵ}
+        Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ returnᴵ
+  forward {n = zero} n<k returnᴵ | ()
+  forward {n = suc n} sn<k returnᴵ
+      with step-return-invert {Σ = impreciseStore (core W)}
+        {n = suc n} {M = Mᴵ} {N = Nᴵ}
+        Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ returnᴵ
+  forward {n = suc n} sn<k returnᴵ
+      | step-return resultᴵ′ returnᴵ′ resultᴵ-eq
+      with forward-return related
+        (≤-trans (n≤1+n (suc n)) sn<k) returnᴵ′
+  forward {n = suc n} sn<k returnᴵ
+      | step-return resultᴵ′ returnᴵ′ resultᴵ-eq
+      | inj₁ (m , resultᴾ , returnᴾ , paired) =
+    inj₁ (m , resultᴾ , returnᴾ ,
+      paired-returns-reindex resultᴵ-eq refl
+        (paired-returns-imprecise-bind-step
+          (paired-returns-downward
+            (∸-monoʳ-≤ k (n≤1+n n)) paired)))
+  forward {n = suc n} sn<k returnᴵ
+      | step-return resultᴵ′ returnᴵ′ resultᴵ-eq
+      | inj₂ (m , blameᴾ) = inj₂ (m , blameᴾ)
+
+  backward : ∀ {n} {resultᴾ : E.EvalResult Mᴾ}
+    → n < k
+    → interpretFrom (preciseStore (core W)) n Mᴾ ≡ returned resultᴾ
+    → Σ[ m ∈ ℕ ] Σ[ resultᴵ ∈ E.EvalResult Mᴵ ]
+        interpretFrom (impreciseStore (core W)) m Mᴵ
+          ≡ returned resultᴵ
+        × PairedReturns W
+            (PostBindValueRelation (imprecise-step W Rᴵ) p)
+            (k ∸ n) resultᴵ resultᴾ
+  backward {n = n} n<k returnᴾ
+      with backward-return related n<k returnᴾ
+  backward {n = n} n<k returnᴾ
+      | m , resultᴵ , returnᴵ , paired =
+    suc m , prepend-result stepᴵ resultᴵ ,
+    step-return-expand {Σ = impreciseStore (core W)}
+      Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ returnᴵ ,
+    paired-returns-imprecise-bind-step paired
+
+  blame-forward : ∀ {n}
+    → n < k
+    → BlamesFrom (impreciseStore (core W)) n Mᴵ
+    → Σ[ m ∈ ℕ ] BlamesFrom (preciseStore (core W)) m Mᴾ
+  blame-forward {n = zero} n<k blameᴵ
+      with step-blame-invert {Σ = impreciseStore (core W)}
+        {n = zero} {M = Mᴵ} {N = Nᴵ}
+        Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ blameᴵ
+  blame-forward {n = zero} n<k blameᴵ | ()
+  blame-forward {n = suc n} sn<k blameᴵ
+      with step-blame-invert {Σ = impreciseStore (core W)}
+        {n = suc n} {M = Mᴵ} {N = Nᴵ}
+        Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ blameᴵ
+  blame-forward {n = suc n} sn<k blameᴵ
+      | step-blame contract-blameᴵ =
+    forward-blame related (≤-trans (n≤1+n (suc n)) sn<k)
+      contract-blameᴵ
+
+------------------------------------------------------------------------
 -- The alias variant: a precise-only binding of a representative type
 ------------------------------------------------------------------------
 
