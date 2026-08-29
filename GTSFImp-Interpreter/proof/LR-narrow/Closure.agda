@@ -1303,17 +1303,10 @@ alias-holds-lift {W′ = W′} W≼W′ f
     (alias-holds Uᴾ refl related) =
   alias-holds (liftPreciseTerm W≼W′ Uᴾ)
     (trans (liftPreciseTerm-sealed W≼W′ Uᴾ _ _)
-      (trans
-        (cong
-          (λ T′ → liftPreciseTerm W≼W′ Uᴾ
-            ↓ Conversion.seal
-                (liftPreciseVariable W≼W′ (aliasPreciseVariable a))
-                T′)
-          (liftPreciseTy-variable W≼W′ (aliasRepName a)))
-        (sym (cong₂
-          (λ Y n → liftPreciseTerm W≼W′ Uᴾ
-            ↓ Conversion.seal Y (＇ n))
-          eqᴾ repᴾ))))
+      (sym (cong₂
+        (λ Y R → liftPreciseTerm W≼W′ Uᴾ
+          ↓ Conversion.seal Y R)
+        eqᴾ repᴾ)))
     (f related)
 
 alias-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1546,7 +1539,7 @@ imprecise-future : ∀ {Δᴾ Δᴵ Δᶜ}
 imprecise-future W Rᴵ = future-imprecise future-refl
 
 alias-future : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : World Δᴾ Δᴵ Δᶜ) (rep : TyVar Δᴾ)
+    (W : World Δᴾ Δᴵ Δᶜ) (rep : Ty Δᴾ)
   → Future W (aliasBindWorld W rep)
 alias-future W rep = future-alias future-refl
 
@@ -1947,7 +1940,7 @@ value-imprecision-precise W r {p = I.alias {X = X} eq p}
 {-# TERMINATING #-}
 value-imprecision-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
     (W : World Δᴾ Δᴵ Δᶜ)
-    (rep : TyVar Δᴾ)
+    (rep : Ty Δᴾ)
     {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ} {k Vᴵ Vᴾ}
   → ValueImprecision W p k Vᴵ Vᴾ
   → ValueImprecision (aliasBindWorld W rep)

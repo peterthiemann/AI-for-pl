@@ -182,7 +182,7 @@ liftPreciseContext-precise W≼W′ (A ∷ Γ) =
 liftPreciseContext-alias : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ : TyCtx}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-    {rep : TyVar Δᴾ′}
+    {rep : Ty Δᴾ′}
     (W≼W′ : Future W W′) (Γ : TermCtx Δᴾ)
   → liftPreciseContext (future-alias {rep = rep} W≼W′) Γ ≡
       T.⇑ᶜ (liftPreciseContext W≼W′ Γ)
@@ -228,7 +228,7 @@ liftImpreciseContext-precise W≼W′ (A ∷ Γ) =
 liftImpreciseContext-alias : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ : TyCtx}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
-    {rep : TyVar Δᴾ′}
+    {rep : Ty Δᴾ′}
     (W≼W′ : Future W W′) (Γ : TermCtx Δᴵ)
   → liftImpreciseContext (future-alias {rep = rep} W≼W′) Γ ≡
       liftImpreciseContext W≼W′ Γ

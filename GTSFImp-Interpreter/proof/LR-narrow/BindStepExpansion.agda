@@ -572,26 +572,26 @@ related-precise-bind-step-expand {W = W} {Rᴾ = Rᴾ} {r★ = r★}
       Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ
 
 ------------------------------------------------------------------------
--- The alias variant: a precise-only re-binding of an existing name
+-- The alias variant: a precise-only binding of a representative type
 ------------------------------------------------------------------------
 
--- An alias bind allocates a precise slot holding the representative
--- variable and needs no imprecision premise: the fresh center is
--- alias-mode and unfolds to the representative's embedding.
+-- An alias bind allocates a precise slot holding the representative type and
+-- needs no imprecision premise: the fresh center is alias-mode and unfolds to
+-- the representative's embedding.
 
 alias-step : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : World Δᴾ Δᴵ Δᶜ) (rep : TyVar Δᴾ)
+    (W : World Δᴾ Δᴵ Δᶜ) (rep : Ty Δᴾ)
   → Future W (aliasBindWorld W rep)
 alias-step W rep = future-alias (future-refl {W = W})
 
 paired-returns-alias-bind-step : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
-    {rep : TyVar Δᴾ}
+    {rep : Ty Δᴾ}
     {Aᴾ Aᴵ : Ty Δᶜ}
     {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ}
     {Mᴵ : Term Δᴵ}
     {Mᴾ : Term Δᴾ} {Nᴾ : Term (suc Δᴾ)}
-    {stepᴾ : Mᴾ —→[ bind (＇ rep) ] Nᴾ}
+    {stepᴾ : Mᴾ —→[ bind rep ] Nᴾ}
     {resultᴵ : E.EvalResult Mᴵ} {resultᴾ : E.EvalResult Nᴾ}
     {k : ℕ}
   → PairedReturns (aliasBindWorld W rep)
@@ -629,16 +629,16 @@ paired-returns-alias-bind-step {W = W} {rep = rep}
 
 related-alias-bind-step-expand : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
-    {rep : TyVar Δᴾ}
+    {rep : Ty Δᴾ}
     {Aᴾ Aᴵ : Ty Δᶜ}
     {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ} {k : ℕ}
     {Mᴵ : Term Δᴵ}
     {Mᴾ : Term Δᴾ} {Nᴾ : Term (suc Δᴾ)}
   → Mᴾ ≢ blame
   → E.value? Mᴾ ≡ nothing
-  → (stepᴾ : Mᴾ —→[ bind (＇ rep) ] Nᴾ)
+  → (stepᴾ : Mᴾ —→[ bind rep ] Nᴾ)
   → E.step? (preciseStore (core W)) Mᴾ ≡
-      just (E.step-result (bind (＇ rep)) Nᴾ stepᴾ)
+      just (E.step-result (bind rep) Nᴾ stepᴾ)
   → ComputationsRelated (aliasBindWorld W rep)
       (FutureValueRelation
         (liftCenterImprecision (alias-step W rep) p)) k
@@ -668,12 +668,12 @@ related-alias-bind-step-expand {W = W} {rep = rep}
       | inj₁ (m , resultᴾ′ , returnᴾ , paired) =
     inj₁ (suc m , prepend-result stepᴾ resultᴾ′ ,
       step-return-expand {Σ = preciseStore (core W)} {gas = m}
-        {M = Mᴾ} {N = Nᴾ} {χ = bind (＇ rep)}
+        {M = Mᴾ} {N = Nᴾ} {χ = bind rep}
         Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ returnᴾ ,
       paired-returns-alias-bind-step {rep = rep} paired)
   forward {n = n} n<k result-eq | inj₂ (m , blameᴾ) =
     inj₂ (suc m , step-blame-expand {Σ = preciseStore (core W)}
-      {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind (＇ rep)}
+      {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind rep}
       Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ)
 
   backward : ∀ {n} {resultᴾ : E.EvalResult Mᴾ}
@@ -708,5 +708,5 @@ related-alias-bind-step-expand {W = W} {rep = rep}
       with forward-blame related n<k blameᴵ
   blame-forward {n = n} n<k blameᴵ | m , blameᴾ =
     suc m , step-blame-expand {Σ = preciseStore (core W)}
-      {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind (＇ rep)}
+      {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind rep}
       Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ

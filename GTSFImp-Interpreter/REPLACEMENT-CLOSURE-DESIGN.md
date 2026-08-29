@@ -1517,3 +1517,20 @@ are themselves `∀`-towers.
    to the generalized imprecise payload.
 3. Then the call-site rewrite of J.4 (ground-level agreement via
    `ground-readings-unique`) and the mechanical record sweep.
+
+### J.6  General alias representatives landed (2026-08-29)
+
+All three items above are now implemented.  The cast proof excludes the
+bottom target, relates expanded imprecise projections, and uses
+`ground-readings-unique` for runtime tag agreement.  Consequently
+`AliasSemanticAtom` now records `aliasRep : Ty Δᴾ`; alias binding, future
+transport, closing substitutions, and operational binding all preserve an
+arbitrary representative type.
+
+The record sweep exposed one additional cast-proof edge.  Chasing an alias
+inside `right-dynamic-ground-tag-value-at` reaches the representative's
+arbitrary source reading, including `∀⊑`, whereas the old helper accepted a
+precise ground source.  The general closure lemma `right-ground-tag-values`
+is derived from the existing `imprecise-cast-values` obligation and
+`related-computation-values`: ground injection is an imprecise-side cast,
+and both endpoints are values.  No new cast obligation is required.

@@ -1624,6 +1624,35 @@ right-dynamic-tag-endpoints {W = W} {Gᴵ = Gᴵ} gᴵ Gᴵ∼★
   imprecise-tag-typed = ⊢⟨⟩ Uᴵ⊢Gᴵ
     (groundInjection gᴵ Gᴵ∼★)
 
+-- Ground-tag closure for an arbitrary precise source is the value-level
+-- specialization of the existing imprecise-cast obligation.  This form is
+-- needed when an alias representative is a compound type, including the
+-- right-universal `∀⊑` reading.
+
+right-ground-tag-values : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᶜ} {Gᴵ : Ty Δᴵ}
+    (gᴵ : Ground Gᴵ) {μᴵ : C.Env∼ Δᴵ}
+    (Gᴵ∼★ : μᴵ C.⊢ Gᴵ ∼★)
+    (p : impEnv (core W) I.⊢ Aᴾ ⊑ embedImprecise (core W) Gᴵ)
+    (q : impEnv (core W) I.⊢ Aᴾ ⊑ ★)
+    {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W p k Vᴵ Vᴾ
+  → ValueImprecision W q k
+      (Vᴵ ⟨ groundInjection gᴵ Gᴵ∼★ ⟩) Vᴾ
+right-ground-tag-values gᴵ Gᴵ∼★ p q {k = zero} related =
+  right-dynamic-tag-endpoints gᴵ Gᴵ∼★ p q {k = zero} related
+right-ground-tag-values {W = W} gᴵ Gᴵ∼★ p q {k = suc k} related =
+  related-computation-values cast-related
+    (imprecise-value tagged-endpoints) (precise-value tagged-endpoints)
+  where
+  endpoints = value-imprecision-endpoints related
+
+  tagged-endpoints = right-dynamic-tag-endpoints gᴵ Gᴵ∼★ p q related
+
+  cast-related = imprecise-cast-values ob p
+    (preciseEmbedded endpoints) refl (groundInjection gᴵ Gᴵ∼★) q
+    (preciseEmbedded endpoints) refl related
+
 right-dynamic-function-tag-value-at : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} (j : ℕ) {A B : Ty Δᶜ}
     (p : impEnv (core W) I.⊢ A ⊑ ★)
@@ -1746,19 +1775,14 @@ right-dynamic-ground-tag-value-at {W = W} (suc j) (＇ X)
   split = ClosureProof.value-imprecision-reindex canonical
     payload-q refl refl related
 
-  chain-step : ∀ (rep : TyVar _)
-    → embedPrecise (core W) (＇ rep) ≡ T
+  chain-step : ∀ (rep : Ty _)
+    → embedPrecise (core W) rep ≡ T
     → ∀ {Uᴾ : Term _}
     → ValueImprecision W w₀ (suc j) Uᴵ Uᴾ
     → ValueImprecision W w (suc j)
         (Uᴵ ⟨ groundInjection gᴵ Gᴵ∼★ ⟩) Uᴾ
   chain-step rep rep-eq {Uᴾ} rel =
-    right-dynamic-ground-tag-value-at (suc j) (＇ rep) gᴵ Gᴵ∼★
-      (reindex-center-imprecision w₀ (sym rep-eq) refl)
-      w rep-eq
-      (ClosureProof.value-imprecision-reindex
-        (reindex-center-imprecision w₀ (sym rep-eq) refl)
-        w₀ rep-eq refl rel)
+    right-ground-tag-values gᴵ Gᴵ∼★ w₀ w rel
 right-dynamic-ground-tag-value-at (suc j) (‵ ι) gᴵ Gᴵ∼★ payload-q
     output-q left-eq related
     with reindex-center-imprecision output-q (sym left-eq) refl

@@ -42,7 +42,7 @@ insert-after-future ins (future-precise {Aᴾ = Aᴾ} W≼W′ r) =
 insert-after-future ins
     (future-alias {W′ = W₁} {rep = rep} W≼W′) =
   shiftLeft-insert
-    (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))) (＇ rep)
+    (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))) rep
     (insert-after-future ins W≼W′)
 insert-after-future ins (future-imprecise {Aᴵ = Aᴵ} W≼W′) =
   shiftRight-insert Aᴵ (insert-after-future ins W≼W′)

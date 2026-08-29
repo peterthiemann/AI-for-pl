@@ -146,12 +146,12 @@ impreciseBindWorld W Aᴵ =
       | .(I.X⊑ᵗ T₀) | refl | .(alias-entry a) | is-alias a
       | refl = is-alias (weaken-alias-atom-imprecise Aᴵ a)
 
--- The alias bind: a precise-only binding at the representative
--- variable whose fresh center is alias-mode.
+-- The alias bind: a precise-only binding at the representative type whose
+-- fresh center is alias-mode.
 
 aliasBindWorld : ∀ {Δᴾ Δᴵ Δᶜ}
   → (W : World Δᴾ Δᴵ Δᶜ)
-  → (rep : TyVar Δᴾ)
+  → (rep : Ty Δᴾ)
   → World (suc Δᴾ) Δᴵ (suc Δᶜ)
 aliasBindWorld W rep =
   world (aliasBindCore (core W) rep) atoms alias-entries
@@ -206,7 +206,7 @@ data Future {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → Future W (impreciseBindWorld W′ Aᴵ)
 
   future-alias : ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
-      {W′ : World Δᴾ′ Δᴵ′ Δᶜ′} {rep : TyVar Δᴾ′}
+      {W′ : World Δᴾ′ Δᴵ′ Δᶜ′} {rep : Ty Δᴾ′}
     → Future W W′
     → Future W (aliasBindWorld W′ rep)
 
@@ -826,7 +826,7 @@ liftCenterImprecision (future-paired W≼W′ related) Aᴾ⊑Aᴵ =
 liftCenterImprecision (future-precise W≼W′ related) Aᴾ⊑Aᴵ =
   shift-⊑ I.X⊑★ (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterImprecision (future-alias {W′ = Wₐ} {rep = rep} W≼W′) Aᴾ⊑Aᴵ =
-  shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core Wₐ) (＇ rep))))
+  shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core Wₐ) rep)))
     (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
 liftCenterImprecision (future-imprecise W≼W′) Aᴾ⊑Aᴵ =
   shift-⊑ I.X⊑★ (liftCenterImprecision W≼W′ Aᴾ⊑Aᴵ)
@@ -1124,7 +1124,7 @@ precise-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
 
 alias-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
-    {rep : TyVar Δᴾ}
+    {rep : Ty Δᴾ}
   → Aᴾ ⊑ᵂ⟨ core W ⟩ Aᴵ
   → ⇑ᵗ Aᴾ ⊑ᵂ⟨ core (aliasBindWorld W rep) ⟩ Aᴵ
 alias-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
@@ -1137,7 +1137,7 @@ alias-local-imprecision {W = W} {Aᴾ = Aᴾ} {Aᴵ = Aᴵ}
       (λ R → impEnv (aliasBindCore (core W) rep) I.⊢
         ⇑ᵗ (embedPrecise (core W) Aᴾ) ⊑ R)
       (sym (renameᵗ-skip-eq (impreciseEmbedding (core W)) Aᴵ))
-      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W) (＇ rep)))) p))
+      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W) rep))) p))
 
 imprecise-local-imprecision : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty Δᴾ} {Aᴵ Bᴵ : Ty Δᴵ}
@@ -1599,8 +1599,7 @@ data EntryLift {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
         (liftCenterVariable W≼W′ Z) T′}
     → aliasPreciseVariable a′
         ≡ liftPreciseVariable W≼W′ (aliasPreciseVariable a)
-    → aliasRepName a′
-        ≡ liftPreciseVariable W≼W′ (aliasRepName a)
+    → aliasRep a′ ≡ liftPreciseTy W≼W′ (aliasRep a)
     → EntryLift W≼W′ (alias-entry a) (alias-entry a′)
 
 -- Extending an entry lift by one further binding.
@@ -1621,7 +1620,7 @@ entry-lift-paired W≼W′ r (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 entry-lift-paired W≼W′ r lift-target = lift-target
 entry-lift-paired W≼W′ r (lift-alias eqᴾ repᴾ) =
-  lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
+  lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 
 entry-lift-precise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1639,12 +1638,12 @@ entry-lift-precise W≼W′ r (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 entry-lift-precise W≼W′ r lift-target = lift-target
 entry-lift-precise W≼W′ r (lift-alias eqᴾ repᴾ) =
-  lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
+  lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 
 entry-lift-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
     (W≼W′ : Future W W′)
-    {rep : TyVar Δᴾ′}
+    {rep : Ty Δᴾ′}
     {Z : TyVar Δᶜ} {mode mode′}
     {e : SemanticEntry (core W) Z mode}
     {e′ : SemanticEntry (core W′) (liftCenterVariable W≼W′ Z) mode′}
@@ -1657,7 +1656,7 @@ entry-lift-aliasbind W≼W′ (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 entry-lift-aliasbind W≼W′ lift-target = lift-target
 entry-lift-aliasbind W≼W′ (lift-alias eqᴾ repᴾ) =
-  lift-alias (cong Fin.suc eqᴾ) (cong Fin.suc repᴾ)
+  lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 
 entry-lift-imprecise : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}

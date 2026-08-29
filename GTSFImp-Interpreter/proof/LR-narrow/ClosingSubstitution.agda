@@ -382,7 +382,7 @@ precise-closing-future
     {Γ = Γ} (future-alias {rep = rep} W≼W′) γ =
   subst≡ (ClosingSubstitution _)
     (sym (liftPreciseContext-alias W≼W′ Γ))
-    (shiftClosingBind {B = ＇ rep}
+    (shiftClosingBind {B = rep}
       (precise-closing-future W≼W′ γ))
 precise-closing-future {Γ = Γ} (future-imprecise W≼W′) γ =
   subst≡ (ClosingSubstitution _)
@@ -454,7 +454,7 @@ precise-closing-future-lookup
   trans
     (lookupClosing-subst
       (sym (liftPreciseContext-alias W≼W′ Γ))
-      (shiftClosingBind {B = ＇ rep}
+      (shiftClosingBind {B = rep}
         (precise-closing-future W≼W′ γ)) x)
     (trans (lookup-shiftClosingBind (precise-closing-future W≼W′ γ) x)
       (cong ⇑ᵗᵐ (precise-closing-future-lookup W≼W′ γ x)))

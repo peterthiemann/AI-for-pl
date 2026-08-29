@@ -154,17 +154,10 @@ record TargetSemanticAtom {Δᴾ Δᴵ Δᶜ}
 
 open TargetSemanticAtom public
 
--- An alias slot is a precise-only allocation whose representative is
--- recorded in the mode: the center variable unfolds to the embedding
--- of the bound representation type.  Unlike the dynamic slot it
--- carries no imprecision derivation — the `alias` rule supplies the
--- premise at each use.  The representative is currently a VARIABLE
--- (the operational alias binds the fresh name of the preceding
--- allocation).  The reveal machinery no longer depends on this (the
--- alias cases route through the one-sided imprecise reveal); the
--- remaining dependency is the ★-projection tag coherence in the
--- cast proof — see Finding J of REPLACEMENT-CLOSURE-DESIGN.md
--- before generalizing the representative to a type.
+-- An alias slot is a precise-only allocation whose representative type is
+-- recorded in the mode: the center variable unfolds to the embedding of the
+-- bound representation type.  Unlike the dynamic slot it carries no
+-- imprecision derivation -- the `alias` rule supplies the premise at each use.
 
 record AliasSemanticAtom {Δᴾ Δᴵ Δᶜ}
     (W : CoreWorld Δᴾ Δᴵ Δᶜ) (Z : TyVar Δᶜ) (T : Ty Δᶜ) : Set where
@@ -176,11 +169,11 @@ record AliasSemanticAtom {Δᴾ Δᴵ Δᶜ}
     aliasNoTargetOccupant :
       (Σ[ Y ∈ TyVar Δᴵ ]
         toRenameᵗ (impreciseEmbedding W) Y ≡ Z) → ⊥
-    aliasRepName : TyVar Δᴾ
-    aliasRep-eq : embedPrecise W (＇ aliasRepName) ≡ T
+    aliasRep : Ty Δᴾ
+    aliasRep-eq : embedPrecise W aliasRep ≡ T
     aliasFresh : ∀ {Y : TyVar Δᶜ} → Y ∈ᵗ T → Z Fin.< Y
     aliasBound :
-      preciseStore W ∋ aliasPreciseVariable ⦂ ＇ aliasRepName
+      preciseStore W ∋ aliasPreciseVariable ⦂ aliasRep
 
 open AliasSemanticAtom public
 
@@ -255,7 +248,7 @@ record AliasHolds {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
     aliasSealed : Term Δᴾ
     alias-sealed-shape :
       Vᴾ ≡ aliasSealed
-        ↓ seal (aliasPreciseVariable a) (＇ aliasRepName a)
+        ↓ seal (aliasPreciseVariable a) (aliasRep a)
     alias-payload-related : ℛ p Vᴵ aliasSealed
 
 open AliasHolds public
@@ -672,9 +665,9 @@ weaken-alias-atom {W = W} {Z = Z} {T = T} Aᴾ Aᴵ a =
   alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (Fin.suc (aliasRepName a))
+    (⇑ᵗ (aliasRep a))
     (trans
-      (embedPrecise-paired-shift W Aᴾ Aᴵ (＇ aliasRepName a))
+      (embedPrecise-paired-shift W Aᴾ Aᴵ (aliasRep a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (S-bind∋ (aliasBound a) refl)
@@ -700,8 +693,8 @@ weaken-alias-atom-precise {W = W} {Z = Z} {T = T} Aᴾ a =
   alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (Fin.suc (aliasRepName a))
-    (trans (embedPrecise-precise-shift W Aᴾ (＇ aliasRepName a))
+    (⇑ᵗ (aliasRep a))
+    (trans (embedPrecise-precise-shift W Aᴾ (aliasRep a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (S-bind∋ (aliasBound a) refl)
@@ -726,9 +719,9 @@ weaken-alias-atom-imprecise {W = W} {Z = Z} {T = T} Aᴵ a =
   alias-semantic-atom (aliasPreciseVariable a)
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (aliasRepName a)
+    (aliasRep a)
     (trans
-      (embedPrecise-imprecise-shift W Aᴵ (＇ aliasRepName a))
+      (embedPrecise-imprecise-shift W Aᴵ (aliasRep a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (aliasBound a)
@@ -792,7 +785,7 @@ weaken-entry-imprecise Aᴵ (alias-entry a) =
 -- the embeddings agree definitionally.
 
 embedPrecise-alias-shift : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (rep : TyVar Δᴾ) (R : Ty Δᴾ)
+    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (rep : Ty Δᴾ) (R : Ty Δᴾ)
   → embedPrecise (aliasBindCore W rep) (⇑ᵗ R)
       ≡ ⇑ᵗ (embedPrecise W R)
 embedPrecise-alias-shift W rep R =
@@ -800,7 +793,7 @@ embedPrecise-alias-shift W rep R =
     (sym (renameᵗ-comp (toRenameᵗ (preciseEmbedding W)) Fin.suc R))
 
 embedImprecise-alias-shift : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (rep : TyVar Δᴾ) (R : Ty Δᴵ)
+    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (rep : Ty Δᴾ) (R : Ty Δᴵ)
   → embedImprecise (aliasBindCore W rep) R
       ≡ ⇑ᵗ (embedImprecise W R)
 embedImprecise-alias-shift W rep R =
@@ -808,7 +801,7 @@ embedImprecise-alias-shift W rep R =
 
 weaken-semantic-atom-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
-  → (rep : TyVar Δᴾ)
+  → (rep : Ty Δᴾ)
   → SemanticAtom W Z
   → SemanticAtom (aliasBindCore W rep) (Fin.suc Z)
 weaken-semantic-atom-aliasbind {W = W} rep a =
@@ -818,13 +811,13 @@ weaken-semantic-atom-aliasbind {W = W} rep a =
     (⇑ᵗ (preciseRep a)) (impreciseRep a)
     (transport-⊑ (embedPrecise-alias-shift W rep (preciseRep a))
       (embedImprecise-alias-shift W rep (impreciseRep a))
-      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise W (＇ rep)))) (rep-related a)))
+      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise W rep))) (rep-related a)))
     (S-bind∋ (preciseBound a) refl)
     (impreciseBound a)
 
 weaken-dynamic-atom-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
-  → (rep : TyVar Δᴾ)
+  → (rep : Ty Δᴾ)
   → DynamicSemanticAtom W Z
   → DynamicSemanticAtom (aliasBindCore W rep) (Fin.suc Z)
 weaken-dynamic-atom-aliasbind {W = W} {Z = Z} rep a =
@@ -833,7 +826,8 @@ weaken-dynamic-atom-aliasbind {W = W} {Z = Z} rep a =
     no-target
     (⇑ᵗ (dynamicRep a))
     (transport-⊑ (embedPrecise-alias-shift W rep (dynamicRep a)) refl
-      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise W (＇ rep)))) (dynamicRep-related a)))
+      (shift-⊑ (I.X⊑ᵗ (⇑ᵗ (embedPrecise W rep)))
+        (dynamicRep-related a)))
     fresh
     (S-bind∋ (dynamicBound a) refl)
   where
@@ -855,7 +849,7 @@ weaken-dynamic-atom-aliasbind {W = W} {Z = Z} rep a =
 
 weaken-target-atom-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
-  → (rep : TyVar Δᴾ)
+  → (rep : Ty Δᴾ)
   → TargetSemanticAtom W Z
   → TargetSemanticAtom (aliasBindCore W rep) (Fin.suc Z)
 weaken-target-atom-aliasbind {W = W} {Z = Z} rep a =
@@ -873,15 +867,15 @@ weaken-target-atom-aliasbind {W = W} {Z = Z} rep a =
 
 weaken-alias-atom-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z} {T : Ty Δᶜ}
-  → (rep : TyVar Δᴾ)
+  → (rep : Ty Δᴾ)
   → AliasSemanticAtom W Z T
   → AliasSemanticAtom (aliasBindCore W rep) (Fin.suc Z) (⇑ᵗ T)
 weaken-alias-atom-aliasbind {W = W} {Z = Z} {T = T} rep a =
   alias-semantic-atom (Fin.suc (aliasPreciseVariable a))
     (cong Fin.suc (aliasPreciseAligned a))
     no-target
-    (Fin.suc (aliasRepName a))
-    (trans (embedPrecise-alias-shift W rep (＇ aliasRepName a))
+    (⇑ᵗ (aliasRep a))
+    (trans (embedPrecise-alias-shift W rep (aliasRep a))
       (cong ⇑ᵗ (aliasRep-eq a)))
     fresh
     (S-bind∋ (aliasBound a) refl)
@@ -899,7 +893,7 @@ weaken-alias-atom-aliasbind {W = W} {Z = Z} {T = T} rep a =
 
 weaken-entry-aliasbind : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z}
-  → (rep : TyVar Δᴾ)
+  → (rep : Ty Δᴾ)
   → SemanticEntry W Z mode
   → SemanticEntry (aliasBindCore W rep) (Fin.suc Z) (I.⇑ᵛ mode)
 weaken-entry-aliasbind rep (paired-entry a) =
@@ -911,21 +905,26 @@ weaken-entry-aliasbind rep (target-entry a) =
 weaken-entry-aliasbind rep (alias-entry a) =
   alias-entry (weaken-alias-atom-aliasbind rep a)
 
--- The fresh alias slot at the alias bind: the bound variable is the
--- representative's alias, so the recorded representative embedding
--- holds by computation.
+-- The fresh alias slot at the alias bind records the shifted representative,
+-- whose embedding equation holds by computation.
 
 fresh-alias-semantic-atom : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (rep : TyVar Δᴾ)
+    (W : CoreWorld Δᴾ Δᴵ Δᶜ) (rep : Ty Δᴾ)
   → AliasSemanticAtom (aliasBindCore W rep) Fin.zero
-      (⇑ᵗ (embedPrecise W (＇ rep)))
-fresh-alias-semantic-atom W rep =
+      (⇑ᵗ (embedPrecise W rep))
+fresh-alias-semantic-atom {Δᶜ = Δᶜ} W rep =
   alias-semantic-atom Fin.zero refl
     (λ { (Y , ()) })
-    (Fin.suc rep)
-    refl
-    (λ { {Fin.zero} () ; {Fin.suc Y} _ → s≤s z≤n })
+    (⇑ᵗ rep)
+    (embedPrecise-alias-shift W rep rep)
+    fresh
     (Z∋ refl)
+  where
+  fresh : ∀ {Y : TyVar (suc Δᶜ)}
+    → Y ∈ᵗ ⇑ᵗ (embedPrecise W rep)
+    → (Fin.zero {n = Δᶜ}) Fin.< Y
+  fresh occurs with shift-∈ᵗ-inversion (embedPrecise W rep) occurs
+  fresh occurs | Y′ , refl , occurs′ = s≤s z≤n
 
 -- An entry classified by an alias mode.
 

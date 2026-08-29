@@ -46,8 +46,8 @@ alias-no-imprecise-target W {Z = Z} eq tgt≡ | Y , _ , ρY≡ =
   aliasNoTargetOccupant (world-alias-atom W Z eq) (Y , ρY≡)
 
 -- Rebuilding an inhabited alias slot at another premise: the seal
--- is kept and the payload is mapped, with the representative's
--- precise name and embedding equation available to the map.
+-- is kept and the payload is mapped, with the representative type and
+-- embedding equation available to the map.
 
 alias-holds-chain : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {W : CoreWorld Δᴾ Δᴵ Δᶜ} {Z : TyVar Δᶜ} {T B B′ : Ty Δᶜ}
@@ -55,8 +55,8 @@ alias-holds-chain : ∀ {Δᴾ Δᴵ Δᶜ mode}
     {p : impEnv W I.⊢ T ⊑ B} {p′ : impEnv W I.⊢ T ⊑ B′}
     {Vᴵ Vᴵ′ : Term Δᴵ} {Vᴾ : Term Δᴾ}
     (entry : SemanticEntry W Z mode) (eq : mode ≡ I.X⊑ᵗ T)
-  → (∀ (rep : TyVar Δᴾ)
-      → embedPrecise W (＇ rep) ≡ T
+  → (∀ (rep : Ty Δᴾ)
+      → embedPrecise W rep ≡ T
       → ∀ {Uᴾ : Term Δᴾ} → ℛ p Vᴵ Uᴾ → ℛ′ p′ Vᴵ′ Uᴾ)
   → AliasAtomHolds ℛ entry eq p Vᴵ Vᴾ
   → AliasAtomHolds ℛ′ entry eq p′ Vᴵ′ Vᴾ
@@ -65,7 +65,7 @@ alias-holds-chain (dynamic-entry a) () f holds
 alias-holds-chain (target-entry a) () f holds
 alias-holds-chain (alias-entry a) refl f
     (alias-holds Uᴾ shape rel) =
-  alias-holds Uᴾ shape (f (aliasRepName a) (aliasRep-eq a) rel)
+  alias-holds Uᴾ shape (f (aliasRep a) (aliasRep-eq a) rel)
 
 -- An alias-mode center's entry is an alias entry, so the paired
 -- slot predicate cannot hold there.

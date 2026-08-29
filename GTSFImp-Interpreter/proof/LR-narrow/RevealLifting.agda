@@ -392,13 +392,13 @@ alias-avoid-lift-center (future-alias {W′ = W₁} {rep = rep} W≼W′)
     c p avoid =
   alias-avoid-rename
     {μ′ = I.extendᵐ
-      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep)))
       (impEnv (core W₁))} Fin.suc
     fin-suc-injective
     (shift-star-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))})
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))})
     (shift-alias-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))})
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))})
     (liftCenterImprecision W≼W′ p)
     (alias-avoid-lift-center W≼W′ c p avoid)
 alias-avoid-lift-center (future-imprecise {W′ = W₁} W≼W′) c p avoid =
@@ -435,13 +435,13 @@ alias-avoid-lift-body (future-alias {W′ = W₁} {rep = rep} W≼W′)
     c p avoid =
   alias-avoid-rename
     {μ′ = I.extᵐ (I.extendᵐ
-      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep)))
       (impEnv (core W₁)))}
     (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-ext Fin.suc (shift-star-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (rename-alias-map-ext Fin.suc (shift-alias-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (liftCenterBodyImprecision W≼W′ p)
     (alias-avoid-lift-body W≼W′ c p avoid)
 alias-avoid-lift-body (future-imprecise {W′ = W₁} W≼W′) c p avoid =
@@ -481,13 +481,13 @@ alias-avoid-lift-dynamic-body (future-alias {W′ = W₁} {rep = rep} W≼W′)
     c p avoid =
   alias-avoid-rename
     {μ′ = I.instᵐ (I.extendᵐ
-      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep)))
       (impEnv (core W₁)))}
     (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-inst Fin.suc (shift-star-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (rename-alias-map-inst Fin.suc (shift-alias-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (liftCenterDynamicBodyImprecision W≼W′ p)
     (alias-avoid-lift-dynamic-body W≼W′ c p avoid)
 alias-avoid-lift-dynamic-body (future-imprecise {W′ = W₁} W≼W′)
@@ -528,13 +528,13 @@ alias-avoid★-lift-center (future-alias {W′ = W₁} {rep = rep} W≼W′)
     c p avoid =
   alias-avoid★-rename
     {μ′ = I.extendᵐ
-      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep)))
       (impEnv (core W₁))} Fin.suc
     fin-suc-injective
     (shift-star-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))})
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))})
     (shift-alias-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))})
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))})
     (liftCenterImprecision W≼W′ p)
     (alias-avoid★-lift-center W≼W′ c p avoid)
 alias-avoid★-lift-center (future-imprecise {W′ = W₁} W≼W′) c p avoid =
@@ -571,13 +571,13 @@ alias-avoid★-lift-body (future-alias {W′ = W₁} {rep = rep} W≼W′)
     c p avoid =
   alias-avoid★-rename
     {μ′ = I.extᵐ (I.extendᵐ
-      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep)))
       (impEnv (core W₁)))}
     (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-ext Fin.suc (shift-star-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (rename-alias-map-ext Fin.suc (shift-alias-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (liftCenterBodyImprecision W≼W′ p)
     (alias-avoid★-lift-body W≼W′ c p avoid)
 alias-avoid★-lift-body (future-imprecise {W′ = W₁} W≼W′) c p avoid =
@@ -618,13 +618,13 @@ alias-avoid★-lift-dynamic-body
     c p avoid =
   alias-avoid★-rename
     {μ′ = I.instᵐ (I.extendᵐ
-      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep))))
+      (I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep)))
       (impEnv (core W₁)))}
     (extᵗ Fin.suc) (ext-injective fin-suc-injective)
     (rename-star-map-inst Fin.suc (shift-star-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (rename-alias-map-inst Fin.suc (shift-alias-map
-      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) (＇ rep)))}))
+      {v = I.X⊑ᵗ (⇑ᵗ (embedPrecise (core W₁) rep))}))
     (liftCenterDynamicBodyImprecision W≼W′ p)
     (alias-avoid★-lift-dynamic-body W≼W′ c p avoid)
 alias-avoid★-lift-dynamic-body (future-imprecise {W′ = W₁} W≼W′)
