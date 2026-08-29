@@ -699,6 +699,48 @@ snocUniWrapᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
   → UniWrapsᵇ W B C B″ C″
 snocUniWrapᵇ σ w = appendUniWrapsᵇ σ (w ∷ [])
 
+-- The operational cascade consumes wrappers from the outside.  This view
+-- exposes the final wrapper of an innermost-first sequence while preserving
+-- all four body indices.
+
+data UniWrapsSnocᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
+    Ty (suc Δᴾ) → Ty (suc Δᴵ) → Ty (suc Δᴾ) → Ty (suc Δᴵ)
+    → Set where
+  emptyᵇ : ∀ {B C} → UniWrapsSnocᵇ W B C B C
+  snocᵇ : ∀ {B C B′ C′ B″ C″}
+    → UniWrapsᵇ W B C B′ C′
+    → UniWrapᵇ W B′ C′ B″ C″
+    → UniWrapsSnocᵇ W B C B″ C″
+
+data NonemptyUniWrapsSnocᵇ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) :
+    Ty (suc Δᴾ) → Ty (suc Δᴵ) → Ty (suc Δᴾ) → Ty (suc Δᴵ)
+    → Set where
+  nonempty-snocᵇ : ∀ {B C B′ C′ B″ C″}
+    → UniWrapsᵇ W B C B′ C′
+    → UniWrapᵇ W B′ C′ B″ C″
+    → NonemptyUniWrapsSnocᵇ W B C B″ C″
+
+viewNonemptyUniWrapsSnocᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B C B′ C′ B″ C″}
+  → (w : UniWrapᵇ W B C B′ C′)
+  → (σ : UniWrapsᵇ W B′ C′ B″ C″)
+  → NonemptyUniWrapsSnocᵇ W B C B″ C″
+viewNonemptyUniWrapsSnocᵇ w [] = nonempty-snocᵇ [] w
+viewNonemptyUniWrapsSnocᵇ w (w′ ∷ σ)
+    with viewNonemptyUniWrapsSnocᵇ w′ σ
+viewNonemptyUniWrapsSnocᵇ w (w′ ∷ σ)
+    | nonempty-snocᵇ τ outer = nonempty-snocᵇ (w ∷ τ) outer
+
+viewUniWrapsSnocᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B C B′ C′}
+  → (σ : UniWrapsᵇ W B C B′ C′)
+  → UniWrapsSnocᵇ W B C B′ C′
+viewUniWrapsSnocᵇ [] = emptyᵇ
+viewUniWrapsSnocᵇ (w ∷ σ) with viewNonemptyUniWrapsSnocᵇ w σ
+viewUniWrapsSnocᵇ (w ∷ σ) | nonempty-snocᵇ τ outer =
+  snocᵇ τ outer
+
 ------------------------------------------------------------------------
 -- Imprecise-only universal peels
 ------------------------------------------------------------------------
