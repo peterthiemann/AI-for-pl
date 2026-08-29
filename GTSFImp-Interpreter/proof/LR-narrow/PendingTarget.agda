@@ -18,9 +18,11 @@ open import LR-narrow.World
 open import LR-narrow.SlotSequence
 open import LR-narrow.PendingTarget
 open import LR-narrow.LogicalRelation
-open import proof.LR-narrow.ReplaceImprecision using (replace-zero-open)
+open import proof.LR-narrow.ReplaceImprecision using
+  (replace-zero-open; open-shifted-body)
 open import proof.LR-narrow.TargetSlot using
   (target-replace-imprecise-lift)
+open import proof.LR-narrow.TypeApplication using (lift-precise-open)
 
 target-transparent-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -103,3 +105,32 @@ fresh-target-open-transparent {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
     trans (cong (embedImprecise (core W′))
         (replace-zero-open Rᴵ Bᴵ))
       (embedImprecise-lift step (Bᴵ [ Rᴵ ]ᵗ))
+
+fresh-target-lifted-open-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+  → BodyImprecisionᵇ W Bᴾ Bᴵ
+  → Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ
+  → TargetTransparent (impreciseBindWorld W Rᴵ)
+      (fresh-target-slot W Rᴵ)
+      (liftPreciseBody
+          (future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})) Bᴾ
+        [ liftPreciseTy
+            (future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})) Rᴾ ]ᵗ)
+      (liftImpreciseBody
+          (future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})) Bᴵ
+        [ ＇ Fin.zero ]ᵗ)
+fresh-target-lifted-open-transparent {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
+    {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W} body r =
+  subst (λ Aᴵ → TargetTransparent W′ slot precise-open Aᴵ)
+    (sym (open-shifted-body Bᴵ))
+    (subst (λ Aᴾ → TargetTransparent W′ slot Aᴾ Bᴵ)
+      (lift-precise-open step Bᴾ Rᴾ)
+      (fresh-target-open-transparent body r))
+  where
+  W′ = impreciseBindWorld W Rᴵ
+  step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+  slot = fresh-target-slot W Rᴵ
+  precise-open =
+    liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ]ᵗ
