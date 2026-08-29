@@ -127,12 +127,13 @@ imprecise-peel-step-question : ∀ {Δᴾ Δᴵ Δᶜ}
           (imprecise-peel-reductᴵᵇ peel R V)
           (imprecise-peel-step peel vV′))
 imprecise-peel-step-question
-    (reveal-imprecise-peelᵇ s C no-occur i av) vV =
+    (reveal-imprecise-peelᵇ s C no-occur i av) {Σ = Σ} vV =
   reveal-type-app-step-question
-    〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗 vV
+    {Σ = Σ} 〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗 vV
 imprecise-peel-step-question
-    (conceal-imprecise-peelᵇ s C no-occur i av) vV =
+    (conceal-imprecise-peelᵇ s C no-occur i av) {Σ = Σ} vV =
   conceal-type-app-step-question
+    {Σ = Σ}
     (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) vV
 
 ------------------------------------------------------------------------
