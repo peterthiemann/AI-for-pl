@@ -34,7 +34,8 @@ open import proof.LR-narrow.RevealLifting using
 open import proof.LR-narrow.SlotLifting using
   (slot-precise-variable-lift; slot-precise-rep-lift;
    slot-imprecise-variable-lift; slot-imprecise-rep-lift;
-   lifted-reveal-imprecise; lifted-conceal-imprecise)
+   lifted-reveal-precise; lifted-reveal-imprecise;
+   lifted-conceal-imprecise)
 open import proof.LR-narrow.ImpreciseReveal using
   (lift-center-body-∉ᵗ)
 open import proof.LR-narrow.UniversalReveal using
@@ -46,12 +47,14 @@ open import proof.LR-narrow.BindStepExpansion using
 open import proof.LR-narrow.ReplaceImprecision using
   (replace-left-⊑; replace-left-alias-eq-⊑; replace-zero-open;
    open-shifted-body)
-open import proof.LR-narrow.PreciseReveal using (sizeᵗ)
+open import proof.LR-narrow.PreciseReveal using
+  (sizeᵗ; lift-∉ᵗ; precise-revealed-computations)
+open import proof.LR-narrow.StarNoOccurrence using (replaceTy-absent)
 open import proof.LR-narrow.DynamicReveal using
   (dyn-slot-future; dyn-slot-precise-variable-lift;
    dyn-slot-precise-rep-lift; dyn-lifted-reveal-precise;
    dyn-lifted-conceal-precise; dyn-embed-replace; dyn-embed-∉;
-   dyn-revealed-computations; dyn-concealed-computations)
+   dyn-revealed-computations; dyn-concealed-computations; ∉-all-inv)
 open import proof.LR-narrow.AliasReveal using
   (alias-slot-future; alias-slot-precise-variable-lift;
    alias-slot-precise-rep-lift; alias-lifted-reveal-precise;
@@ -1373,6 +1376,256 @@ conceal-alias-chainᵇ W a {B = B} {C = C} target source
         ((Vᴾ′ ↓ `∀↓ aᴾ) ⦂∀ B′ [ Rᴾ ])
     weakened = post-bind-weaken step q stepped
 
+------------------------------------------------------------------------
+-- Precise-only inert wrapper chain reveal
+------------------------------------------------------------------------
+
+reveal-inert-innerᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
+    {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
+    (no-occur : slotXᴾ s ∉ᵗ `∀ B)
+    (source : BodyImprecisionᵇ W B C)
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W (bodyPᵇ source) B C (suc k) Vᴵ Vᴾ
+  → ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′)
+      (W≼W′ : Future W W′) (Rᴾ : Ty Δᴾ′) (Rᴵ : Ty Δᴵ′)
+      (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
+      (q : liftPreciseBody W≼W′ B [ Rᴾ ]ᵗ
+        ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ C [ Rᴵ ]ᵗ)
+  → ComputationsRelated (aliasBindWorld W′ Rᴾ)
+      (FutureValueRelation
+        (liftCenterImprecision (alias-step W′ Rᴾ) q)) (suc k)
+      (liftImpreciseTerm W≼W′ Vᴵ
+        ⦂∀ liftImpreciseBody W≼W′ C [ Rᴵ ])
+      (((⇑ᵗᵐ (liftPreciseTerm W≼W′ Vᴾ)
+          ⦂∀ renameᵗ (extᵗ Fin.suc) (liftPreciseBody W≼W′ B)
+            [ ＇ Fin.zero ])
+        ↑ 〖 Fin.suc (slotXᴾ (slot-future s W≼W′)) ,
+            ⇑ᵗ (slotRᴾ (slot-future s W≼W′))
+            ↑ liftPreciseBody W≼W′ B 〗)
+        ↑ 〖 Fin.zero , ⇑ᵗ Rᴾ
+          ↑ replaceTy
+              (Fin.suc (slotXᴾ (slot-future s W≼W′)))
+              (⇑ᵗ (slotRᴾ (slot-future s W≼W′)))
+              (liftPreciseBody W≼W′ B) 〗)
+reveal-inert-innerᵇ W s {B = B} {C = C} no-occur source
+    {k = k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat W′ W≼W′ Rᴾ Rᴵ r q = final
+  where
+  step = alias-step W′ Rᴾ
+  Wb = aliasBindWorld W′ Rᴾ
+  W≼Wb : Future W Wb
+  W≼Wb = future-alias W≼W′
+
+  s′ = slot-future s W≼W′
+  s₁ = slot-future s′ step
+  a₂ = fresh-alias-slot W′ Rᴾ
+  Xᴾ′ = slotXᴾ s′
+  Rᴾ′ = slotRᴾ s′
+  B′ = liftPreciseBody W≼W′ B
+  C′ = liftImpreciseBody W≼W′ C
+  D′ = replaceTy (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′) B′
+
+  source′ : BodyImprecisionᵇ Wb
+      (renameᵗ (extᵗ Fin.suc) B′) C′
+  source′ = body-imprecisionᵇ-future W≼Wb source
+
+  r₀ : ＇ Fin.zero ⊑ᵂ⟨ core Wb ⟩ Rᴵ
+  r₀ = fresh-alias-local-imprecision W′ r
+
+  opened : renameᵗ (extᵗ Fin.suc) B′ [ ＇ Fin.zero ]ᵗ
+      ⊑ᵂ⟨ core Wb ⟩ C′ [ Rᴵ ]ᵗ
+  opened = openRelatedBodyImprecision {W = Wb} (bodyPᵇ source′) r₀
+
+  core-related : ComputationsRelated Wb
+      (FutureValueRelation opened) (suc k)
+      (liftImpreciseTerm W≼W′ Vᴵ ⦂∀ C′ [ Rᴵ ])
+      (⇑ᵗᵐ (liftPreciseTerm W≼W′ Vᴾ)
+        ⦂∀ renameᵗ (extᵗ Fin.suc) B′ [ ＇ Fin.zero ])
+  core-related = proj₁ (data-chainᵇ dat)
+    Wb W≼Wb (＇ Fin.zero) Rᴵ r₀ opened
+
+  open-P : renameᵗ (extᵗ Fin.suc) B′ [ ＇ Fin.zero ]ᵗ ≡ B′
+  open-P = open-shifted-body B′
+
+  t₀ : impEnv (core Wb) I.⊢ embedPrecise (core Wb) B′ ⊑
+      embedImprecise (core Wb) (C′ [ Rᴵ ]ᵗ)
+  t₀ = subst≡
+    (λ L → impEnv (core Wb) I.⊢ L ⊑
+      embedImprecise (core Wb) (C′ [ Rᴵ ]ᵗ))
+    (cong (embedPrecise (core Wb)) open-P) opened
+
+  Nᴵ = liftImpreciseTerm W≼W′ Vᴵ
+  Nᴾ = ⇑ᵗᵐ (liftPreciseTerm W≼W′ Vᴾ)
+    ⦂∀ renameᵗ (extᵗ Fin.suc) B′ [ ＇ Fin.zero ]
+
+  reindexed : ComputationsRelated Wb (FutureValueRelation t₀) (suc k)
+      (Nᴵ ⦂∀ C′ [ Rᴵ ]) Nᴾ
+  reindexed = Closure.computations-related-reindex opened t₀
+    (cong (embedPrecise (core Wb)) open-P) refl refl refl core-related
+
+  slot-absent : slotXᴾ s₁ ∉ᵗ B′
+  slot-absent = subst≡ (_∉ᵗ B′)
+    (sym (slot-precise-variable-lift s′ step))
+    (∉-all-inv
+      (subst≡ (slotXᴾ s′ ∉ᵗ_) (liftPreciseTy-universal W≼W′ B)
+        (subst≡ (_∉ᵗ liftPreciseTy W≼W′ (`∀ B))
+          (sym (slot-precise-variable-lift s W≼W′))
+          (lift-∉ᵗ W≼W′ no-occur))))
+
+  revealed₁ : ComputationsRelated Wb (FutureValueRelation t₀) (suc k)
+      (Nᴵ ⦂∀ C′ [ Rᴵ ])
+      (Nᴾ ↑ 〖 slotXᴾ s₁ , slotRᴾ s₁ ↑ B′ 〗)
+  revealed₁ = precise-revealed-computations (sizeᵗ B′) (suc k)
+    (below-allᵇ (suc k) (sizeᵗ B′)) Wb s₁ t₀
+    ≤-refl slot-absent refl reindexed
+
+  wrap-eq-P : (Nᴾ ↑ 〖 slotXᴾ s₁ , slotRᴾ s₁ ↑ B′ 〗)
+      ≡ (Nᴾ ↑ 〖 Fin.suc Xᴾ′ , ⇑ᵗ Rᴾ′ ↑ B′ 〗)
+  wrap-eq-P = cong₂ (λ X R → Nᴾ ↑ 〖 X , R ↑ B′ 〗)
+    (slot-precise-variable-lift s′ step)
+    (slot-precise-rep-lift s′ step)
+
+  revealed₁′ : ComputationsRelated Wb (FutureValueRelation t₀) (suc k)
+      (Nᴵ ⦂∀ C′ [ Rᴵ ])
+      (Nᴾ ↑ 〖 Fin.suc Xᴾ′ , ⇑ᵗ Rᴾ′ ↑ B′ 〗)
+  revealed₁′ = Closure.computations-related-reindex t₀ t₀
+    refl refl refl wrap-eq-P revealed₁
+
+  t₀′ : impEnv (core Wb) I.⊢ embedPrecise (core Wb) B′ ⊑
+      ⇑ᵗ (embedImprecise (core W′) (C′ [ Rᴵ ]ᵗ))
+  t₀′ = subst≡
+    (λ R → impEnv (core Wb) I.⊢ embedPrecise (core Wb) B′ ⊑ R)
+    (embedImprecise-alias-shift (core W′) Rᴾ (C′ [ Rᴵ ]ᵗ)) t₀
+
+  revealed₁″ : ComputationsRelated Wb (FutureValueRelation t₀′) (suc k)
+      (Nᴵ ⦂∀ C′ [ Rᴵ ])
+      (Nᴾ ↑ 〖 Fin.suc Xᴾ′ , ⇑ᵗ Rᴾ′ ↑ B′ 〗)
+  revealed₁″ = Closure.computations-related-reindex t₀ t₀′
+    refl
+    (embedImprecise-alias-shift (core W′) Rᴾ (C′ [ Rᴵ ]ᵗ))
+    refl refl revealed₁′
+
+  body-id : D′ ≡ B′
+  body-id = replaceTy-absent (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′)
+    (subst≡ (_∉ᵗ B′) (slot-precise-variable-lift s′ step)
+      slot-absent)
+
+  source₂-P : embedPrecise (core Wb) D′
+      ≡ embedPrecise (core Wb) B′
+  source₂-P = cong (embedPrecise (core Wb)) body-id
+
+  target₂-P : embedPrecise (core Wb)
+      (replaceTy Fin.zero (⇑ᵗ Rᴾ) D′)
+      ≡ ⇑ᵗ (embedPrecise (core W′) (B′ [ Rᴾ ]ᵗ))
+  target₂-P = trans
+    (cong (embedPrecise (core Wb)) (replace-zero-open Rᴾ D′))
+    (trans
+      (embedPrecise-alias-shift (core W′) Rᴾ (D′ [ Rᴾ ]ᵗ))
+      (cong (λ T → ⇑ᵗ (embedPrecise (core W′) (T [ Rᴾ ]ᵗ)))
+        body-id))
+
+  final : ComputationsRelated Wb
+      (FutureValueRelation (liftCenterImprecision step q)) (suc k)
+      (Nᴵ ⦂∀ C′ [ Rᴵ ])
+      ((Nᴾ ↑ 〖 Fin.suc Xᴾ′ , ⇑ᵗ Rᴾ′ ↑ B′ 〗)
+        ↑ 〖 Fin.zero , ⇑ᵗ Rᴾ ↑ D′ 〗)
+  final = alias-revealed-computations (sizeᵗ D′) (suc k)
+    (sizeᵗ D′) (below-allᵇ (suc k) (sizeᵗ D′)) Wb a₂ t₀′
+    ≤-refl source₂-P (liftCenterImprecision step q) target₂-P
+    revealed₁″
+
+reveal-inert-chainᵇ : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (s : PairedSlot W)
+    {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
+    (no-occur : slotXᴾ s ∉ᵗ `∀ B)
+    (source : BodyImprecisionᵇ W B C)
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W (bodyPᵇ source) B C k Vᴵ Vᴾ
+  → UniversalsRelated W (bodyPᵇ source) B C k Vᴵ
+      (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗)
+reveal-inert-chainᵇ W s no-occur source {k = zero} dat = tt
+reveal-inert-chainᵇ W s {B = B} {C = C} no-occur source
+    {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat =
+  head ,
+  reveal-inert-chainᵇ W s no-occur source
+    (universal-dataᵇ-downward dat)
+  where
+  head : ∀ {Δᴾ′ Δᴵ′ Δᶜ′}
+      (W′ : World Δᴾ′ Δᴵ′ Δᶜ′)
+      (W≼W′ : Future W W′) (Rᴾ : Ty Δᴾ′) (Rᴵ : Ty Δᴵ′)
+      (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
+      (q : liftPreciseBody W≼W′ B [ Rᴾ ]ᵗ
+        ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ C [ Rᴵ ]ᵗ)
+    → ComputationsRelated W′ (FutureValueRelation q) (suc k)
+        (liftImpreciseTerm W≼W′ Vᴵ
+          ⦂∀ liftImpreciseBody W≼W′ C [ Rᴵ ])
+        (liftPreciseTerm W≼W′
+            (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗)
+          ⦂∀ liftPreciseBody W≼W′ B [ Rᴾ ])
+  head W′ W≼W′ Rᴾ Rᴵ r q =
+    Closure.computations-related-reindex q q refl refl refl
+      (sym precise-redex-eq) weakened
+    where
+    step = alias-step W′ Rᴾ
+    s′ = slot-future s W≼W′
+    Xᴾ′ = slotXᴾ s′
+    Rᴾ′ = slotRᴾ s′
+    B′ = liftPreciseBody W≼W′ B
+    Vᴾ′ = liftPreciseTerm W≼W′ Vᴾ
+    D′ = replaceTy (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′) B′
+    cᴾ = 〖 Fin.suc Xᴾ′ , ⇑ᵗ Rᴾ′ ↑ B′ 〗
+
+    slot-absent′ : Fin.suc Xᴾ′ ∉ᵗ B′
+    slot-absent′ = ∉-all-inv
+      (subst≡ (Xᴾ′ ∉ᵗ_) (liftPreciseTy-universal W≼W′ B)
+        (subst≡ (_∉ᵗ liftPreciseTy W≼W′ (`∀ B))
+          (sym (slot-precise-variable-lift s W≼W′))
+          (lift-∉ᵗ W≼W′ no-occur)))
+
+    body-id : D′ ≡ B′
+    body-id = replaceTy-absent (Fin.suc Xᴾ′) (⇑ᵗ Rᴾ′)
+      slot-absent′
+
+    lifted-wrapper-eq : liftPreciseTerm W≼W′
+        (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗)
+        ≡ Vᴾ′ ↑ `∀↑ cᴾ
+    lifted-wrapper-eq
+        rewrite lifted-reveal-precise s W≼W′ Vᴾ (`∀ B)
+              | liftPreciseTy-universal W≼W′ B = refl
+
+    precise-redex-eq :
+        liftPreciseTerm W≼W′
+            (Vᴾ ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗)
+          ⦂∀ B′ [ Rᴾ ]
+      ≡ (Vᴾ′ ↑ `∀↑ cᴾ) ⦂∀ D′ [ Rᴾ ]
+    precise-redex-eq = trans
+      (cong (λ M → M ⦂∀ B′ [ Rᴾ ]) lifted-wrapper-eq)
+      (cong (λ T → (Vᴾ′ ↑ `∀↑ cᴾ) ⦂∀ T [ Rᴾ ])
+        (sym body-id))
+
+    stepped : ComputationsRelated W′
+        (PostBindValueRelation step q) (suc k)
+        (liftImpreciseTerm W≼W′ Vᴵ
+          ⦂∀ liftImpreciseBody W≼W′ C [ Rᴵ ])
+        ((Vᴾ′ ↑ `∀↑ cᴾ) ⦂∀ D′ [ Rᴾ ])
+    stepped
+        with reveal-type-app-step-question
+               {Σ = preciseStore (core W′)} {A = Rᴾ} cᴾ vVᴾ′
+      where
+      endpoints = data-endpointsᵇ dat
+      vVᴾ′ = Closure.precise-value-future W≼W′
+        (precise-value endpoints)
+    stepped | vVᴾ″ , step-eqᴾ =
+      related-alias-bind-step-expand (λ ()) refl
+        (β-reveal-∀ vVᴾ″) step-eqᴾ
+        (reveal-inert-innerᵇ W s no-occur source dat W′ W≼W′
+          Rᴾ Rᴵ r q)
+
+    weakened : ComputationsRelated W′ (FutureValueRelation q) (suc k)
+        (liftImpreciseTerm W≼W′ Vᴵ
+          ⦂∀ liftImpreciseBody W≼W′ C [ Rᴵ ])
+        ((Vᴾ′ ↑ `∀↑ cᴾ) ⦂∀ D′ [ Rᴾ ])
+    weakened = post-bind-weaken step q stepped
 
 ------------------------------------------------------------------------
 -- Imprecise-only wrapper chain extensions
