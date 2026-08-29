@@ -1592,6 +1592,9 @@ data EntryLift {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
   lift-target :
       {a : TargetSemanticAtom (core W) Z}
       {a′ : TargetSemanticAtom (core W′) (liftCenterVariable W≼W′ Z)}
+    → targetImpreciseVariable a′
+        ≡ liftImpreciseVariable W≼W′ (targetImpreciseVariable a)
+    → targetRep a′ ≡ liftImpreciseTy W≼W′ (targetRep a)
     → EntryLift W≼W′ (target-entry a) (target-entry a′)
   lift-alias : ∀ {T T′}
       {a : AliasSemanticAtom (core W) Z T}
@@ -1618,7 +1621,8 @@ entry-lift-paired W≼W′ r (lift-paired eqᴾ eqᴵ repᴾ repᴵ) =
     (cong ⇑ᵗ repᴾ) (cong ⇑ᵗ repᴵ)
 entry-lift-paired W≼W′ r (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
-entry-lift-paired W≼W′ r lift-target = lift-target
+entry-lift-paired W≼W′ r (lift-target eqᴵ repᴵ) =
+  lift-target (cong Fin.suc eqᴵ) (cong ⇑ᵗ repᴵ)
 entry-lift-paired W≼W′ r (lift-alias eqᴾ repᴾ) =
   lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 
@@ -1636,7 +1640,8 @@ entry-lift-precise W≼W′ r (lift-paired eqᴾ eqᴵ repᴾ repᴵ) =
   lift-paired (cong Fin.suc eqᴾ) eqᴵ (cong ⇑ᵗ repᴾ) repᴵ
 entry-lift-precise W≼W′ r (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
-entry-lift-precise W≼W′ r lift-target = lift-target
+entry-lift-precise W≼W′ r (lift-target eqᴵ repᴵ) =
+  lift-target eqᴵ repᴵ
 entry-lift-precise W≼W′ r (lift-alias eqᴾ repᴾ) =
   lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 
@@ -1654,7 +1659,8 @@ entry-lift-aliasbind W≼W′ (lift-paired eqᴾ eqᴵ repᴾ repᴵ) =
   lift-paired (cong Fin.suc eqᴾ) eqᴵ (cong ⇑ᵗ repᴾ) repᴵ
 entry-lift-aliasbind W≼W′ (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
-entry-lift-aliasbind W≼W′ lift-target = lift-target
+entry-lift-aliasbind W≼W′ (lift-target eqᴵ repᴵ) =
+  lift-target eqᴵ repᴵ
 entry-lift-aliasbind W≼W′ (lift-alias eqᴾ repᴾ) =
   lift-alias (cong Fin.suc eqᴾ) (cong ⇑ᵗ repᴾ)
 
@@ -1672,7 +1678,8 @@ entry-lift-imprecise W≼W′ (lift-paired eqᴾ eqᴵ repᴾ repᴵ) =
   lift-paired eqᴾ (cong Fin.suc eqᴵ) repᴾ (cong ⇑ᵗ repᴵ)
 entry-lift-imprecise W≼W′ (lift-dynamic eqᴾ repᴾ) =
   lift-dynamic eqᴾ repᴾ
-entry-lift-imprecise W≼W′ lift-target = lift-target
+entry-lift-imprecise W≼W′ (lift-target eqᴵ repᴵ) =
+  lift-target (cong Fin.suc eqᴵ) (cong ⇑ᵗ repᴵ)
 entry-lift-imprecise W≼W′ (lift-alias eqᴾ repᴾ) =
   lift-alias eqᴾ repᴾ
 
@@ -1681,7 +1688,7 @@ entry-lift-refl : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
   → EntryLift (future-refl {W = W}) e e
 entry-lift-refl (paired-entry a) = lift-paired refl refl refl refl
 entry-lift-refl (dynamic-entry a) = lift-dynamic refl refl
-entry-lift-refl (target-entry a) = lift-target
+entry-lift-refl (target-entry a) = lift-target refl refl
 entry-lift-refl (alias-entry a) = lift-alias refl refl
 
 -- The entry at the lifted center of any future world lifts the entry at

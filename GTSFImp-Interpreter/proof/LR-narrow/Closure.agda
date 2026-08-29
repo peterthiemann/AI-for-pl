@@ -1212,7 +1212,7 @@ paired-holds-lift {W′ = W′} W≼W′ f reindex
         (cong (embedImprecise (core W′)) (sym repᴵ)))
       (f related))
 paired-holds-lift W≼W′ f reindex (lift-dynamic eqᴾ repᴾ) ()
-paired-holds-lift W≼W′ f reindex lift-target ()
+paired-holds-lift W≼W′ f reindex (lift-target eqX eqR) ()
 paired-holds-lift W≼W′ f reindex (lift-alias eqᴾ repᴾ) ()
 
 paired-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1257,7 +1257,7 @@ dynamic-holds-lift {W′ = W′} W≼W′ f reindex
         (cong (embedPrecise (core W′)) (sym repᴾ)))
       (liftCenterTy-star W≼W′)
       (f related))
-dynamic-holds-lift W≼W′ f reindex lift-target refl refl ()
+dynamic-holds-lift W≼W′ f reindex (lift-target eqX eqR) refl refl ()
 dynamic-holds-lift W≼W′ f reindex (lift-alias eqᴾ repᴾ) () eq′
 
 dynamic-holds-future : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -1297,7 +1297,7 @@ alias-holds-lift : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ mode mode�
       (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
 alias-holds-lift W≼W′ f (lift-paired _ _ _ _) eq eq′ p ()
 alias-holds-lift W≼W′ f (lift-dynamic eqᴾ repᴾ) () eq′ p holds
-alias-holds-lift W≼W′ f lift-target () eq′ p holds
+alias-holds-lift W≼W′ f (lift-target eqX eqR) () eq′ p holds
 alias-holds-lift {W′ = W′} W≼W′ f
     (lift-alias {a = a} {a′ = a′} eqᴾ repᴾ) refl refl p
     (alias-holds Uᴾ refl related) =
