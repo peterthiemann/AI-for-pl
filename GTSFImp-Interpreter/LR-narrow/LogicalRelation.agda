@@ -385,15 +385,28 @@ mutual
   PendingTargetUniversalsRelated W Bᴾ Bᴵ zero Vᴵ Vᴾ = ⊤
 
   PendingTargetUniversalsRelated W Bᴾ Bᴵ (suc k) Vᴵ Vᴾ =
-    ((t : TargetSlot W) (Rᴾ : Ty _) (Rᴵ : Ty _)
-        (r : TargetTransparent W t Rᴾ Rᴵ)
-        (s : TargetTransparent W t
-          (Bᴾ [ Rᴾ ]ᵗ) (Bᴵ [ Rᴵ ]ᵗ))
-      → ComputationsRelated W
-          (PendingTargetValueRelation t
-            {Aᴾ = Bᴾ [ Rᴾ ]ᵗ} {Aᴵ = Bᴵ [ Rᴵ ]ᵗ} s)
-          (suc k)
-          (Vᴵ ⦂∀ Bᴵ [ Rᴵ ]) (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
+    (((t : TargetSlot W) (Rᴾ : Ty _) (Rᴵ : Ty _)
+          (r : TargetTransparent W t Rᴾ Rᴵ)
+          (s : TargetTransparent W t
+            (Bᴾ [ Rᴾ ]ᵗ) (Bᴵ [ Rᴵ ]ᵗ))
+        → ComputationsRelated W
+            (PendingTargetValueRelation t
+              {Aᴾ = Bᴾ [ Rᴾ ]ᵗ} {Aᴵ = Bᴵ [ Rᴵ ]ᵗ} s)
+            (suc k)
+            (Vᴵ ⦂∀ Bᴵ [ Rᴵ ]) (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
+      × (∀ {Bᴵ′ : Ty _} (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
+          (Rᴾ : Ty _) (Rᴵ : Ty _)
+          (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+        → let
+            step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+            opened = openRelatedBodyImprecision {W = W}
+              (bodyPᵇ (imprecise-peel-targetᵇ peel)) r
+          in ComputationsRelated (impreciseBindWorld W Rᴵ)
+              (FutureValueRelation (liftCenterImprecision step opened))
+              (suc k)
+              (imprecise-peel-reductᴵᵇ peel Rᴵ Vᴵ)
+              (liftPreciseTerm step Vᴾ
+                ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])))
     × PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
 
   RightUniversalsRelated : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}

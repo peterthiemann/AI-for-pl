@@ -64,7 +64,7 @@ related-universal-pending-instantiation : ∀
 related-universal-pending-instantiation {W = W}
     (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
   Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
-  proj₁ (proj₂ (fam (future-refl {W = W}) []))
+  proj₁ (proj₁ (proj₂ (fam (future-refl {W = W}) [])))
 
 right-related-universal-instantiation : ∀
     {Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty (suc Δᶜ)} {Aᴵ : Ty Δᶜ}

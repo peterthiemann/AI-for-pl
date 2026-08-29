@@ -6,7 +6,7 @@ module proof.LR-narrow.PendingUniversal where
 --   * Supplies the semantic core of an imprecise-only universal peel.
 
 open import Data.Nat using (ℕ; suc)
-open import Data.Product using (proj₁; proj₂)
+open import Data.Product using (_,_; proj₁; proj₂)
 import Data.Maybe
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
@@ -31,7 +31,9 @@ open import proof.LR-narrow.ReplaceImprecision using
 open import proof.LR-narrow.TypeApplication using (lift-precise-open)
 open import proof.LR-narrow.BindStepExpansion using
   (related-imprecise-bind-step-expand)
-open import proof.LR-narrow.UniversalReveal using (post-bind-weaken)
+open import proof.LR-narrow.UniversalReveal using
+  (post-bind-weaken; reveal-type-app-step-question;
+   conceal-type-app-step-question)
 
 pending-target-universal-head : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -76,7 +78,7 @@ pending-target-universal-head {W = W} {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
         ⦂∀ liftImpreciseBody step Bᴵ [ ＇ Fin.zero ])
       (liftPreciseTerm step Vᴾ
         ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])
-  pending = proj₁ (proj₂ (fam step [])) slot
+  pending = proj₁ (proj₁ (proj₂ (fam step []))) slot
     (liftPreciseTy step Rᴾ) (＇ Fin.zero)
     argument-related result-related
 
@@ -186,6 +188,80 @@ pending-target-universal-bind-expand {W = W} {Bᴾ = Bᴾ}
     (related-imprecise-bind-step-expand Mᴵ≢blame value-eqᴵ
       stepᴵ step-eqᴵ
       (pending-target-universal-reduct body r fam))
+  where
+  step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+  opened = openRelatedBodyImprecision {W = W} (bodyPᵇ body) r
+
+------------------------------------------------------------------------
+-- Exact imprecise-only wrapper peels
+------------------------------------------------------------------------
+
+pending-target-imprecise-peel-reduct : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ Bᴵ′ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ} {k : ℕ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+    (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
+    (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+  → UniversalFamily W (bodyPᵇ (imprecise-peel-targetᵇ peel))
+      Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+  → let
+      step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+      opened = openRelatedBodyImprecision {W = W}
+        (bodyPᵇ (imprecise-peel-targetᵇ peel)) r
+    in ComputationsRelated (impreciseBindWorld W Rᴵ)
+        (FutureValueRelation (liftCenterImprecision step opened))
+        (suc k)
+        (imprecise-peel-reductᴵᵇ peel Rᴵ Vᴵ)
+        (liftPreciseTerm step Vᴾ
+          ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])
+pending-target-imprecise-peel-reduct {W = W} {Rᴾ = Rᴾ}
+    {Rᴵ = Rᴵ} peel r fam =
+  proj₂ (proj₁ (proj₂ (fam (future-refl {W = W}) []))) peel Rᴾ Rᴵ r
+
+pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ Bᴵ′ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ} {k : ℕ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+    (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
+    (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+  → UniversalFamily W (bodyPᵇ (imprecise-peel-targetᵇ peel))
+      Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+  → Value Vᴵ
+  → ComputationsRelated W
+      (FutureValueRelation (openRelatedBodyImprecision {W = W}
+        (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+      (suc k)
+      (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
+      (Vᴾ ⦂∀ Bᴾ [ Rᴾ ])
+pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
+    (reveal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    with reveal-type-app-step-question
+      {Σ = impreciseStore (core W)} {A = Rᴵ}
+      〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗 vVᴵ
+pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
+    peel@(reveal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    | vVᴵ′ , step-eq =
+  post-bind-weaken step opened
+    (related-imprecise-bind-step-expand (λ ()) refl
+      (β-reveal-∀ vVᴵ′) step-eq
+      (pending-target-imprecise-peel-reduct peel r fam))
+  where
+  step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+  opened = openRelatedBodyImprecision {W = W} (bodyPᵇ body) r
+pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
+    (conceal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    with conceal-type-app-step-question
+      {Σ = impreciseStore (core W)} {A = Rᴵ}
+      (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) vVᴵ
+pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
+    peel@(conceal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    | vVᴵ′ , step-eq =
+  post-bind-weaken step opened
+    (related-imprecise-bind-step-expand (λ ()) refl
+      (β-conceal-∀ vVᴵ′) step-eq
+      (pending-target-imprecise-peel-reduct peel r fam))
   where
   step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
   opened = openRelatedBodyImprecision {W = W} (bodyPᵇ body) r

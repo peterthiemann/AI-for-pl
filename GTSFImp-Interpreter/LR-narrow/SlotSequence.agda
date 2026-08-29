@@ -686,6 +686,72 @@ data UniWrapsᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → UniWrapᵇ W B C B′ C′ → UniWrapsᵇ W B′ C′ B″ C″
     → UniWrapsᵇ W B C B″ C″
 
+------------------------------------------------------------------------
+-- Imprecise-only universal peels
+------------------------------------------------------------------------
+
+-- A view of the two wrappers whose first application step allocates only
+-- the imprecise endpoint.  Unlike `UniWrapᵇ`, the unchanged precise body
+-- is an index and the two imprecise bodies are adjacent indices.  This is
+-- exactly the information needed by the pending-target universal clause.
+
+data ImprecisePeelᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (B : Ty (suc Δᴾ)) : Ty (suc Δᴵ) → Ty (suc Δᴵ) → Set where
+  reveal-imprecise-peelᵇ : (s : PairedSlot W)
+      (C : Ty (suc Δᴵ))
+    → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
+    → BodyImprecisionᵇ W B
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+    → ((j : BodyImprecisionᵇ W B C)
+        → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
+    → ImprecisePeelᵇ W B C
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+
+  conceal-imprecise-peelᵇ : (s : PairedSlot W)
+      (C : Ty (suc Δᴵ))
+    → Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B
+    → BodyImprecisionᵇ W B C
+    → ((j : BodyImprecisionᵇ W B C)
+        → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
+    → ImprecisePeelᵇ W B
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) C
+
+imprecise-peel-targetᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
+  → ImprecisePeelᵇ W B C D
+  → BodyImprecisionᵇ W B D
+imprecise-peel-targetᵇ (reveal-imprecise-peelᵇ s C no-occur i av) = i
+imprecise-peel-targetᵇ (conceal-imprecise-peelᵇ s C no-occur i av) = i
+
+imprecise-peel-termᴵᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
+  → ImprecisePeelᵇ W B C D → Term Δᴵ → Term Δᴵ
+imprecise-peel-termᴵᵇ (reveal-imprecise-peelᵇ s C no-occur i av) V =
+  V ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ C 〗
+imprecise-peel-termᴵᵇ (conceal-imprecise-peelᵇ s C no-occur i av) V =
+  V ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ C)
+
+-- The exact reduct of the wrapper application.  The inherited slot
+-- conversion is inside the fresh target reveal, in the order prescribed by
+-- `β-reveal-∀` and `β-conceal-∀`.
+
+imprecise-peel-reductᴵᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
+  → ImprecisePeelᵇ W B C D → Ty Δᴵ → Term Δᴵ → Term (suc Δᴵ)
+imprecise-peel-reductᴵᵇ
+    (reveal-imprecise-peelᵇ s C no-occur i av) R V =
+  ((⇑ᵗᵐ V ⦂∀ renameᵗ (extᵗ Fin.suc) C [ ＇ Fin.zero ])
+      ↑ 〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗)
+    ↑ 〖 Fin.zero , ⇑ᵗ R ↑
+      replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C 〗
+imprecise-peel-reductᴵᵇ
+    (conceal-imprecise-peelᵇ s C no-occur i av) R V =
+  ((⇑ᵗᵐ V ⦂∀ renameᵗ (extᵗ Fin.suc)
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+      [ ＇ Fin.zero ])
+      ↓ makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+    ↑ 〖 Fin.zero , ⇑ᵗ R ↑ C 〗
+
 wrapTermᴾᵇ₁ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     {B C B′ C′}
   → UniWrapᵇ W B C B′ C′ → Term Δᴾ → Term Δᴾ
