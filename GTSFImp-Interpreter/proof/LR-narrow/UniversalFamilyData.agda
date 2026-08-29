@@ -2208,6 +2208,36 @@ extend-universal-dataᵇ {W = W} source
   chain = conceal-imprecise-chainᵇ W s no-occur target source
     avoid dat
 
+------------------------------------------------------------------------
+-- Extending producer data through a wrapper sequence
+------------------------------------------------------------------------
+
+extend-universal-data-sequenceᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {B B′ : Ty (suc Δᴾ)} {C C′ : Ty (suc Δᴵ)}
+  → (source : BodyImprecisionᵇ W B C)
+  → (σ : UniWrapsᵇ W B C B′ C′)
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W (bodyPᵇ source) B C k Vᴵ Vᴾ
+  → (∀ {B″ : Ty (suc Δᴾ)} {C″ : Ty (suc Δᴵ)}
+      (τ : UniWrapsᵇ W B C B″ C″)
+      {Δᴾ′ Δᴵ′ Δᶜ′} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+      → (W≼W′ : Future W W′)
+      → PendingTargetUniversalsRelated W′
+          (liftPreciseBody W≼W′ B″) (liftImpreciseBody W≼W′ C″) k
+          (liftImpreciseTerm W≼W′ (wrapTermᴵᵇ τ Vᴵ))
+          (liftPreciseTerm W≼W′ (wrapTermᴾᵇ τ Vᴾ)))
+  → Σ[ target ∈ BodyImprecisionᵇ W B′ C′ ]
+      UniversalDataᵇ W (bodyPᵇ target) B′ C′ k
+        (wrapTermᴵᵇ σ Vᴵ) (wrapTermᴾᵇ σ Vᴾ)
+extend-universal-data-sequenceᵇ source [] dat pending = source , dat
+extend-universal-data-sequenceᵇ source (w ∷ σ) dat pending
+    with extend-universal-dataᵇ source w dat (pending (w ∷ []))
+extend-universal-data-sequenceᵇ source (w ∷ σ) dat pending
+    | target , dat′ =
+  extend-universal-data-sequenceᵇ target σ dat′
+    (λ τ W≼W′ → pending (w ∷ τ) W≼W′)
+
 universal-dataᵇ-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
