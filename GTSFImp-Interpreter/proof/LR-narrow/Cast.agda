@@ -75,6 +75,8 @@ open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 open import LR-narrow.ClosingSubstitution
 open import LR-narrow.TermRelation
+open import LR-narrow.SlotSequence using
+  (embedPreciseBody; embedImpreciseBody)
 open import LR-narrow.DynamicPayload using
   (right-tags-and-payload; dynamic-payload-variable)
 open import LR-narrow.ClosingSubstitutionProperties using
@@ -112,7 +114,7 @@ open import proof.LR-narrow.CastPhases using
   (cast-operand-nonvalue; cast-operand-step-question)
 open import proof.LR-narrow.TypeApplication using
   (positive-universal-application; precise-body-lift-eq;
-   imprecise-body-lift-eq)
+   imprecise-body-lift-eq; lift-local-body-imprecision)
 open import proof.LR-narrow.Closure using
   (value-imprecision-downward-to)
 import proof.LR-narrow.Closure as ClosureProof
@@ -5484,6 +5486,137 @@ related-value-casts {W = W}
       {k = suc j} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} source-at-index
       (imprecise-value source-endpoints 《 all 》)
       (precise-value source-endpoints 《 all 》)
+
+    unwrapped-head : ∀ {Δᴾ₂ Δᴵ₂ Δᶜ₂}
+        {W₂ : World Δᴾ₂ Δᴵ₂ Δᶜ₂}
+        (W≼W₂ : Future W W₂) (Rᴾ : Ty Δᴾ₂) (Rᴵ : Ty Δᴵ₂)
+        (r : Rᴾ ⊑ᵂ⟨ core W₂ ⟩ Rᴵ)
+        (s : liftPreciseBody W≼W₂ Aᴾ₁ [ Rᴾ ]ᵗ
+          ⊑ᵂ⟨ core W₂ ⟩
+            liftImpreciseBody W≼W₂ Aᴵ₁ [ Rᴵ ]ᵗ)
+      → ComputationsRelated W₂ (FutureValueRelation s) (suc j)
+          (liftImpreciseTerm W≼W₂ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩)
+            ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₁ [ Rᴵ ])
+          (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
+            ⦂∀ liftPreciseBody W≼W₂ Aᴾ₁ [ Rᴾ ])
+    unwrapped-head {W₂ = W₂} W≼W₂ Rᴾ Rᴵ r s =
+      ClosureProof.computations-related-reindex s s refl refl
+        (sym imprecise-application-eq) (sym precise-application-eq)
+        expanded
+      where
+      cᴾ₂ = precise-universal-body-consistency-future W≼W₂ cᴾ
+      cᴵ₂ = imprecise-universal-body-consistency-future W≼W₂ cᴵ
+
+      source-body₂ = lift-local-body-imprecision W≼W₂ source-body
+      source-local₂ = I.∀⊑∀ source-body₂
+
+      source-open = openRelatedBodyImprecision {W = W₂} source-body₂ r
+
+      precise-source-universal-eq = trans
+        (cong `∀ (precise-body-lift-eq W≼W₂ Aᴾ₀))
+        (sym (liftCenterTy-universal W≼W₂
+          (embedPreciseBody (core W) Aᴾ₀)))
+
+      imprecise-source-universal-eq = trans
+        (cong `∀ (imprecise-body-lift-eq W≼W₂ Aᴵ₀))
+        (sym (liftCenterTy-universal W≼W₂
+          (embedImpreciseBody (core W) Aᴵ₀)))
+
+      source-related₂ : ValueImprecision W₂ source-local₂ (suc j)
+          (liftImpreciseTerm W≼W₂ Vᴵ) (liftPreciseTerm W≼W₂ Vᴾ)
+      source-related₂ = ClosureProof.value-imprecision-reindex
+        source-local₂ (liftCenterImprecision W≼W₂ source-local)
+        precise-source-universal-eq imprecise-source-universal-eq
+        (ClosureProof.value-imprecision-future
+          {W = W} {W′ = W₂} {p = source-local} {k = suc j}
+          {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} W≼W₂ source-at-index)
+
+      source-application : ∀ n
+        → ValueImprecision W₂ source-local₂ n
+            (liftImpreciseTerm W≼W₂ Vᴵ) (liftPreciseTerm W≼W₂ Vᴾ)
+        → ComputationsRelated W₂ (FutureValueRelation source-open) n
+          (liftImpreciseTerm W≼W₂ Vᴵ
+            ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₀ [ Rᴵ ])
+          (liftPreciseTerm W≼W₂ Vᴾ
+            ⦂∀ liftPreciseBody W≼W₂ Aᴾ₀ [ Rᴾ ])
+      source-application zero related₂ =
+        ClosureProof.computations-related-zero
+      source-application (suc i) related₂ =
+        positive-universal-application
+          {Cᴾ = liftPreciseBody W≼W₂ Aᴾ₀}
+          {Cᴵ = liftImpreciseBody W≼W₂ Aᴵ₀}
+          {Rᴾ = Rᴾ} {Rᴵ = Rᴵ}
+          {p = source-body₂} {r = r} {s = source-open}
+          refl refl (s≤s z≤n) related₂
+
+      source-head : ComputationsRelated W₂
+          (FutureValueRelation source-open) j
+          (liftImpreciseTerm W≼W₂ Vᴵ
+            ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₀ [ Rᴵ ])
+          (liftPreciseTerm W≼W₂ Vᴾ
+            ⦂∀ liftPreciseBody W≼W₂ Aᴾ₀ [ Rᴾ ])
+      source-head = source-application j
+        (value-imprecision-downward-to
+          {W = W₂} {p = source-local₂} {j = j} {k = suc j}
+          {Vᴵ = liftImpreciseTerm W≼W₂ Vᴵ}
+          {Vᴾ = liftPreciseTerm W≼W₂ Vᴾ}
+          (n≤1+n j) source-related₂)
+
+      casted : ComputationsRelated W₂ (FutureValueRelation s) j
+          ((liftImpreciseTerm W≼W₂ Vᴵ
+              ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₀ [ Rᴵ ])
+            ⟨ cᴵ₂ [ Rᴵ ]ᶜ ⟩)
+          ((liftPreciseTerm W≼W₂ Vᴾ
+              ⦂∀ liftPreciseBody W≼W₂ Aᴾ₀ [ Rᴾ ])
+            ⟨ cᴾ₂ [ Rᴾ ]ᶜ ⟩)
+      casted = cast-computations-related source-open refl refl
+        (cᴾ₂ [ Rᴾ ]ᶜ) (cᴵ₂ [ Rᴵ ]ᶜ) s refl refl
+        j
+        (liftImpreciseTerm W≼W₂ Vᴵ
+          ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₀ [ Rᴵ ])
+        (liftPreciseTerm W≼W₂ Vᴾ
+          ⦂∀ liftPreciseBody W≼W₂ Aᴾ₀ [ Rᴾ ])
+        (λ W₂≼W₃ sourceᴾ₃ sourceᴵ₃ cᴾ₃ cᴵ₃
+            targetᴾ₃ targetᴵ₃ related₃ →
+          computations-related-future-compose W₂≼W₃ s
+            (related-value-casts
+              (liftCenterImprecision W₂≼W₃ source-open)
+              sourceᴾ₃ sourceᴵ₃ cᴾ₃ cᴵ₃
+              (liftCenterImprecision W₂≼W₃ s)
+              targetᴾ₃ targetᴵ₃ related₃))
+        source-head
+
+      lifted-endpoints = ClosureProof.typed-endpoints-future W≼W₂
+        (value-imprecision-endpoints
+          {W = W} {p = source-local} {k = suc j}
+          {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} source-at-index)
+
+      expanded : ComputationsRelated W₂ (FutureValueRelation s) (suc j)
+          ((liftImpreciseTerm W≼W₂ Vᴵ ⟨ C.∀ᶜ cᴵ₂ ⟩)
+            ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₁ [ Rᴵ ])
+          ((liftPreciseTerm W≼W₂ Vᴾ ⟨ C.∀ᶜ cᴾ₂ ⟩)
+            ⦂∀ liftPreciseBody W≼W₂ Aᴾ₁ [ Rᴾ ])
+      expanded
+          with universal-cast-type-application-step-question
+                 {Σ = impreciseStore (core W₂)}
+                 (imprecise-value lifted-endpoints)
+      expanded | vVᴵ₂ , imprecise-step-eq
+          with universal-cast-type-application-step-question
+                 {Σ = preciseStore (core W₂)}
+                 (precise-value lifted-endpoints)
+      expanded | vVᴵ₂ , imprecise-step-eq
+          | vVᴾ₂ , precise-step-eq =
+        related-pure-step-expand (λ ()) (λ ()) refl refl
+          (β-∀ vVᴵ₂ refl) (β-∀ vVᴾ₂ refl)
+          imprecise-step-eq precise-step-eq casted
+
+      imprecise-application-eq = cong
+        (λ U → U ⦂∀ liftImpreciseBody W≼W₂ Aᴵ₁ [ Rᴵ ])
+        (lift-imprecise-universal-cast W≼W₂ Vᴵ cᴵ)
+
+      precise-application-eq = cong
+        (λ U → U ⦂∀ liftPreciseBody W≼W₂ Aᴾ₁ [ Rᴾ ])
+        (lift-precise-universal-cast W≼W₂ Vᴾ cᴾ)
 
 related-value-casts (I.∀⊑∀ p) sourceᴾ sourceᴵ cᴾ cᴵ q targetᴾ
     targetᴵ related =
