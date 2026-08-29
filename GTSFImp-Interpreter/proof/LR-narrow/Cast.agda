@@ -1371,6 +1371,52 @@ nonvalue-computations-zero : ∀ {Δᴾ Δᴵ Δᶜ}
   → ComputationsRelated W R zero Mᴵ Mᴾ
 nonvalue-computations-zero _ _ _ _ = ClosureProof.computations-related-zero
 
+-- At index one, two non-blame non-values are still vacuously related: the
+-- only observable gas is zero, where neither endpoint can return or blame.
+nonvalue-computations-one : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {R : IndexedValueRelation W}
+    {Mᴵ : Term Δᴵ} {Mᴾ : Term Δᴾ}
+  → Mᴵ ≢ blame
+  → Mᴾ ≢ blame
+  → E.value? Mᴵ ≡ nothing
+  → E.value? Mᴾ ≡ nothing
+  → ComputationsRelated W R (suc zero) Mᴵ Mᴾ
+nonvalue-computations-one {W = W} {Mᴵ = Mᴵ} {Mᴾ = Mᴾ}
+    Mᴵ≢blame Mᴾ≢blame value-eqᴵ value-eqᴾ = record
+  { forward-return = forward
+  ; backward-return = backward
+  ; forward-blame = blame-forward
+  }
+  where
+  forward : ∀ {n} {resultᴵ : E.EvalResult Mᴵ}
+    → n < suc zero
+    → interpretFrom (impreciseStore (core W)) n Mᴵ ≡ returned resultᴵ
+    → _
+  forward {n = zero} n<1 result-eq
+      with trans (sym (nonvalue-zero-timed Mᴵ≢blame value-eqᴵ)) result-eq
+  forward {n = zero} n<1 result-eq | ()
+  forward {n = suc n} (s≤s ()) result-eq
+
+  backward : ∀ {n} {resultᴾ : E.EvalResult Mᴾ}
+    → n < suc zero
+    → interpretFrom (preciseStore (core W)) n Mᴾ ≡ returned resultᴾ
+    → _
+  backward {n = zero} n<1 result-eq
+      with trans (sym (nonvalue-zero-timed Mᴾ≢blame value-eqᴾ)) result-eq
+  backward {n = zero} n<1 result-eq | ()
+  backward {n = suc n} (s≤s ()) result-eq
+
+  blame-forward : ∀ {n}
+    → n < suc zero
+    → BlamesFrom (impreciseStore (core W)) n Mᴵ
+    → _
+  blame-forward {n = zero} n<1
+      (Δ′ , changes , trace , result-eq)
+      with trans (sym (nonvalue-zero-timed Mᴵ≢blame value-eqᴵ)) result-eq
+  blame-forward {n = zero} n<1
+      (Δ′ , changes , trace , result-eq) | ()
+  blame-forward {n = suc n} (s≤s ()) blaming
+
 blame-now : ∀ {Δ} {Σ : TyStore Δ}
   → BlamesFrom Σ zero (blame {Δ = Δ})
 blame-now = _ , [] , ↠-refl , refl
@@ -5639,6 +5685,39 @@ related-value-casts {W = W}
       unwrapped-head i si≤sj ,
       unwrapped-chain i (≤-trans (n≤1+n i) si≤sj)
 
+    bare-pending-head : ∀ i → suc i ≤ suc j
+      → ∀ {Δᴾ₂ Δᴵ₂ Δᶜ₂}
+        (W₂ : World Δᴾ₂ Δᴵ₂ Δᶜ₂)
+        (W≼W₂ : Future W W₂)
+        {Bᴵ₂ : Ty (suc Δᴵ₂)}
+        (peel : Slots.ImprecisePeelᵇ W₂
+          (liftPreciseBody W≼W₂ Aᴾ₁)
+          (liftImpreciseBody W≼W₂ Aᴵ₁) Bᴵ₂)
+        (Rᴾ : Ty Δᴾ₂) (Rᴵ : Ty Δᴵ₂)
+        (r : Rᴾ ⊑ᵂ⟨ core W₂ ⟩ Rᴵ)
+      → ComputationsRelated W₂
+          (FutureValueRelation (openRelatedBodyImprecision {W = W₂}
+            (bodyPᵇ (Slots.imprecise-peel-targetᵇ peel)) r))
+          (suc i)
+          (Slots.imprecise-peel-termᴵᵇ peel
+              (liftImpreciseTerm W≼W₂ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩))
+            ⦂∀ Bᴵ₂ [ Rᴵ ])
+          (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩)
+            ⦂∀ liftPreciseBody W≼W₂ Aᴾ₁ [ Rᴾ ])
+    bare-pending-head zero si≤sj W₂ W≼W₂ peel Rᴾ Rᴵ r =
+      nonvalue-computations-one (λ ()) (λ ()) refl refl
+    bare-pending-head (suc i) ssi≤sj W₂ W≼W₂ peel Rᴾ Rᴵ r =
+      cast-pending-headᵇ kitᵇ
+        {W = W} source-body refl refl cᴾ cᴵ
+        target-body refl refl
+        {k = suc i}
+        (value-imprecision-downward-to
+          {W = W} {p = source-local}
+          {j = suc (suc i)} {k = suc j}
+          {Vᴵ = Vᴵ} {Vᴾ = Vᴾ}
+          ssi≤sj source-at-index)
+        casted-endpoints W≼W₂ Slots.[] future-refl peel Rᴾ Rᴵ r
+
     pending-chain : ∀ n → n ≤ suc j
       → ∀ {Δᴾ₂ Δᴵ₂ Δᶜ₂}
         {W₂ : World Δᴾ₂ Δᴵ₂ Δᶜ₂}
@@ -5659,6 +5738,11 @@ related-value-casts {W = W}
             (wrapTermᴾᵇ σᵇ
               (liftPreciseTerm W≼W₂ (Vᴾ ⟨ C.∀ᶜ cᴾ ⟩))))
     pending-chain zero n≤sj W≼W₂ σᵇ W₂≼W₃ = tt
+    pending-chain (suc i) si≤sj future-refl Slots.[]
+        {W₃ = W₃} W≼W₃ =
+      bare-pending-head i si≤sj W₃ W≼W₃ ,
+      pending-chain i (≤-trans (n≤1+n i) si≤sj)
+        future-refl Slots.[] W≼W₃
     pending-chain (suc i) si≤sj W≼W₂ σᵇ W₂≼W₃ =
       cast-pending-headᵇ kitᵇ
         {W = W} source-body refl refl cᴾ cᴵ
