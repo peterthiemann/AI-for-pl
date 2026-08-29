@@ -14,7 +14,7 @@ open import Relation.Binary.PropositionalEquality
 
 open import Types
 open import CastTerms
-open import Conversion using (replaceTy; 〖_,_↑_〗)
+open import Conversion using (replaceTy; 〖_,_↑_〗; makeConceal)
 open import Reduction
 import Eval as E
 import Imprecision as I
@@ -23,6 +23,7 @@ open import LR-narrow.SlotSequence
 open import LR-narrow.PendingTarget using (TargetTransparent)
 open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
+open import LR-narrow.UniversalFamily
 open import proof.LR-narrow.PendingTarget
 open import proof.LR-narrow.PendingTargetFrame
 import proof.LR-narrow.Closure as ClosureProof
@@ -203,7 +204,7 @@ pending-target-imprecise-peel-reduct : ∀ {Δᴾ Δᴵ Δᶜ}
     {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
     (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
     (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
-  → UniversalFamily W (bodyPᵇ (imprecise-peel-targetᵇ peel))
+  → UniversalDataᵇ W (bodyPᵇ (imprecise-peel-targetᵇ peel))
       Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
   → let
       step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
@@ -216,8 +217,8 @@ pending-target-imprecise-peel-reduct : ∀ {Δᴾ Δᴵ Δᶜ}
         (liftPreciseTerm step Vᴾ
           ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])
 pending-target-imprecise-peel-reduct {W = W} {Rᴾ = Rᴾ}
-    {Rᴵ = Rᴵ} peel r fam =
-  proj₂ (proj₁ (proj₂ (fam (future-refl {W = W}) []))) peel Rᴾ Rᴵ r
+    {Rᴵ = Rᴵ} peel r dat =
+  proj₂ (proj₁ (data-pendingᵇ dat)) peel Rᴾ Rᴵ r
 
 pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -226,7 +227,7 @@ pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
     {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
     (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
     (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
-  → UniversalFamily W (bodyPᵇ (imprecise-peel-targetᵇ peel))
+  → UniversalDataᵇ W (bodyPᵇ (imprecise-peel-targetᵇ peel))
       Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
   → Value Vᴵ
   → ComputationsRelated W
