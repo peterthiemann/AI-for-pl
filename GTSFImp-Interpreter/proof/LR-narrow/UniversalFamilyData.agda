@@ -9,7 +9,9 @@ open import Data.Nat using (ℕ; zero; suc)
 open import Data.Product using (_,_)
 open import Data.Unit.Polymorphic.Base using (tt)
 import Data.Fin as Fin
-open import Relation.Binary.PropositionalEquality using (refl; trans)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; cong₂; refl; sym; trans)
+  renaming (subst to subst≡)
 
 open import Types
 open import CastTerms
@@ -20,7 +22,16 @@ open import LR-narrow.SlotSequence
 open import LR-narrow.LogicalRelation
 open import LR-narrow.UniversalFamily
 import proof.LR-narrow.Closure as Closure
-open import proof.LR-narrow.AliasAvoid using (AliasAvoidᵖ)
+open import proof.LR-narrow.AliasAvoid using
+  (AliasAvoidᵖ; AliasAvoid★ᵖ; alias-avoid★-any)
+open import proof.LR-narrow.RevealLifting using
+  (slot-future; alias-avoid★-lift-body)
+open import proof.LR-narrow.SlotLifting using
+  (slot-imprecise-variable-lift; slot-imprecise-rep-lift)
+open import proof.LR-narrow.ImpreciseReveal using
+  (lift-center-body-∉ᵗ)
+open import proof.LR-narrow.UniversalReveal using
+  (liftImpreciseBody-replace)
 open import proof.LR-narrow.RevealStatements using (OuterBelow)
 open import proof.LR-narrow.RevealStructural using
   (statements-all; reveal-universal-head; conceal-universal-head)
@@ -31,6 +42,101 @@ open import proof.LR-narrow.RevealStructural using
 
 outer-below-all : ∀ (k : ℕ) → OuterBelow k
 outer-below-all k j j<k n = statements-all j n
+
+------------------------------------------------------------------------
+-- Future lifting of imprecise-only peels
+------------------------------------------------------------------------
+
+reveal-imprecise-peel-futureᵇ : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (s : PairedSlot W) {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
+    (no-occur : Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B)
+    (source : BodyImprecisionᵇ W B C)
+    (target : BodyImprecisionᵇ W B
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C))
+    (avoid : (j : BodyImprecisionᵇ W B C)
+      → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
+    (W≼W′ : Future W W′)
+  → ImprecisePeelᵇ W′ (liftPreciseBody W≼W′ B)
+      (liftImpreciseBody W≼W′ C)
+      (replaceTy (Fin.suc (slotXᴵ (slot-future s W≼W′)))
+        (⇑ᵗ (slotRᴵ (slot-future s W≼W′)))
+        (liftImpreciseBody W≼W′ C))
+reveal-imprecise-peel-futureᵇ {W′ = W′} s {B = B} {C = C}
+    no-occur source target avoid W≼W′ =
+  reveal-imprecise-peelᵇ s′ C′ no-occur′ target′ avoid′
+  where
+  s′ = slot-future s W≼W′
+  B′ = liftPreciseBody W≼W′ B
+  C′ = liftImpreciseBody W≼W′ C
+
+  target-eq : liftImpreciseBody W≼W′
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+      ≡ replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) C′
+  target-eq = trans
+    (liftImpreciseBody-replace W≼W′ (slotXᴵ s) (slotRᴵ s) C)
+    (cong₂ (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R) C′)
+      (sym (slot-imprecise-variable-lift s W≼W′))
+      (sym (slot-imprecise-rep-lift s W≼W′)))
+
+  no-occur′ : Fin.suc (center s′) ∉ᵗ embedPreciseBody (core W′) B′
+  no-occur′ = subst≡ (Fin.suc (center s′) ∉ᵗ_)
+    (sym (embedPreciseBody-lift W≼W′ B))
+    (lift-center-body-∉ᵗ W≼W′ no-occur)
+
+  target′ : BodyImprecisionᵇ W′ B′
+      (replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) C′)
+  target′ = body-imprecisionᵇ-subst-imp target-eq
+    (body-imprecisionᵇ-future W≼W′ target)
+
+  avoid′ : (j : BodyImprecisionᵇ W′ B′ C′)
+    → AliasAvoid★ᵖ (Fin.suc (center s′)) (bodyPᵇ j)
+  avoid′ j = alias-avoid★-any
+    (liftCenterBodyImprecision W≼W′ (bodyPᵇ source)) (bodyPᵇ j)
+    (sym (embedPreciseBody-lift W≼W′ B))
+    (sym (embedImpreciseBody-lift W≼W′ C))
+    (alias-avoid★-lift-body W≼W′ (center s)
+      (bodyPᵇ source) (avoid source))
+
+conceal-imprecise-peel-futureᵇ : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
+    {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (s : PairedSlot W) {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
+    (no-occur : Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B)
+    (target : BodyImprecisionᵇ W B C)
+    (avoid : (j : BodyImprecisionᵇ W B C)
+      → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
+    (W≼W′ : Future W W′)
+  → ImprecisePeelᵇ W′ (liftPreciseBody W≼W′ B)
+      (replaceTy (Fin.suc (slotXᴵ (slot-future s W≼W′)))
+        (⇑ᵗ (slotRᴵ (slot-future s W≼W′)))
+        (liftImpreciseBody W≼W′ C))
+      (liftImpreciseBody W≼W′ C)
+conceal-imprecise-peel-futureᵇ {W′ = W′} s {B = B} {C = C}
+    no-occur target avoid W≼W′ =
+  conceal-imprecise-peelᵇ s′ C′ no-occur′ target′ avoid′
+  where
+  s′ = slot-future s W≼W′
+  B′ = liftPreciseBody W≼W′ B
+  C′ = liftImpreciseBody W≼W′ C
+
+  no-occur′ : Fin.suc (center s′) ∉ᵗ embedPreciseBody (core W′) B′
+  no-occur′ = subst≡ (Fin.suc (center s′) ∉ᵗ_)
+    (sym (embedPreciseBody-lift W≼W′ B))
+    (lift-center-body-∉ᵗ W≼W′ no-occur)
+
+  target′ : BodyImprecisionᵇ W′ B′ C′
+  target′ = body-imprecisionᵇ-future W≼W′ target
+
+  avoid′ : (j : BodyImprecisionᵇ W′ B′ C′)
+    → AliasAvoid★ᵖ (Fin.suc (center s′)) (bodyPᵇ j)
+  avoid′ j = alias-avoid★-any
+    (liftCenterBodyImprecision W≼W′ (bodyPᵇ target)) (bodyPᵇ j)
+    (sym (embedPreciseBody-lift W≼W′ B))
+    (sym (embedImpreciseBody-lift W≼W′ C))
+    (alias-avoid★-lift-body W≼W′ (center s)
+      (bodyPᵇ target) (avoid target))
 
 ------------------------------------------------------------------------
 -- Paired wrapper chain extensions
