@@ -15,6 +15,7 @@ open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 open import proof.LR-narrow.StepExpansion using
   (nonvalue-computations-one)
+open import proof.LR-narrow.UniversalReveal using (post-bind-weaken)
 
 pending-target-imprecise-peel-one : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -24,8 +25,10 @@ pending-target-imprecise-peel-one : ∀ {Δᴾ Δᴵ Δᶜ}
     (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
     (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
   → ComputationsRelated W
-      (FutureValueRelation (openRelatedBodyImprecision {W = W}
-        (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+      (PostBindValueRelation
+        (future-paired (future-refl {W = W}) r)
+        (openRelatedBodyImprecision {W = W}
+          (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
       (suc zero)
       (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
       (Vᴾ ⦂∀ Bᴾ [ Rᴾ ])
@@ -48,4 +51,26 @@ pending-target-imprecise-peel : ∀ {Δᴾ Δᴵ Δᶜ}
       (Vᴾ ⦂∀ Bᴾ [ Rᴾ ])
 pending-target-imprecise-peel {W = W} {Rᴾ = Rᴾ}
     {Rᴵ = Rᴵ} peel r pending =
-  proj₁ pending peel Rᴾ Rᴵ r
+  post-bind-weaken (future-paired (future-refl {W = W}) r)
+    (openRelatedBodyImprecision {W = W}
+      (bodyPᵇ (imprecise-peel-targetᵇ peel)) r)
+    (proj₁ pending peel Rᴾ Rᴵ r)
+
+pending-target-imprecise-peel-factored : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ Bᴵ′ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ} {k : ℕ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+    (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
+    (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+  → PendingTargetUniversalsRelated W Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+  → ComputationsRelated W
+      (PostBindValueRelation
+        (future-paired (future-refl {W = W}) r)
+        (openRelatedBodyImprecision {W = W}
+          (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+      (suc k)
+      (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
+      (Vᴾ ⦂∀ Bᴾ [ Rᴾ ])
+pending-target-imprecise-peel-factored peel r pending =
+  proj₁ pending peel _ _ r

@@ -163,8 +163,10 @@ record UniversalFamilyKitᵇ : Set where
           (Rᴾ : Ty Δᴾ″) (Rᴵ : Ty Δᴵ″)
           (r : Rᴾ ⊑ᵂ⟨ core W″ ⟩ Rᴵ)
       → ComputationsRelated W″
-          (FutureValueRelation (openRelatedBodyImprecision {W = W″}
-            (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+          (PostBindValueRelation
+            (future-paired (future-refl {W = W″}) r)
+            (openRelatedBodyImprecision {W = W″}
+              (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
           (suc k)
           (imprecise-peel-termᴵᵇ peel
               (liftImpreciseTerm W′≼W″

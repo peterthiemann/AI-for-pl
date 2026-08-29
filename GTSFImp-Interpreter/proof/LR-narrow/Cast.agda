@@ -5653,8 +5653,10 @@ related-value-casts {W = W}
         (Rᴾ : Ty Δᴾ₂) (Rᴵ : Ty Δᴵ₂)
         (r : Rᴾ ⊑ᵂ⟨ core W₂ ⟩ Rᴵ)
       → ComputationsRelated W₂
-          (FutureValueRelation (openRelatedBodyImprecision {W = W₂}
-            (bodyPᵇ (Slots.imprecise-peel-targetᵇ peel)) r))
+          (PostBindValueRelation
+            (future-paired (future-refl {W = W₂}) r)
+            (openRelatedBodyImprecision {W = W₂}
+              (bodyPᵇ (Slots.imprecise-peel-targetᵇ peel)) r))
           (suc i)
           (Slots.imprecise-peel-termᴵᵇ peel
               (liftImpreciseTerm W≼W₂ (Vᴵ ⟨ C.∀ᶜ cᴵ ⟩))

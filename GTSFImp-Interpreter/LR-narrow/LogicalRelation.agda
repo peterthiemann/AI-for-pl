@@ -375,8 +375,10 @@ mutual
         (Rᴾ : Ty _) (Rᴵ : Ty _)
         (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
       → ComputationsRelated W
-          (FutureValueRelation (openRelatedBodyImprecision {W = W}
-            (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
+          (PostBindValueRelation
+            (future-paired (future-refl {W = W}) r)
+            (openRelatedBodyImprecision {W = W}
+              (bodyPᵇ (imprecise-peel-targetᵇ peel)) r))
           (suc k)
           (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
           (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))

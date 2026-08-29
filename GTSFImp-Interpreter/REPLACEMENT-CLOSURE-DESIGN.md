@@ -1622,3 +1622,18 @@ now records
 at `W`, for every exact imprecise peel and every `Rᴾ ⊑ Rᴵ`.  The
 imprecise-only wrapper chain extensions consume this observation directly;
 no target-transparent extension of ordinary type imprecision is involved.
+
+### J.10  Pending observations retain their paired-bind factor
+
+The complete pre-bind term of J.9 is necessary but not sufficient if its
+result relation is immediately weakened to an arbitrary future.  The cast and
+`Λ` cascades must contract the known first `Rᴾ`/`Rᴵ` allocation before
+processing the surplus inner bind.  That contraction needs the returned world
+to factor through `pairedBindWorld W Rᴾ Rᴵ r`.
+
+`PendingTargetUniversalsRelated` therefore stores the complete application
+under `PostBindValueRelation (future-paired future-refl r) opened`.  Ordinary
+family consumers still receive `FutureValueRelation opened` through
+`pending-target-imprecise-peel`, which performs the weakening at the projection
+boundary.  Producers can use `pending-target-imprecise-peel-factored` to retain
+the factorization while peeling their operational cascade.
