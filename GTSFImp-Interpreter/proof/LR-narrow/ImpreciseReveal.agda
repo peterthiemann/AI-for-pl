@@ -1361,13 +1361,14 @@ mutual
         (Vᴵ ↑ 〖 slotXᴵ s , slotRᴵ s ↑ `∀ B₀ᴵ 〗) Vᴾ
     fam-out {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
       ClosureProof.universals-phantom
-        (liftCenterBodyImprecision W≼W′ p₀)
-        (liftCenterBodyImprecision W≼W′ q̂₀)
-        (ClosureProof.universals-related-transport
-          {W = W′} {p = liftCenterBodyImprecision W≼W′ p₀}
-          {Bᴾ = Bᴾ′} {k = suc m}
-          termᴵ-eq termᴾ-eq
-          (fam W≼W′ (w ∷ σ‡)))
+          (liftCenterBodyImprecision W≼W′ p₀)
+          (liftCenterBodyImprecision W≼W′ q̂₀)
+          (ClosureProof.universals-related-transport
+            {W = W′} {p = liftCenterBodyImprecision W≼W′ p₀}
+            {Bᴾ = Bᴾ′} {k = suc m}
+            termᴵ-eq termᴾ-eq (proj₁ base)) ,
+        ClosureProof.pending-target-universals-related-transport
+          termᴵ-eq termᴾ-eq (proj₂ base)
       where
       s′ = slot-future s W≼W′
       B₀ᴵ′ = liftImpreciseBody W≼W′ B₀ᴵ
@@ -1441,6 +1442,8 @@ mutual
               (sym (liftImpreciseTy-universal W≼W′ B₀ᴵ)))
             (sym (lifted-reveal-imprecise s W≼W′ Vᴵ
               (`∀ B₀ᴵ)))))
+
+      base = fam W≼W′ (w ∷ σ‡)
 
   -- Wrapping a related computation on the imprecise endpoint.
 
@@ -1996,13 +1999,14 @@ mutual
         (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ B₀ᴵ)) Vᴾ
     fam-out {W′ = W′} W≼W′ {Bᴾ′ = Bᴾ′} {Bᴵ′ = Bᴵ′} σ =
       ClosureProof.universals-phantom
-        (liftCenterBodyImprecision W≼W′ q̂₀)
-        (liftCenterBodyImprecision W≼W′ p₀)
-        (ClosureProof.universals-related-transport
-          {W = W′} {p = liftCenterBodyImprecision W≼W′ q̂₀}
-          {Bᴾ = Bᴾ′} {k = suc m}
-          termᴵ-eq termᴾ-eq
-          (fam-r W≼W′ σ†))
+          (liftCenterBodyImprecision W≼W′ q̂₀)
+          (liftCenterBodyImprecision W≼W′ p₀)
+          (ClosureProof.universals-related-transport
+            {W = W′} {p = liftCenterBodyImprecision W≼W′ q̂₀}
+            {Bᴾ = Bᴾ′} {k = suc m}
+            termᴵ-eq termᴾ-eq (proj₁ base)) ,
+        ClosureProof.pending-target-universals-related-transport
+          termᴵ-eq termᴾ-eq (proj₂ base)
       where
       s′ = slot-future s W≼W′
       B₀ᴵ′ = liftImpreciseBody W≼W′ B₀ᴵ
@@ -2075,6 +2079,8 @@ mutual
               (sym (liftImpreciseTy-universal W≼W′ B₀ᴵ)))
             (sym (lifted-conceal-imprecise s W≼W′ Vᴵ
               (`∀ B₀ᴵ)))))
+
+      base = fam-r W≼W′ σ†
 
 ------------------------------------------------------------------------
 -- The one-sided imprecise reveal and conceal, with the fuel

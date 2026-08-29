@@ -9,7 +9,7 @@ module proof.LR-narrow.PendingTarget where
 import Data.Fin as Fin
 open import Data.Nat using (suc)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; cong; refl; subst; sym; trans)
+  using (_≡_; cong; cong₂; refl; subst; sym; trans)
 
 open import Types
 open import Conversion using (replaceTy)
@@ -23,6 +23,14 @@ open import proof.LR-narrow.ReplaceImprecision using
 open import proof.LR-narrow.TargetSlot using
   (target-replace-imprecise-lift)
 open import proof.LR-narrow.TypeApplication using (lift-precise-open)
+open import proof.LR-narrow.UniversalReveal using
+  (liftImpreciseBody-replace)
+open import proof.LR-narrow.RevealLifting using (slot-future)
+open import proof.LR-narrow.SlotLifting using
+  (slot-imprecise-variable-lift; slot-imprecise-rep-lift)
+open import proof.LR-narrow.AliasAvoid using (AliasAvoid★ᵖ)
+open import proof.LR-narrow.ImpreciseReveal using
+  (replace-right-body-⊑; embI-replace-body-eq)
 
 target-transparent-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -134,3 +142,66 @@ fresh-target-lifted-open-transparent {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
   slot = fresh-target-slot W Rᴵ
   precise-open =
     liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ]ᵗ
+
+fresh-target-lifted-replaced-open-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    (s : PairedSlot W)
+    (body : BodyImprecisionᵇ W Bᴾ Bᴵ)
+  → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ body)
+  → Fin.suc (center s) ∉ᵗ
+      embedPreciseBody (core W) Bᴾ
+  → (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+  → let
+      step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+      s′ = slot-future s step
+    in TargetTransparent (impreciseBindWorld W Rᴵ)
+        (fresh-target-slot W Rᴵ)
+        (liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ]ᵗ)
+        (replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′))
+            (liftImpreciseBody step Bᴵ)
+          [ ＇ Fin.zero ]ᵗ)
+fresh-target-lifted-replaced-open-transparent {Bᴾ = Bᴾ}
+    {Bᴵ = Bᴵ} {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W}
+    s body avoid no-occur r =
+  subst (TargetTransparent W′ fresh precise-open)
+    lifted-replaced-open-eq
+    (fresh-target-lifted-open-transparent replaced-body r)
+  where
+  step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+  W′ = impreciseBindWorld W Rᴵ
+  fresh = fresh-target-slot W Rᴵ
+  s′ = slot-future s step
+  precise-open =
+    liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ]ᵗ
+
+  replaced-body : BodyImprecisionᵇ W Bᴾ
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) Bᴵ)
+  replaced-body = body-imprecisionᵇ
+    (subst (λ R → I.extᵐ (impEnv (core W)) I.⊢
+        embedPreciseBody (core W) Bᴾ ⊑ R)
+      (sym (embI-replace-body-eq W s Bᴵ))
+      (replace-right-body-⊑ W s (bodyPᵇ body) avoid no-occur))
+
+  lifted-replaced-body-eq : liftImpreciseBody step
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) Bᴵ)
+      ≡ replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′))
+          (liftImpreciseBody step Bᴵ)
+  lifted-replaced-body-eq = trans
+    (liftImpreciseBody-replace step (slotXᴵ s) (slotRᴵ s) Bᴵ)
+    (cong₂
+      (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R)
+        (liftImpreciseBody step Bᴵ))
+      (sym (slot-imprecise-variable-lift s step))
+      (sym (slot-imprecise-rep-lift s step)))
+
+  lifted-replaced-open-eq :
+      liftImpreciseBody step
+          (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) Bᴵ)
+        [ ＇ Fin.zero ]ᵗ
+      ≡ replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′))
+          (liftImpreciseBody step Bᴵ)
+        [ ＇ Fin.zero ]ᵗ
+  lifted-replaced-open-eq = cong (_[ ＇ Fin.zero ]ᵗ)
+    lifted-replaced-body-eq

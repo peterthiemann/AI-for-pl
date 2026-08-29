@@ -334,12 +334,14 @@ precise-universal-value (suc k) below W s {B₁ = B₁}
                 ↑ 〖 slotXᴾ s′ , slotRᴾ s′ ↑ T 〗)
               (sym (liftPreciseTy-universal W≼W′ B₁)))
             (sym (lifted-reveal-precise s W≼W′ Vᴾ (`∀ B₁))))
+        base = fam W≼W′ (w ∷ σ)
     in ClosureProof.universals-related-transport
-      {W = W′}
-      {p = liftCenterBodyImprecision W≼W′ p₀}
-      {Bᴾ = Bᴾ′} {k = suc k}
-      refl term-eq
-      (fam W≼W′ (w ∷ σ)))
+         {W = W′}
+         {p = liftCenterBodyImprecision W≼W′ p₀}
+         {Bᴾ = Bᴾ′} {k = suc k}
+         refl term-eq (proj₁ base) ,
+       ClosureProof.pending-target-universals-related-transport
+         refl term-eq (proj₂ base))
 precise-universal-value (suc k) below W s {B₁ = B₁}
     I.∀★⊑★ no-occur sourceᴾ
     related@(endpoints , shape , payload) =
@@ -477,12 +479,14 @@ precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
                 ↓ makeConceal (slotXᴾ s′) (slotRᴾ s′) T)
               (sym (liftPreciseTy-universal W≼W′ B₁)))
             (sym (lifted-conceal-precise s W≼W′ Vᴾ (`∀ B₁))))
+        base = fam W≼W′ (w ∷ σ)
     in ClosureProof.universals-related-transport
-      {W = W′}
-      {p = liftCenterBodyImprecision W≼W′ p₀}
-      {Bᴾ = Bᴾ′} {k = suc k}
-      refl term-eq
-      (fam W≼W′ (w ∷ σ)))
+         {W = W′}
+         {p = liftCenterBodyImprecision W≼W′ p₀}
+         {Bᴾ = Bᴾ′} {k = suc k}
+         refl term-eq (proj₁ base) ,
+       ClosureProof.pending-target-universals-related-transport
+         refl term-eq (proj₂ base))
 precise-universal-conceal-value (suc k) below W s {B₁ = B₁}
     I.∀★⊑★ no-occur sourceᴾ
     related@(endpoints , shape , payload) =
