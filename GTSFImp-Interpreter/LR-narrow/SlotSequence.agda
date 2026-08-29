@@ -686,6 +686,19 @@ data UniWrapsᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → UniWrapᵇ W B C B′ C′ → UniWrapsᵇ W B′ C′ B″ C″
     → UniWrapsᵇ W B C B″ C″
 
+appendUniWrapsᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {B C B′ C′ B″ C″}
+  → UniWrapsᵇ W B C B′ C′ → UniWrapsᵇ W B′ C′ B″ C″
+  → UniWrapsᵇ W B C B″ C″
+appendUniWrapsᵇ [] τ = τ
+appendUniWrapsᵇ (w ∷ σ) τ = w ∷ appendUniWrapsᵇ σ τ
+
+snocUniWrapᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {B C B′ C′ B″ C″}
+  → UniWrapsᵇ W B C B′ C′ → UniWrapᵇ W B′ C′ B″ C″
+  → UniWrapsᵇ W B C B″ C″
+snocUniWrapᵇ σ w = appendUniWrapsᵇ σ (w ∷ [])
+
 ------------------------------------------------------------------------
 -- Imprecise-only universal peels
 ------------------------------------------------------------------------
@@ -715,6 +728,17 @@ data ImprecisePeelᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
         → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
     → ImprecisePeelᵇ W B
         (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) C
+
+imprecisePeelWrapᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
+  → ImprecisePeelᵇ W B C D
+  → UniWrapᵇ W B C B D
+imprecisePeelWrapᵇ
+    (reveal-imprecise-peelᵇ s C no-occur i av) =
+  reveal-impreciseᵇ s _ C no-occur i av
+imprecisePeelWrapᵇ
+    (conceal-imprecise-peelᵇ s C no-occur i av) =
+  conceal-impreciseᵇ s _ C no-occur i av
 
 imprecise-peel-targetᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
@@ -801,6 +825,81 @@ wrapTermᴵᵇ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ} {B C B′
   → UniWrapsᵇ W B C B′ C′ → Term Δᴵ → Term Δᴵ
 wrapTermᴵᵇ [] V = V
 wrapTermᴵᵇ (w ∷ σ) V = wrapTermᴵᵇ σ (wrapTermᴵᵇ₁ w V)
+
+wrapTermᴾᵇ-append : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {B C B′ C′ B″ C″}
+    (σ : UniWrapsᵇ W B C B′ C′)
+    (τ : UniWrapsᵇ W B′ C′ B″ C″) (V : Term Δᴾ)
+  → wrapTermᴾᵇ (appendUniWrapsᵇ σ τ) V
+      ≡ wrapTermᴾᵇ τ (wrapTermᴾᵇ σ V)
+wrapTermᴾᵇ-append [] τ V = refl
+wrapTermᴾᵇ-append (w ∷ σ) τ V =
+  wrapTermᴾᵇ-append σ τ (wrapTermᴾᵇ₁ w V)
+
+wrapTermᴵᵇ-append : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {B C B′ C′ B″ C″}
+    (σ : UniWrapsᵇ W B C B′ C′)
+    (τ : UniWrapsᵇ W B′ C′ B″ C″) (V : Term Δᴵ)
+  → wrapTermᴵᵇ (appendUniWrapsᵇ σ τ) V
+      ≡ wrapTermᴵᵇ τ (wrapTermᴵᵇ σ V)
+wrapTermᴵᵇ-append [] τ V = refl
+wrapTermᴵᵇ-append (w ∷ σ) τ V =
+  wrapTermᴵᵇ-append σ τ (wrapTermᴵᵇ₁ w V)
+
+wrapTermᴾᵇ-snoc : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {B C B′ C′ B″ C″}
+    (σ : UniWrapsᵇ W B C B′ C′) (w : UniWrapᵇ W B′ C′ B″ C″)
+    (V : Term Δᴾ)
+  → wrapTermᴾᵇ (snocUniWrapᵇ σ w) V
+      ≡ wrapTermᴾᵇ₁ w (wrapTermᴾᵇ σ V)
+wrapTermᴾᵇ-snoc σ w V = wrapTermᴾᵇ-append σ (w ∷ []) V
+
+wrapTermᴵᵇ-snoc : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {B C B′ C′ B″ C″}
+    (σ : UniWrapsᵇ W B C B′ C′) (w : UniWrapᵇ W B′ C′ B″ C″)
+    (V : Term Δᴵ)
+  → wrapTermᴵᵇ (snocUniWrapᵇ σ w) V
+      ≡ wrapTermᴵᵇ₁ w (wrapTermᴵᵇ σ V)
+wrapTermᴵᵇ-snoc σ w V = wrapTermᴵᵇ-append σ (w ∷ []) V
+
+imprecisePeelWrapᵇ-precise : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D) (V : Term Δᴾ)
+  → wrapTermᴾᵇ₁ (imprecisePeelWrapᵇ peel) V ≡ V
+imprecisePeelWrapᵇ-precise
+    (reveal-imprecise-peelᵇ s C no-occur i av) V = refl
+imprecisePeelWrapᵇ-precise
+    (conceal-imprecise-peelᵇ s C no-occur i av) V = refl
+
+imprecisePeelWrapᵇ-imprecise : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)} {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D) (V : Term Δᴵ)
+  → wrapTermᴵᵇ₁ (imprecisePeelWrapᵇ peel) V
+      ≡ imprecise-peel-termᴵᵇ peel V
+imprecisePeelWrapᵇ-imprecise
+    (reveal-imprecise-peelᵇ s C no-occur i av) V = refl
+imprecisePeelWrapᵇ-imprecise
+    (conceal-imprecise-peelᵇ s C no-occur i av) V = refl
+
+wrapTermᴾᵇ-snoc-imprecise-peel : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B C B′ C′}
+    (σ : UniWrapsᵇ W B C B′ C′) {D′}
+    (peel : ImprecisePeelᵇ W B′ C′ D′) (V : Term Δᴾ)
+  → wrapTermᴾᵇ (snocUniWrapᵇ σ (imprecisePeelWrapᵇ peel)) V
+      ≡ wrapTermᴾᵇ σ V
+wrapTermᴾᵇ-snoc-imprecise-peel σ peel V =
+  trans (wrapTermᴾᵇ-snoc σ (imprecisePeelWrapᵇ peel) V)
+        (imprecisePeelWrapᵇ-precise peel (wrapTermᴾᵇ σ V))
+
+wrapTermᴵᵇ-snoc-imprecise-peel : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B C B′ C′}
+    (σ : UniWrapsᵇ W B C B′ C′) {D′}
+    (peel : ImprecisePeelᵇ W B′ C′ D′) (V : Term Δᴵ)
+  → wrapTermᴵᵇ (snocUniWrapᵇ σ (imprecisePeelWrapᵇ peel)) V
+      ≡ imprecise-peel-termᴵᵇ peel (wrapTermᴵᵇ σ V)
+wrapTermᴵᵇ-snoc-imprecise-peel σ peel V =
+  trans (wrapTermᴵᵇ-snoc σ (imprecisePeelWrapᵇ peel) V)
+        (imprecisePeelWrapᵇ-imprecise peel (wrapTermᴵᵇ σ V))
 
 wrapTermᴾᵇ-subst : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
     {B B′ C B″ C″}
