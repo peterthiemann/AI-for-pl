@@ -391,3 +391,206 @@ inserted-universal-body-relation
       (liftImpreciseBodyTerm W≼W′ (renameᵗᵐ (keep ρᴵ) Vᴵ))))
       (cong (λ B → pack↑ 〖 Fin.zero , ⇑ᵗ Rᴵ ↑ B 〗)
         (sym imprecise-body-eq))
+
+------------------------------------------------------------------------
+-- The inserted body after the surplus target allocation
+------------------------------------------------------------------------
+
+inserted-universal-body-contract-imprecise-bind : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
+    {Wᶜ : CTI.World Δᴾ Δᴵ Δᶜ}
+    {Γ : CTI.CtxImp Wᶜ}
+    {Γᵇ : CTI.CtxImp (CTI.liftWorldBoth I.X⊑X Wᶜ)}
+    {p : Aᴾ CTI.⊑ᵂ⟨ CTI.liftWorldBoth I.X⊑X Wᶜ ⟩ Aᴵ}
+    {Vᴾ : Term (suc Δᴾ)} {Vᴵ : Term (suc Δᴵ)}
+    (liftΓ : CTI.LiftCtx I.X⊑X Γ Γᵇ)
+    (body : CTI.liftWorldBoth I.X⊑X Wᶜ ∣ Γᵇ ⊢² Vᴾ ⊑ Vᴵ ∶ p)
+    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′}
+    {π : Δᶜ ↪ᵗ Δᶜ′}
+    {W : World Δᴾ′ Δᴵ′ Δᶜ′}
+    (ins : WorldInsert ρᴾ ρᴵ π Wᶜ (forgetWorld W))
+  → InsertedFundamentalProperty body
+  → ∀ k {Δᴾ″ Δᴵ″ Δᶜ″}
+      (W′ : World Δᴾ″ Δᴵ″ Δᶜ″)
+      (W≼W′ : Future W W′)
+      (γ : RelatedClosingSubstitutions W′ k
+        (liftContextImprecision W≼W′
+          (compiledContext W (insertCtx ins Γ))))
+      (Rᴾ : Ty Δᴾ″) (Rᴵ : Ty Δᴵ″)
+      (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
+  → let tested = pairedBindWorld W′ Rᴾ Rᴵ r
+        target-bound = impreciseBindWorld tested (＇ Fin.zero)
+        step = paired-step W′ r
+        target-step = future-imprecise {Aᴵ = ＇ Fin.zero}
+          (future-refl {W = tested})
+        ins′ = insert-after-future ins W≼W′
+        body-ins = liftBoth-insert I.X⊑X Rᴾ Rᴵ ins′
+        source = insert⊑ body-ins p
+    in ComputationsRelated target-bound
+        (FutureValueRelation (liftCenterImprecision target-step source)) k
+        (liftImpreciseTerm target-step
+          (closeTypeBody (impreciseClosingSubstitution γ)
+            (liftImpreciseBodyTerm W≼W′
+              (renameᵗᵐ (keep ρᴵ) Vᴵ))))
+        (liftPreciseTerm target-step
+          (closeTypeBody (preciseClosingSubstitution γ)
+            (liftPreciseBodyTerm W≼W′
+              (renameᵗᵐ (keep ρᴾ) Vᴾ))))
+inserted-universal-body-contract-imprecise-bind
+    {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {Γᵇ = Γᵇ} {p = p}
+    {Vᴾ = Vᴾ} {Vᴵ = Vᴵ}
+    liftΓ body {ρᴾ = ρᴾ} {ρᴵ = ρᴵ} ins ih k
+    W′ W≼W′ γ Rᴾ Rᴵ r =
+  Closure.computations-related-reindex source′
+    (liftCenterImprecision target-step source)
+    precise-type-eq imprecise-type-eq
+    imprecise-close-eq precise-close-eq raw
+  where
+  tested = pairedBindWorld W′ Rᴾ Rᴵ r
+  target-bound = impreciseBindWorld tested (＇ Fin.zero)
+  step : Future W′ tested
+  step = paired-step W′ r
+  target-step : Future tested target-bound
+  target-step = future-imprecise {Aᴵ = ＇ Fin.zero}
+    (future-refl {W = tested})
+  ins′ = insert-after-future ins W≼W′
+  body-ins = liftBoth-insert I.X⊑X Rᴾ Rᴵ ins′
+  body-ins′ = insert-after-future body-ins target-step
+  source = insert⊑ body-ins p
+  source′ = insert⊑ body-ins′ p
+
+  ctx-eq = trans (insert-lift-context ins′ liftΓ Rᴾ Rᴵ r)
+    (cong (liftContextImprecision step)
+      (insert-context-after-future ins W≼W′))
+
+  γ-step = related-closing-future step γ
+  γ-body = related-closing-context-reindex (sym ctx-eq) γ-step
+  body-context = compiledContext tested (insertCtx body-ins Γᵇ)
+
+  ctx-after = insert-context-after-future body-ins target-step
+  γ-future = related-closing-future target-step γ-body
+  γ-inserted = related-closing-context-reindex (sym ctx-after) γ-future
+  final-context = compiledContext target-bound (insertCtx body-ins′ Γᵇ)
+  γ-raw = related-closing-context-reindex
+    (sym (lift-context-imprecision-refl final-context)) γ-inserted
+
+  raw = inserted-relation ih target-bound body-ins′ k
+    target-bound future-refl γ-raw
+
+  precise-type-eq = trans
+    (cong (embedPrecise (core target-bound))
+      (sym (liftPreciseTy-after target-step
+        (keep (afterPrecise W≼W′ ρᴾ)) Aᴾ)))
+    (embedPrecise-lift target-step
+      (renameᵗ (toRenameᵗ (keep (afterPrecise W≼W′ ρᴾ))) Aᴾ))
+
+  imprecise-type-eq = trans
+    (cong (embedImprecise (core target-bound))
+      (sym (liftImpreciseTy-after target-step
+        (keep (afterImprecise W≼W′ ρᴵ)) Aᴵ)))
+    (embedImprecise-lift target-step
+      (renameᵗ (toRenameᵗ (keep (afterImprecise W≼W′ ρᴵ))) Aᴵ))
+
+  precise-base-env-eq : ∀ x → lookupClosing
+      (preciseClosingSubstitution γ-body) x
+    ≡ liftˢ (closingSubstitution (preciseClosingSubstitution γ)) x
+  precise-base-env-eq x = trans
+    (precise-closing-context-reindex-lookup (sym ctx-eq) γ-step x)
+    (ClosingProof.precise-related-future-lookup step γ x)
+
+  imprecise-base-env-eq : ∀ x → lookupClosing
+      (impreciseClosingSubstitution γ-body) x
+    ≡ liftˢ (closingSubstitution (impreciseClosingSubstitution γ)) x
+  imprecise-base-env-eq x = trans
+    (imprecise-closing-context-reindex-lookup (sym ctx-eq) γ-step x)
+    (ClosingProof.imprecise-related-future-lookup step γ x)
+
+  precise-base-close-eq = trans
+    (subst-cong precise-base-env-eq
+      (renameᵗᵐ (keep (afterPrecise W≼W′ ρᴾ)) Vᴾ))
+    (cong (closeTypeBody (preciseClosingSubstitution γ))
+      (sym (liftPreciseBodyTerm-after W≼W′ ρᴾ Vᴾ)))
+
+  imprecise-base-close-eq = trans
+    (subst-cong imprecise-base-env-eq
+      (renameᵗᵐ (keep (afterImprecise W≼W′ ρᴵ)) Vᴵ))
+    (cong (closeTypeBody (impreciseClosingSubstitution γ))
+      (sym (liftImpreciseBodyTerm-after W≼W′ ρᴵ Vᴵ)))
+
+  precise-final-env-eq : ∀ x → lookupClosing
+      (preciseClosingSubstitution γ-raw) x
+    ≡ lookupClosing (preciseClosingSubstitution γ-future) x
+  precise-final-env-eq x = trans
+    (precise-closing-context-reindex-lookup
+      (sym (lift-context-imprecision-refl final-context)) γ-inserted x)
+    (precise-closing-context-reindex-lookup
+      (sym ctx-after) γ-future x)
+
+  imprecise-final-env-eq : ∀ x → lookupClosing
+      (impreciseClosingSubstitution γ-raw) x
+    ≡ lookupClosing (impreciseClosingSubstitution γ-future) x
+  imprecise-final-env-eq x = trans
+    (imprecise-closing-context-reindex-lookup
+      (sym (lift-context-imprecision-refl final-context)) γ-inserted x)
+    (imprecise-closing-context-reindex-lookup
+      (sym ctx-after) γ-future x)
+
+  precise-future-env-eq : ∀ x → lookupClosing
+      (preciseClosingSubstitution γ-future) x
+    ≡ lookupClosing
+        (ClosingProof.precise-closing-future target-step
+          (preciseClosingSubstitution γ-body)) x
+  precise-future-env-eq x = trans
+    (ClosingProof.precise-related-future-lookup target-step γ-body x)
+    (sym (ClosingProof.precise-closing-future-lookup target-step
+      (preciseClosingSubstitution γ-body) x))
+
+  imprecise-future-env-eq : ∀ x → lookupClosing
+      (impreciseClosingSubstitution γ-future) x
+    ≡ lookupClosing
+        (ClosingProof.imprecise-closing-future target-step
+          (impreciseClosingSubstitution γ-body)) x
+  imprecise-future-env-eq x = trans
+    (ClosingProof.imprecise-related-future-lookup target-step γ-body x)
+    (sym (ClosingProof.imprecise-closing-future-lookup target-step
+      (impreciseClosingSubstitution γ-body) x))
+
+  precise-close-eq = trans
+    (subst-cong precise-final-env-eq
+      (renameᵗᵐ
+        (afterPrecise target-step
+          (keep (afterPrecise W≼W′ ρᴾ))) Vᴾ))
+    (trans
+      (cong (close (preciseClosingSubstitution γ-future))
+        (sym (liftPreciseTerm-after target-step
+          (keep (afterPrecise W≼W′ ρᴾ)) Vᴾ)))
+      (trans
+        (subst-cong precise-future-env-eq
+          (liftPreciseTerm target-step
+            (renameᵗᵐ (keep (afterPrecise W≼W′ ρᴾ)) Vᴾ)))
+        (trans
+          (sym (precise-close-future target-step
+            (preciseClosingSubstitution γ-body)
+            (renameᵗᵐ (keep (afterPrecise W≼W′ ρᴾ)) Vᴾ)))
+          (cong (liftPreciseTerm target-step) precise-base-close-eq))))
+
+  imprecise-close-eq = trans
+    (subst-cong imprecise-final-env-eq
+      (renameᵗᵐ
+        (afterImprecise target-step
+          (keep (afterImprecise W≼W′ ρᴵ))) Vᴵ))
+    (trans
+      (cong (close (impreciseClosingSubstitution γ-future))
+        (sym (liftImpreciseTerm-after target-step
+          (keep (afterImprecise W≼W′ ρᴵ)) Vᴵ)))
+      (trans
+        (subst-cong imprecise-future-env-eq
+          (liftImpreciseTerm target-step
+            (renameᵗᵐ (keep (afterImprecise W≼W′ ρᴵ)) Vᴵ)))
+        (trans
+          (sym (imprecise-close-future target-step
+            (impreciseClosingSubstitution γ-body)
+            (renameᵗᵐ
+              (keep (afterImprecise W≼W′ ρᴵ)) Vᴵ)))
+          (cong (liftImpreciseTerm target-step)
+            imprecise-base-close-eq))))
