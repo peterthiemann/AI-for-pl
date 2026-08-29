@@ -117,6 +117,8 @@ import proof.LR-narrow.Closure as ClosureProof
 open import proof.LR-narrow.AliasWorld using
   (world-alias-atom; alias-mode-no-paired-holds;
    alias-holds-chain; alias-no-imprecise-target)
+open import proof.LR-narrow.GroundReading using
+  (NoAliasImage; ground-readings-unique)
 
 reindex-center-imprecision : ∀ {Δ} {μ : I.ImpEnv Δ}
     {A B A′ B′ : Ty Δ}
@@ -866,6 +868,46 @@ ground-cast-square-tags-agree {ν₂ = ν₂} nv ∀★ g₂ ns₁ ns₂
 ground-cast-square-tags-agree nv ∀★ g₂ ns₁ ns₂ C.bot-intro c₂ q =
   ground-targets-unique⊑-nonvar nonvar-all ∀★ g₂ I.bot-elim
     (expand-cast-source⊑ g₂ ns₂ c₂ I.bot⊑★ q)
+
+world-no-alias-image : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+  → NoAliasImage
+      (C.toRenameᵗ (impreciseEmbedding (core W))) (impEnv (core W))
+world-no-alias-image W Y eq = alias-no-imprecise-target W eq refl
+
+dynamic-payload-ground-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Hᴾ Gᴾ : Ty Δᴾ} {Hᴵ Gᴵ : Ty Δᴵ}
+    {Bᴾ Bᴵ : Ty Δᶜ}
+  → (hᴵ : Ground Hᴵ)
+  → (gᴵ : Ground Gᴵ)
+  → Hᴾ ≡ Gᴾ
+  → impEnv (core W) I.⊢ embedPrecise (core W) Hᴾ
+      ⊑ embedImprecise (core W) Hᴵ
+  → (q : impEnv (core W) I.⊢ Bᴾ ⊑ Bᴵ)
+  → embedPrecise (core W) Gᴾ ≡ Bᴾ
+  → embedImprecise (core W) Gᴵ ≡ Bᴵ
+  → Hᴵ ≡ Gᴵ
+dynamic-payload-ground-tags-agree {W = W} {Hᴾ = Hᴾ}
+    {Gᴾ = Gᴾ} {Hᴵ = Hᴵ} {Gᴵ = Gᴵ}
+    hᴵ gᴵ Hᴾ≡Gᴾ payload-q q targetᴾ targetᴵ =
+  renameᵗ-injective
+    (toRenameᵗ-injective (impreciseEmbedding (core W))) center-eq
+  where
+  ρᴾ = C.toRenameᵗ (preciseEmbedding (core W))
+  ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
+
+  payload-q′ : impEnv (core W) I.⊢
+      renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Hᴵ
+  payload-q′ = reindex-center-imprecision payload-q
+    (cong (renameᵗ ρᴾ) Hᴾ≡Gᴾ) refl
+
+  target-q : impEnv (core W) I.⊢
+      renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Gᴵ
+  target-q = reindex-center-imprecision q (sym targetᴾ) (sym targetᴵ)
+
+  center-eq : renameᵗ ρᴵ Hᴵ ≡ renameᵗ ρᴵ Gᴵ
+  center-eq = ground-readings-unique ρᴵ (sizeᵖ payload-q′)
+    (world-no-alias-image W) payload-q′ target-q ≤-refl hᴵ gᴵ refl refl
 
 dynamic-payload-projection-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -3919,10 +3961,8 @@ related-value-casts {W = W} I.★⊑★ sourceᴾ sourceᴵ
     | tag-matched Hᴾ≡Gᴾ precise-step precise-step-eq
     | projection-same
     | tag-mismatched Hᴵ≢Gᴵ imprecise-step imprecise-step-eq =
-  ⊥-elim (Hᴵ≢Gᴵ (sym
-    (dynamic-payload-projection-target-agrees {W = W}
-      hᴵ gᴾ Hᴾ≡Gᴾ payload-q (C.ground-nonstar gᴵ)
-      q targetᴾ targetᴵ)))
+  ⊥-elim (Hᴵ≢Gᴵ (dynamic-payload-ground-tags-agree {W = W}
+    hᴵ gᴵ Hᴾ≡Gᴾ payload-q q targetᴾ targetᴵ))
 related-value-casts {W = W} I.★⊑★ sourceᴾ sourceᴵ
     (C.？_ {G = Gᴾ} ⦃ Gᵍ = gᴾ ⦄ ⦃ ★∼G = ★∼Gᴾ ⦄
       cᴾ ⦃ Bns = nsᴾ ⦄)
