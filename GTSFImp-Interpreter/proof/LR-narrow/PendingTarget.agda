@@ -7,6 +7,7 @@ module proof.LR-narrow.PendingTarget where
 --   * Keeps the relaxed reading outside ordinary type imprecision.
 
 import Data.Fin as Fin
+open import Data.Nat using (suc)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; cong; refl; subst; sym; trans)
 
@@ -23,6 +24,7 @@ open import LR-narrow.LogicalRelation using (ValueImprecisionᵏ)
 open import proof.ImprecisionConsistency using (toRenameᵗ-injective)
 open import proof.LR-narrow.RevealLifting using
   (renameᵗ-replaceTy; shift-replace)
+open import proof.LR-narrow.ReplaceImprecision using (replace-zero-open)
 open import proof.LR-narrow.TargetSlot
 
 liftCenterTy-replace : ∀ {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
@@ -164,3 +166,35 @@ fresh-target-variable-transparent {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W} r =
       (sym (embedImprecise-imprecise-shift (core W) Rᴵ Rᴵ))
       (liftCenterImprecision
         (future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})) r))
+
+fresh-target-open-transparent : ∀ {Δᴾ Δᴵ Δᶜ}
+    {Bᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty (suc Δᴵ)}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+  → BodyImprecisionᵇ W Bᴾ Bᴵ
+  → Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ
+  → TargetTransparent (impreciseBindWorld W Rᴵ)
+      (fresh-target-slot W Rᴵ) (Bᴾ [ Rᴾ ]ᵗ) Bᴵ
+fresh-target-open-transparent {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
+    {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W} body r =
+  subst (λ L → impEnv (core W′) I.⊢ L
+      ⊑ targetNormalize W′ slot (embedImprecise (core W′) Bᴵ))
+    (sym (embedPrecise-lift step (Bᴾ [ Rᴾ ]ᵗ)))
+    (subst (λ R → impEnv (core W′) I.⊢
+        liftCenterTy step (embedPrecise (core W) (Bᴾ [ Rᴾ ]ᵗ)) ⊑ R)
+      (sym right-eq)
+      (liftCenterImprecision step
+        (openRelatedBodyImprecision {W = W} (bodyPᵇ body) r)))
+  where
+  W′ = impreciseBindWorld W Rᴵ
+  step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+  slot = fresh-target-slot W Rᴵ
+
+  right-eq : targetNormalize W′ slot (embedImprecise (core W′) Bᴵ)
+      ≡ liftCenterTy step
+          (embedImprecise (core W) (Bᴵ [ Rᴵ ]ᵗ))
+  right-eq =
+    trans (target-normalize-embedding W′ slot Bᴵ)
+      (trans (cong (embedImprecise (core W′))
+          (replace-zero-open Rᴵ Bᴵ))
+        (embedImprecise-lift step (Bᴵ [ Rᴵ ]ᵗ)))
