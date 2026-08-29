@@ -8,7 +8,7 @@ module proof.LR-narrow.BindStepExpansion where
 open import Data.List using (_∷_)
 open import Data.Maybe using (just; nothing)
 import Data.Maybe as Maybe
-open import Data.Nat using (ℕ; zero; suc; _∸_; _≤_; _<_)
+open import Data.Nat using (ℕ; zero; suc; _∸_; _≤_; _<_; s≤s)
 open import Data.Nat.Properties using
   (≤-pred; ≤-trans; n≤1+n; ∸-monoʳ-≤)
 open import Data.Product using (_×_; _,_; Σ-syntax)
@@ -37,6 +37,10 @@ open import proof.LR-narrow.StepExpansion using (nonvalue-zero-timed)
 import proof.LR-narrow.Closure as ClosureProof
 open import proof.LR-narrow.TypeBetaExpansion using
   (precise-step; paired-returns-downward)
+open import proof.LR-narrow.StoreChangesCoherence using
+  (store-changes-terms-unique; future-precise-changes;
+   future-imprecise-changes; future-precise-changes-action;
+   future-imprecise-changes-action)
 
 paired-bind-step : ∀ {Δᴾ Δᴵ Δᶜ}
     (W : World Δᴾ Δᴵ Δᶜ) {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
@@ -434,6 +438,188 @@ related-paired-bind-step-expand {W = W} {Rᴾ = Rᴾ} {Rᴵ = Rᴵ}
     suc m , step-blame-expand {Σ = preciseStore (core W)}
       {gas = m} {M = Mᴾ} {N = Nᴾ} {χ = bind Rᴾ}
       Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ contract-blameᴾ
+
+------------------------------------------------------------------------
+-- Removing a known paired allocation prefix
+------------------------------------------------------------------------
+
+paired-returns-bind-step-contract : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ}
+    {Mᴵ : Term Δᴵ} {Nᴵ : Term (suc Δᴵ)}
+    {Mᴾ : Term Δᴾ} {Nᴾ : Term (suc Δᴾ)}
+    {stepᴵ : Mᴵ —→[ bind Rᴵ ] Nᴵ}
+    {stepᴾ : Mᴾ —→[ bind Rᴾ ] Nᴾ}
+    {resultᴵ : E.EvalResult Nᴵ} {resultᴾ : E.EvalResult Nᴾ}
+    {k : ℕ}
+  → PairedReturns W
+      (PostBindValueRelation (paired-bind-step W r) p) k
+      (prepend-result stepᴵ resultᴵ) (prepend-result stepᴾ resultᴾ)
+  → PairedReturns (pairedBindWorld W Rᴾ Rᴵ r)
+      (FutureValueRelation
+        (liftCenterImprecision (paired-bind-step W r) p))
+      k resultᴵ resultᴾ
+paired-returns-bind-step-contract {W = W} {Rᴾ = Rᴾ} {Rᴵ = Rᴵ}
+    {r = r} {p = p}
+    {resultᴵ = E.result Δᴵ′ χsᴵ Vᴵ traceᴵ valueᴵ}
+    {resultᴾ = E.result Δᴾ′ χsᴾ Vᴾ traceᴾ valueᴾ}
+    (paired-returns W′ W≼W′ storeᴵ storeᴾ termsᴵ termsᴾ
+      (bound≼W′ , refl , related)) =
+  paired-returns W′ bound≼W′ storeᴵ storeᴾ termsᴵ′ termsᴾ′
+    final-related
+  where
+  step = paired-bind-step W r
+
+  termsᴵ′ : ∀ M → χsᴵ ▶ᵀ M ≡ liftImpreciseTerm bound≼W′ M
+  termsᴵ′ M = trans
+    (store-changes-terms-unique χsᴵ
+      (future-imprecise-changes bound≼W′) M)
+    (future-imprecise-changes-action bound≼W′ M)
+
+  termsᴾ′ : ∀ M → χsᴾ ▶ᵀ M ≡ liftPreciseTerm bound≼W′ M
+  termsᴾ′ M = trans
+    (store-changes-terms-unique χsᴾ
+      (future-precise-changes bound≼W′) M)
+    (future-precise-changes-action bound≼W′ M)
+
+  composite = liftCenterImprecision
+    (future-trans step bound≼W′) p
+  sequential = liftCenterImprecision bound≼W′
+    (liftCenterImprecision step p)
+
+  final-related = ClosureProof.value-imprecision-reindex
+    sequential composite
+    (sym (liftCenterTy-trans step bound≼W′ _))
+    (sym (liftCenterTy-trans step bound≼W′ _)) related
+
+related-paired-bind-step-contract : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ}
+    {Aᴾ Aᴵ : Ty Δᶜ}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ} {k : ℕ}
+    {Mᴵ : Term Δᴵ} {Nᴵ : Term (suc Δᴵ)}
+    {Mᴾ : Term Δᴾ} {Nᴾ : Term (suc Δᴾ)}
+  → Mᴵ ≢ blame
+  → Mᴾ ≢ blame
+  → E.value? Mᴵ ≡ nothing
+  → E.value? Mᴾ ≡ nothing
+  → (stepᴵ : Mᴵ —→[ bind Rᴵ ] Nᴵ)
+  → (stepᴾ : Mᴾ —→[ bind Rᴾ ] Nᴾ)
+  → E.step? (impreciseStore (core W)) Mᴵ ≡
+      just (E.step-result (bind Rᴵ) Nᴵ stepᴵ)
+  → E.step? (preciseStore (core W)) Mᴾ ≡
+      just (E.step-result (bind Rᴾ) Nᴾ stepᴾ)
+  → ComputationsRelated W
+      (PostBindValueRelation (paired-bind-step W r) p)
+      (suc k) Mᴵ Mᴾ
+  → ComputationsRelated (pairedBindWorld W Rᴾ Rᴵ r)
+      (FutureValueRelation
+        (liftCenterImprecision (paired-bind-step W r) p))
+      k Nᴵ Nᴾ
+related-paired-bind-step-contract {W = W} {Rᴾ = Rᴾ} {Rᴵ = Rᴵ}
+    {r = r} {p = p} {k = k}
+    {Mᴵ = Mᴵ} {Nᴵ = Nᴵ} {Mᴾ = Mᴾ} {Nᴾ = Nᴾ}
+    Mᴵ≢blame Mᴾ≢blame value-eqᴵ value-eqᴾ stepᴵ stepᴾ
+    step-eqᴵ step-eqᴾ related = record
+  { forward-return = forward
+  ; backward-return = backward
+  ; forward-blame = blame-forward
+  }
+  where
+  bound = pairedBindWorld W Rᴾ Rᴵ r
+
+  forward : ∀ {n} {resultᴵ : E.EvalResult Nᴵ}
+    → n < k
+    → interpretFrom (impreciseStore (core bound)) n Nᴵ
+        ≡ returned resultᴵ
+    → (Σ[ m ∈ ℕ ] Σ[ resultᴾ ∈ E.EvalResult Nᴾ ]
+        interpretFrom (preciseStore (core bound)) m Nᴾ
+          ≡ returned resultᴾ
+        × PairedReturns bound
+          (FutureValueRelation (liftCenterImprecision
+            (paired-bind-step W r) p))
+          (k ∸ n) resultᴵ resultᴾ)
+      ⊎ (Σ[ m ∈ ℕ ] BlamesFrom
+          (preciseStore (core bound)) m Nᴾ)
+  forward {n = n} n<k returnᴵ
+      with forward-return related (s≤s n<k)
+        (step-return-expand
+          {Σ = impreciseStore (core W)} {gas = n}
+          {M = Mᴵ} {N = Nᴵ} {χ = bind Rᴵ}
+          Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ returnᴵ)
+  forward {n = n} n<k returnᴵ
+      | inj₁ (m , resultᴾ , returnᴾ , paired)
+      with step-return-invert
+        {Σ = preciseStore (core W)} {n = m}
+        {M = Mᴾ} {N = Nᴾ} {χ = bind Rᴾ}
+        Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ returnᴾ
+  forward {n = n} n<k returnᴵ
+      | inj₁ (.(suc m) , resultᴾ , returnᴾ , paired)
+      | step-return {gas = m} resultᴾ′ returnᴾ′ resultᴾ-eq =
+    inj₁ (m , resultᴾ′ , returnᴾ′ ,
+      paired-returns-bind-step-contract {r = r}
+        (paired-returns-reindex refl (sym resultᴾ-eq) paired))
+  forward {n = n} n<k returnᴵ
+      | inj₂ (m , blameᴾ)
+      with step-blame-invert
+        {Σ = preciseStore (core W)} {n = m}
+        {M = Mᴾ} {N = Nᴾ} {χ = bind Rᴾ}
+        Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ
+  forward {n = n} n<k returnᴵ
+      | inj₂ (.(suc m) , blameᴾ)
+      | step-blame {gas = m} blameᴾ′ = inj₂ (m , blameᴾ′)
+
+  backward : ∀ {n} {resultᴾ : E.EvalResult Nᴾ}
+    → n < k
+    → interpretFrom (preciseStore (core bound)) n Nᴾ
+        ≡ returned resultᴾ
+    → Σ[ m ∈ ℕ ] Σ[ resultᴵ ∈ E.EvalResult Nᴵ ]
+        interpretFrom (impreciseStore (core bound)) m Nᴵ
+          ≡ returned resultᴵ
+        × PairedReturns bound
+          (FutureValueRelation (liftCenterImprecision
+            (paired-bind-step W r) p))
+          (k ∸ n) resultᴵ resultᴾ
+  backward {n = n} n<k returnᴾ
+      with backward-return related (s≤s n<k)
+        (step-return-expand
+          {Σ = preciseStore (core W)} {gas = n}
+          {M = Mᴾ} {N = Nᴾ} {χ = bind Rᴾ}
+          Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ returnᴾ)
+  backward {n = n} n<k returnᴾ
+      | m , resultᴵ , returnᴵ , paired
+      with step-return-invert
+        {Σ = impreciseStore (core W)} {n = m}
+        {M = Mᴵ} {N = Nᴵ} {χ = bind Rᴵ}
+        Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ returnᴵ
+  backward {n = n} n<k returnᴾ
+      | .(suc m) , resultᴵ , returnᴵ , paired
+      | step-return {gas = m} resultᴵ′ returnᴵ′ resultᴵ-eq =
+    m , resultᴵ′ , returnᴵ′ ,
+    paired-returns-bind-step-contract {r = r}
+      (paired-returns-reindex (sym resultᴵ-eq) refl paired)
+
+  blame-forward : ∀ {n}
+    → n < k
+    → BlamesFrom (impreciseStore (core bound)) n Nᴵ
+    → Σ[ m ∈ ℕ ] BlamesFrom (preciseStore (core bound)) m Nᴾ
+  blame-forward {n = n} n<k blameᴵ
+      with forward-blame related (s≤s n<k)
+        (step-blame-expand
+          {Σ = impreciseStore (core W)} {gas = n}
+          {M = Mᴵ} {N = Nᴵ} {χ = bind Rᴵ}
+          Mᴵ≢blame value-eqᴵ stepᴵ step-eqᴵ blameᴵ)
+  blame-forward {n = n} n<k blameᴵ | m , blameᴾ
+      with step-blame-invert
+        {Σ = preciseStore (core W)} {n = m}
+        {M = Mᴾ} {N = Nᴾ} {χ = bind Rᴾ}
+        Mᴾ≢blame value-eqᴾ stepᴾ step-eqᴾ blameᴾ
+  blame-forward {n = n} n<k blameᴵ | .(suc m) , blameᴾ
+      | step-blame {gas = m} blameᴾ′ = m , blameᴾ′
 
 ------------------------------------------------------------------------
 -- A precise-only allocation step

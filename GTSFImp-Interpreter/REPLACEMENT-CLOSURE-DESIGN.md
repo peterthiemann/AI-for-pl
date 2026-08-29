@@ -1637,3 +1637,19 @@ family consumers still receive `FutureValueRelation opened` through
 `pending-target-imprecise-peel`, which performs the weakening at the projection
 boundary.  Producers can use `pending-target-imprecise-peel-factored` to retain
 the factorization while peeling their operational cascade.
+
+### J.11  Paired-bind factors can be contracted (2026-08-29)
+
+The evaluator records a concrete `StoreChanges` trace, while a logical future
+records only which endpoint contexts were reached.  Removing the first paired
+bind therefore appeared to require an additional coherence premise connecting
+the residual trace to the residual future.
+
+No strengthening of the computation relation is necessary.  Every store
+change acts on terms solely by one weakening for each context-increasing
+`bind`; `keep` is the identity.  Hence two traces with the same source and
+target contexts induce equal term actions.  `StoreChangesCoherence` proves this
+endpoint uniqueness and synthesizes the canonical traces represented by a
+`Future`.  Using those facts, `paired-returns-bind-step-contract` and
+`related-paired-bind-step-contract` remove a known first paired allocation and
+recover the residual relation at `pairedBindWorld W Rᴾ Rᴵ r`.
