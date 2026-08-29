@@ -115,6 +115,26 @@ imprecise-peel-step
 imprecise-peel-step
     (conceal-imprecise-peelᵇ s C no-occur i av) vV = β-conceal-∀ vV
 
+imprecise-peel-step-question : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
+    {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D)
+    {Σ : TyStore Δᴵ} {R : Ty Δᴵ} {V : Term Δᴵ}
+  → (vV : Value V)
+  → Σ[ vV′ ∈ Value V ] E.step? Σ
+      (imprecise-peel-termᴵᵇ peel V ⦂∀ D [ R ])
+      ≡ just (E.step-result (bind R)
+          (imprecise-peel-reductᴵᵇ peel R V)
+          (imprecise-peel-step peel vV′))
+imprecise-peel-step-question
+    (reveal-imprecise-peelᵇ s C no-occur i av) vV =
+  reveal-type-app-step-question
+    〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗 vV
+imprecise-peel-step-question
+    (conceal-imprecise-peelᵇ s C no-occur i av) vV =
+  conceal-type-app-step-question
+    (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) vV
+
 ------------------------------------------------------------------------
 -- The slot allocated by a paired type application
 ------------------------------------------------------------------------
