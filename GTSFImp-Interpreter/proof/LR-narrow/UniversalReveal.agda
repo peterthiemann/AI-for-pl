@@ -43,6 +43,10 @@ open import proof.LR-narrow.SlotLifting using
   (slotXᴾ; slotXᴵ; slotRᴾ; slotRᴵ)
 open import LR-narrow.World
 open import LR-narrow.Atoms
+open import LR-narrow.SlotSequence using
+  (ImprecisePeelᵇ; reveal-imprecise-peelᵇ;
+   conceal-imprecise-peelᵇ; imprecise-peel-termᴵᵇ;
+   imprecise-peel-reductᴵᵇ)
 
 ------------------------------------------------------------------------
 -- The evaluator steps a revealed or concealed universal value
@@ -97,6 +101,19 @@ conceal-type-app-step-question c vV
     | nothing | _ | vV′ , value-eq | no B≢B with B≢B refl
 conceal-type-app-step-question c vV
     | nothing | _ | vV′ , value-eq | no B≢B | ()
+
+imprecise-peel-step : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
+    {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D)
+    {R : Ty Δᴵ} {V : Term Δᴵ}
+  → (vV : Value V)
+  → imprecise-peel-termᴵᵇ peel V ⦂∀ D [ R ] —→[ bind R ]
+      imprecise-peel-reductᴵᵇ peel R V
+imprecise-peel-step
+    (reveal-imprecise-peelᵇ s C no-occur i av) vV = β-reveal-∀ vV
+imprecise-peel-step
+    (conceal-imprecise-peelᵇ s C no-occur i av) vV = β-conceal-∀ vV
 
 ------------------------------------------------------------------------
 -- The slot allocated by a paired type application
