@@ -8,7 +8,7 @@ module proof.LR-narrow.StepExpansion where
 open import Data.List using (_∷_)
 open import Data.Maybe using (just; nothing)
 import Data.Maybe as Maybe
-open import Data.Nat using (ℕ; suc; _∸_; _≤_; _<_)
+open import Data.Nat using (ℕ; suc; _∸_; _≤_; s≤s; _<_)
 open import Data.Nat.Properties using (≤-pred)
 open import Data.Product using (_×_; _,_; Σ-syntax)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
@@ -127,6 +127,64 @@ nonvalue-zero-timed {Σ = Σ} {M = M} M≢blame value-eq
 nonvalue-zero-timed M≢blame value-eq | just outcome | normalized-eq
     rewrite value-eq with normalized-eq
 nonvalue-zero-timed M≢blame value-eq | just outcome | normalized-eq | ()
+
+-- At index one, two non-blame non-values are still vacuously related: the
+-- only observable gas is zero, where neither endpoint can return or blame.
+nonvalue-computations-one : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {R : IndexedValueRelation W}
+    {Mᴵ : Term Δᴵ} {Mᴾ : Term Δᴾ}
+  → Mᴵ ≢ blame
+  → Mᴾ ≢ blame
+  → E.value? Mᴵ ≡ nothing
+  → E.value? Mᴾ ≡ nothing
+  → ComputationsRelated W R (suc Data.Nat.zero) Mᴵ Mᴾ
+nonvalue-computations-one {W = W} {R = R} {Mᴵ = Mᴵ} {Mᴾ = Mᴾ}
+    Mᴵ≢blame Mᴾ≢blame value-eqᴵ value-eqᴾ = record
+  { forward-return = forward
+  ; backward-return = backward
+  ; forward-blame = blame-forward
+  }
+  where
+  forward : ∀ {n} {resultᴵ : E.EvalResult Mᴵ}
+    → n < suc Data.Nat.zero
+    → interpretFrom (impreciseStore (core W)) n Mᴵ ≡ returned resultᴵ
+    →
+      (Σ[ m ∈ ℕ ] Σ[ resultᴾ ∈ E.EvalResult Mᴾ ]
+        (interpretFrom (preciseStore (core W)) m Mᴾ ≡ returned resultᴾ)
+        × PairedReturns W R (suc Data.Nat.zero ∸ n) resultᴵ resultᴾ)
+      ⊎ (Σ[ m ∈ ℕ ] BlamesFrom (preciseStore (core W)) m Mᴾ)
+  forward {n = Data.Nat.zero} n<1 result-eq
+      with trans (sym (nonvalue-zero-timed
+        {Σ = impreciseStore (core W)} {M = Mᴵ} Mᴵ≢blame value-eqᴵ))
+        result-eq
+  forward {n = Data.Nat.zero} n<1 result-eq | ()
+  forward {n = suc n} (s≤s ()) result-eq
+
+  backward : ∀ {n} {resultᴾ : E.EvalResult Mᴾ}
+    → n < suc Data.Nat.zero
+    → interpretFrom (preciseStore (core W)) n Mᴾ ≡ returned resultᴾ
+    → Σ[ m ∈ ℕ ] Σ[ resultᴵ ∈ E.EvalResult Mᴵ ]
+        (interpretFrom (impreciseStore (core W)) m Mᴵ ≡ returned resultᴵ)
+        × PairedReturns W R (suc Data.Nat.zero ∸ n) resultᴵ resultᴾ
+  backward {n = Data.Nat.zero} n<1 result-eq
+      with trans (sym (nonvalue-zero-timed
+        {Σ = preciseStore (core W)} {M = Mᴾ} Mᴾ≢blame value-eqᴾ))
+        result-eq
+  backward {n = Data.Nat.zero} n<1 result-eq | ()
+  backward {n = suc n} (s≤s ()) result-eq
+
+  blame-forward : ∀ {n}
+    → n < suc Data.Nat.zero
+    → BlamesFrom (impreciseStore (core W)) n Mᴵ
+    → Σ[ m ∈ ℕ ] BlamesFrom (preciseStore (core W)) m Mᴾ
+  blame-forward {n = Data.Nat.zero} n<1
+      (Δ′ , changes , trace , result-eq)
+      with trans (sym (nonvalue-zero-timed
+        {Σ = impreciseStore (core W)} {M = Mᴵ} Mᴵ≢blame value-eqᴵ))
+        result-eq
+  blame-forward {n = Data.Nat.zero} n<1
+      (Δ′ , changes , trace , result-eq) | ()
+  blame-forward {n = suc n} (s≤s ()) blaming
 
 data PureStepReturn {Δ : TyCtx} (Σ : TyStore Δ)
     {M N : Term Δ} (step : M —→ N) (result : E.EvalResult M) :

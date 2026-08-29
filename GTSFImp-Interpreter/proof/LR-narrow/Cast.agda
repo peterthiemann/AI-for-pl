@@ -91,7 +91,8 @@ open import proof.LR-narrow.ImmediateReturn using
   (related-values-return; value-question-complete)
 open import proof.LR-narrow.BetaExpansion using (value-step-none)
 open import proof.LR-narrow.StepExpansion using
-  (nonvalue-zero-timed; PureStepReturn; pure-step-return;
+  (nonvalue-zero-timed; nonvalue-computations-one;
+   PureStepReturn; pure-step-return;
    PureStepBlame; pure-step-blame; pure-step-return-invert;
    pure-step-return-expand; pure-step-blame-invert;
    pure-step-blame-expand; related-pure-step-expand)
@@ -1370,52 +1371,6 @@ nonvalue-computations-zero : ∀ {Δᴾ Δᴵ Δᶜ}
   → E.value? Mᴾ ≡ nothing
   → ComputationsRelated W R zero Mᴵ Mᴾ
 nonvalue-computations-zero _ _ _ _ = ClosureProof.computations-related-zero
-
--- At index one, two non-blame non-values are still vacuously related: the
--- only observable gas is zero, where neither endpoint can return or blame.
-nonvalue-computations-one : ∀ {Δᴾ Δᴵ Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ} {R : IndexedValueRelation W}
-    {Mᴵ : Term Δᴵ} {Mᴾ : Term Δᴾ}
-  → Mᴵ ≢ blame
-  → Mᴾ ≢ blame
-  → E.value? Mᴵ ≡ nothing
-  → E.value? Mᴾ ≡ nothing
-  → ComputationsRelated W R (suc zero) Mᴵ Mᴾ
-nonvalue-computations-one {W = W} {Mᴵ = Mᴵ} {Mᴾ = Mᴾ}
-    Mᴵ≢blame Mᴾ≢blame value-eqᴵ value-eqᴾ = record
-  { forward-return = forward
-  ; backward-return = backward
-  ; forward-blame = blame-forward
-  }
-  where
-  forward : ∀ {n} {resultᴵ : E.EvalResult Mᴵ}
-    → n < suc zero
-    → interpretFrom (impreciseStore (core W)) n Mᴵ ≡ returned resultᴵ
-    → _
-  forward {n = zero} n<1 result-eq
-      with trans (sym (nonvalue-zero-timed Mᴵ≢blame value-eqᴵ)) result-eq
-  forward {n = zero} n<1 result-eq | ()
-  forward {n = suc n} (s≤s ()) result-eq
-
-  backward : ∀ {n} {resultᴾ : E.EvalResult Mᴾ}
-    → n < suc zero
-    → interpretFrom (preciseStore (core W)) n Mᴾ ≡ returned resultᴾ
-    → _
-  backward {n = zero} n<1 result-eq
-      with trans (sym (nonvalue-zero-timed Mᴾ≢blame value-eqᴾ)) result-eq
-  backward {n = zero} n<1 result-eq | ()
-  backward {n = suc n} (s≤s ()) result-eq
-
-  blame-forward : ∀ {n}
-    → n < suc zero
-    → BlamesFrom (impreciseStore (core W)) n Mᴵ
-    → _
-  blame-forward {n = zero} n<1
-      (Δ′ , changes , trace , result-eq)
-      with trans (sym (nonvalue-zero-timed Mᴵ≢blame value-eqᴵ)) result-eq
-  blame-forward {n = zero} n<1
-      (Δ′ , changes , trace , result-eq) | ()
-  blame-forward {n = suc n} (s≤s ()) blaming
 
 blame-now : ∀ {Δ} {Σ : TyStore Δ}
   → BlamesFrom Σ zero (blame {Δ = Δ})
