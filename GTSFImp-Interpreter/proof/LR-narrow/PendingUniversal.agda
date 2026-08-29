@@ -66,7 +66,8 @@ pending-target-universal-head {W = W} {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
 
   argument-related : TargetTransparent W′ slot
       (liftPreciseTy step Rᴾ) (＇ Fin.zero)
-  argument-related = fresh-target-variable-transparent r
+  argument-related = fresh-target-variable-transparent
+    {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W} r
 
   result-related : TargetTransparent W′ slot
       (liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ]ᵗ)
