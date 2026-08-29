@@ -20,6 +20,8 @@ open import proof.DGG.WorldInsert
 open import LR-narrow.World
 open import LR-narrow.ClosingSubstitution
 open import LR-narrow.TermRelation
+open import proof.LR-narrow.FutureInsertion using
+  (insert-after-future; liftPreciseTy-after; liftImpreciseTy-after)
 
 ------------------------------------------------------------------------
 -- Inserting a syntactically lifted context
@@ -67,5 +69,33 @@ insert-lift-context {ρᴾ = ρᴾ} {ρᴵ = ρᴵ} {W = W} ins
       {W = pairedBindWorld W Rᴾ Rᴵ r}
       (insert⊑ (liftBoth-insert I.X⊑X Rᴾ Rᴵ ins) p′)
       (liftLocalImprecision (future-paired future-refl r)
-        (insert⊑ ins p))
+      (insert⊑ ins p))
       (renameᵗ-keep-shift ρᴾ A) (renameᵗ-keep-shift ρᴵ B)
+
+------------------------------------------------------------------------
+-- Inserting a context after a semantic future
+------------------------------------------------------------------------
+
+insert-context-after-future : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′ Δᴾ″ Δᴵ″ Δᶜ″}
+    {Wᶜ : CTI.World Δᴾ Δᴵ Δᶜ}
+    {Γ : CTI.CtxImp Wᶜ}
+    {ρᴾ : Δᴾ ↪ᵗ Δᴾ′} {ρᴵ : Δᴵ ↪ᵗ Δᴵ′} {π : Δᶜ ↪ᵗ Δᶜ′}
+    {W : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {W′ : World Δᴾ″ Δᴵ″ Δᶜ″}
+    (ins : WorldInsert ρᴾ ρᴵ π Wᶜ (forgetWorld W))
+    (W≼W′ : Future W W′)
+  → compiledContext W′
+      (insertCtx (insert-after-future ins W≼W′) Γ)
+    ≡ liftContextImprecision W≼W′
+        (compiledContext W (insertCtx ins Γ))
+insert-context-after-future {Γ = []} ins W≼W′ = refl
+insert-context-after-future {Γ = CTI.ctx-imp A B p ∷ Γ}
+    {ρᴾ = ρᴾ} {ρᴵ = ρᴵ} {W = W} ins W≼W′ =
+  cong₂ _∷_ entry-eq (insert-context-after-future ins W≼W′)
+  where
+  entry-eq = context-imp-entry-eq {W = _}
+    (insert⊑ (insert-after-future ins W≼W′) p)
+    (liftLocalImprecision W≼W′ (insert⊑ ins p))
+    (sym (liftPreciseTy-after W≼W′ ρᴾ A))
+    (sym (liftImpreciseTy-after W≼W′ ρᴵ B))
