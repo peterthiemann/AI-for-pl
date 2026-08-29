@@ -284,6 +284,85 @@ reveal-imprecise-chainᵇ W s {B = B} {C = C} no-occur source target
     valueᴵ′ = Closure.imprecise-value-future W≼W′
       (imprecise-value (data-endpointsᵇ dat))
 
+conceal-imprecise-chainᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (s : PairedSlot W)
+    {B : Ty (suc Δᴾ)} {C : Ty (suc Δᴵ)}
+    (no-occur : Fin.suc (center s) ∉ᵗ embedPreciseBody (core W) B)
+    (target : BodyImprecisionᵇ W B C)
+    (source : BodyImprecisionᵇ W B
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C))
+    (avoid : (j : BodyImprecisionᵇ W B C)
+      → AliasAvoid★ᵖ (Fin.suc (center s)) (bodyPᵇ j))
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W (bodyPᵇ source) B
+      (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+      k Vᴵ Vᴾ
+  → UniversalsRelated W (bodyPᵇ target) B C k
+      (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ C)) Vᴾ
+conceal-imprecise-chainᵇ W s no-occur target source avoid
+    {k = zero} dat = tt
+conceal-imprecise-chainᵇ W s {B = B} {C = C} no-occur target source
+    avoid {k = suc k} {Vᴵ = Vᴵ} {Vᴾ = Vᴾ} dat =
+  head ,
+  conceal-imprecise-chainᵇ W s no-occur target source avoid
+    (universal-dataᵇ-downward dat)
+  where
+  head : ∀ {Δᴾ′ Δᴵ′ Δᶜ′} (W′ : World Δᴾ′ Δᴵ′ Δᶜ′)
+      (W≼W′ : Future W W′) (Rᴾ : Ty Δᴾ′) (Rᴵ : Ty Δᴵ′)
+      (r : Rᴾ ⊑ᵂ⟨ core W′ ⟩ Rᴵ)
+      (q : liftPreciseBody W≼W′ B [ Rᴾ ]ᵗ
+        ⊑ᵂ⟨ core W′ ⟩ liftImpreciseBody W≼W′ C [ Rᴵ ]ᵗ)
+    → ComputationsRelated W′ (FutureValueRelation q) (suc k)
+        (liftImpreciseTerm W≼W′
+            (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ C))
+          ⦂∀ liftImpreciseBody W≼W′ C [ Rᴵ ])
+        (liftPreciseTerm W≼W′ Vᴾ
+          ⦂∀ liftPreciseBody W≼W′ B [ Rᴾ ])
+  head W′ W≼W′ Rᴾ Rᴵ r q =
+    Closure.computations-related-reindex opened q
+      refl refl (sym termᴵ-eq) refl
+      (pending-target-imprecise-peel-bind-expand peel′ r
+        pending′ valueᴵ′)
+    where
+    s′ = slot-future s W≼W′
+    B′ = liftPreciseBody W≼W′ B
+    C′ = liftImpreciseBody W≼W′ C
+    D′ = replaceTy (Fin.suc (slotXᴵ s′)) (⇑ᵗ (slotRᴵ s′)) C′
+
+    peel′ : ImprecisePeelᵇ W′ B′ D′ C′
+    peel′ = conceal-imprecise-peel-futureᵇ s no-occur target avoid
+      W≼W′
+
+    body-eq : liftImpreciseBody W≼W′
+        (replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) ≡ D′
+    body-eq = trans
+      (liftImpreciseBody-replace W≼W′ (slotXᴵ s) (slotRᴵ s) C)
+      (cong₂ (λ X R → replaceTy (Fin.suc X) (⇑ᵗ R) C′)
+        (sym (slot-imprecise-variable-lift s W≼W′))
+        (sym (slot-imprecise-rep-lift s W≼W′)))
+
+    pending′ : PendingTargetUniversalsRelated W′ B′ D′ (suc k)
+        (liftImpreciseTerm W≼W′ Vᴵ) (liftPreciseTerm W≼W′ Vᴾ)
+    pending′ = Closure.pending-target-universals-related-body-transport
+      refl body-eq (data-pendingᵇ dat W≼W′)
+
+    opened = openRelatedBodyImprecision {W = W′}
+      (bodyPᵇ (imprecise-peel-targetᵇ peel′)) r
+
+    termᴵ-eq :
+        liftImpreciseTerm W≼W′
+            (Vᴵ ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ C))
+          ⦂∀ C′ [ Rᴵ ]
+      ≡ imprecise-peel-termᴵᵇ peel′ (liftImpreciseTerm W≼W′ Vᴵ)
+          ⦂∀ C′ [ Rᴵ ]
+    termᴵ-eq
+        rewrite lifted-conceal-imprecise s W≼W′ Vᴵ (`∀ C)
+              | liftImpreciseTy-universal W≼W′ C = refl
+
+    valueᴵ′ : Value (liftImpreciseTerm W≼W′ Vᴵ)
+    valueᴵ′ = Closure.imprecise-value-future W≼W′
+      (imprecise-value (data-endpointsᵇ dat))
+
 universal-dataᵇ-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
     {W : World Δᴾ Δᴵ Δᶜ} {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
