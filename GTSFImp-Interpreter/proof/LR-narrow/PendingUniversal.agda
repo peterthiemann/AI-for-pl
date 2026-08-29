@@ -204,8 +204,7 @@ pending-target-imprecise-peel-reduct : ∀ {Δᴾ Δᴵ Δᶜ}
     {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
     (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
     (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
-  → UniversalDataᵇ W (bodyPᵇ (imprecise-peel-targetᵇ peel))
-      Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+  → PendingTargetUniversalsRelated W Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
   → let
       step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
       opened = openRelatedBodyImprecision {W = W}
@@ -217,8 +216,8 @@ pending-target-imprecise-peel-reduct : ∀ {Δᴾ Δᴵ Δᶜ}
         (liftPreciseTerm step Vᴾ
           ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])
 pending-target-imprecise-peel-reduct {W = W} {Rᴾ = Rᴾ}
-    {Rᴵ = Rᴵ} peel r dat =
-  proj₂ (proj₁ (data-pendingᵇ dat future-refl)) peel Rᴾ Rᴵ r
+    {Rᴵ = Rᴵ} peel r pending =
+  proj₂ (proj₁ pending) peel Rᴾ Rᴵ r
 
 pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -227,8 +226,7 @@ pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
     {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
     (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
     (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
-  → UniversalDataᵇ W (bodyPᵇ (imprecise-peel-targetᵇ peel))
-      Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
+  → PendingTargetUniversalsRelated W Bᴾ Bᴵ (suc k) Vᴵ Vᴾ
   → Value Vᴵ
   → ComputationsRelated W
       (FutureValueRelation (openRelatedBodyImprecision {W = W}
@@ -237,32 +235,32 @@ pending-target-imprecise-peel-bind-expand : ∀ {Δᴾ Δᴵ Δᶜ}
       (imprecise-peel-termᴵᵇ peel Vᴵ ⦂∀ Bᴵ′ [ Rᴵ ])
       (Vᴾ ⦂∀ Bᴾ [ Rᴾ ])
 pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
-    (reveal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    (reveal-imprecise-peelᵇ s C no-occur body avoid) r pending vVᴵ
     with reveal-type-app-step-question
       {Σ = impreciseStore (core W)} {A = Rᴵ}
       〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗 vVᴵ
 pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
-    peel@(reveal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    peel@(reveal-imprecise-peelᵇ s C no-occur body avoid) r pending vVᴵ
     | vVᴵ′ , step-eq =
   post-bind-weaken step opened
     (related-imprecise-bind-step-expand (λ ()) refl
       (β-reveal-∀ vVᴵ′) step-eq
-      (pending-target-imprecise-peel-reduct peel r fam))
+      (pending-target-imprecise-peel-reduct peel r pending))
   where
   step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
   opened = openRelatedBodyImprecision {W = W} (bodyPᵇ body) r
 pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
-    (conceal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    (conceal-imprecise-peelᵇ s C no-occur body avoid) r pending vVᴵ
     with conceal-type-app-step-question
       {Σ = impreciseStore (core W)} {A = Rᴵ}
       (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) vVᴵ
 pending-target-imprecise-peel-bind-expand {W = W} {Rᴵ = Rᴵ}
-    peel@(conceal-imprecise-peelᵇ s C no-occur body avoid) r fam vVᴵ
+    peel@(conceal-imprecise-peelᵇ s C no-occur body avoid) r pending vVᴵ
     | vVᴵ′ , step-eq =
   post-bind-weaken step opened
     (related-imprecise-bind-step-expand (λ ()) refl
       (β-conceal-∀ vVᴵ′) step-eq
-      (pending-target-imprecise-peel-reduct peel r fam))
+      (pending-target-imprecise-peel-reduct peel r pending))
   where
   step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
   opened = openRelatedBodyImprecision {W = W} (bodyPᵇ body) r
