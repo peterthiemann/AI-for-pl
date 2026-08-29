@@ -1548,3 +1548,56 @@ fresh instantiation slot remains the existing dynamic case.
 The implementation is in `proof/LR-narrow/AliasReveal.agda` and
 `proof/LR-narrow/AliasUniversalChain.agda`; `LR-narrow/SlotSequence.agda`
 now exposes `AliasSlot` plus the one-sided alias wrapper constructors.
+
+### J.8  The cast cascade does not cover an imprecise-only first peel
+(2026-08-29)
+
+The schedule in I.3 predates the imprecise-only constructors added to
+`UniWrapᵇ`.  Those constructors expose a missing case which is not dual to
+the self-alias case.
+
+Take a family head at the related instantiations `Rᴾ = ℕ` and `Rᴵ = ℕ`,
+and let the outermost wrapper be `reveal-impreciseᵇ` (the conceal case has
+the same issue).  Its first operational step is only on the imprecise
+endpoint:
+
+    precise:    Uᴾ ⦂∀ Bᴾ[ℕ]
+    imprecise:  (Uᴵ ↑ ∀↑c) ⦂∀ Bᴵ′[ℕ]
+                                  │ β-reveal-∀, bind ℕ
+                                  ▼
+                ((⇑Uᴵ ⦂∀ C[＇0]) ↑ c) ↑ fresh-reveal
+
+The reduct lives in `impreciseBindWorld W ℕ`.  To continue by the source
+universal family at the inner application, the proposed cascade needs
+
+    `ℕ ⊑ᵂ⟨ core (impreciseBindWorld W ℕ) ⟩ ＇0`.
+
+This judgment is uninhabited.  The fresh semantic entry is a
+`target-entry` at mode `X⊑★`; the precise embedding skips the fresh center
+and the imprecise embedding keeps it.  Consequently the requested center
+judgment is `ℕ ⊑ ＇0`.  The only base-source clauses are `ι⊑ι` (target
+`ℕ`) and `ι⊑★` (target `★`); `X⊑★` has a variable on the left, and there
+is deliberately no `★⊑X` or right-alias clause.  The existing
+`imprecise-local-imprecision` only yields `ℕ ⊑ ⇑ℕ`, not `ℕ ⊑ ＇0`.
+
+Thus `related-alias-bind-step-expand` closes the surplus-precise queue,
+but no symmetric step can close a surplus-imprecise queue under the
+current world relation.  Merely adding an imprecise-bind step-expansion
+lemma would expose the same impossible continuation premise.
+
+This refutes the producer schedule as written; it does not by itself
+refute the intended operational equivalence of an absent imprecise-side
+universal wrapper.  Step 6 must choose one of these repairs before
+`cast-familyᵇ` can be discharged:
+
+1. Remove imprecise-only wrappers from the stored two-sided family and
+   prove the two imprecise-side universal eta/commutation cases directly.
+2. Add a target-transparent world mode and right-alias precision rule,
+   after checking that this does not invalidate the one-way precision
+   invariants which intentionally exclude `★⊑X`.
+3. Change the family closure to quotient or normalize absent one-sided
+   universal wrappers, so producers are not required to instantiate a
+   source family at an unrelated target-only name.
+
+Until that choice is made, moving `cast-familyᵇ` out of
+`RemainingObligations` would only relocate the same assumption.
