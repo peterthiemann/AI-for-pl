@@ -7,7 +7,7 @@ module proof.LR-narrow.UniversalFamilyData where
 
 open import Data.Nat using (ℕ; zero; suc)
 open import Data.Nat.Properties using (≤-refl)
-open import Data.Product using (_,_; proj₁)
+open import Data.Product using (_,_; proj₁; Σ-syntax)
 open import Data.Unit.Polymorphic.Base using (tt)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
@@ -48,24 +48,30 @@ open import proof.LR-narrow.ReplaceImprecision using
   (replace-left-⊑; replace-left-alias-eq-⊑; replace-zero-open;
    open-shifted-body)
 open import proof.LR-narrow.PreciseReveal using
-  (sizeᵗ; lift-∉ᵗ; precise-revealed-computations;
+  (precise-reveal-endpoints; precise-conceal-endpoints;
+   sizeᵗ; lift-∉ᵗ; precise-revealed-computations;
    precise-concealed-computations)
 open import proof.LR-narrow.StarNoOccurrence using (replaceTy-absent)
 open import proof.LR-narrow.DynamicReveal using
   (dyn-slot-future; dyn-slot-precise-variable-lift;
    dyn-slot-precise-rep-lift; dyn-lifted-reveal-precise;
    dyn-lifted-conceal-precise; dyn-embed-replace; dyn-embed-∉;
+   dyn-reveal-endpoints; dyn-conceal-endpoints;
    dyn-revealed-computations; dyn-concealed-computations; ∉-all-inv)
 open import proof.LR-narrow.AliasReveal using
   (alias-slot-future; alias-slot-precise-variable-lift;
    alias-slot-precise-rep-lift; alias-lifted-reveal-precise;
    alias-lifted-conceal-precise; alias-embed-replace; alias-embed-∉;
+   alias-reveal-endpoints; alias-conceal-endpoints;
    alias-revealed-computations; alias-concealed-computations)
+open import proof.LR-narrow.ImpreciseReveal using
+  (imp-reveal-endpoints; imp-conceal-endpoints)
 open import proof.LR-narrow.PendingUniversal using
   (pending-target-imprecise-peel)
 open import proof.LR-narrow.RevealStatements using (Below; OuterBelow)
 open import proof.LR-narrow.RevealStructural using
-  (statements-all; reveal-universal-head; conceal-universal-head)
+  (statements-all; revealed-endpoints; concealed-endpoints;
+   reveal-universal-head; conceal-universal-head)
 
 ------------------------------------------------------------------------
 -- Completed structural induction below any step index
@@ -2077,6 +2083,130 @@ conceal-imprecise-chainᵇ W s {B = B} {C = C} no-occur target source
     termᴵ-eq
         rewrite lifted-conceal-imprecise s W≼W′ Vᴵ (`∀ C)
               | liftImpreciseTy-universal W≼W′ C = refl
+
+------------------------------------------------------------------------
+-- Extending producer data by one wrapper
+------------------------------------------------------------------------
+
+extend-universal-dataᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {B B′ : Ty (suc Δᴾ)} {C C′ : Ty (suc Δᴵ)}
+  → (source : BodyImprecisionᵇ W B C)
+  → (w : UniWrapᵇ W B C B′ C′)
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → UniversalDataᵇ W (bodyPᵇ source) B C k Vᴵ Vᴾ
+  → (∀ {Δᴾ′ Δᴵ′ Δᶜ′}
+      {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+      → (W≼W′ : Future W W′)
+      → PendingTargetUniversalsRelated W′
+          (liftPreciseBody W≼W′ B′) (liftImpreciseBody W≼W′ C′) k
+          (liftImpreciseTerm W≼W′ (wrapTermᴵᵇ₁ w Vᴵ))
+          (liftPreciseTerm W≼W′ (wrapTermᴾᵇ₁ w Vᴾ)))
+  → Σ[ target ∈ BodyImprecisionᵇ W B′ C′ ]
+      UniversalDataᵇ W (bodyPᵇ target) B′ C′ k
+        (wrapTermᴵᵇ₁ w Vᴵ) (wrapTermᴾᵇ₁ w Vᴾ)
+extend-universal-dataᵇ {W = W} source
+    (reveal-pairedᵇ s B C target avoid) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = revealed-endpoints W s (I.∀⊑∀ source-p) refl refl
+    (I.∀⊑∀ target-p) refl refl (data-endpointsᵇ dat)
+    (imprecise-value (data-endpointsᵇ dat) ↑ all)
+    (precise-value (data-endpointsᵇ dat) ↑ all)
+  chain = reveal-paired-chainᵇ W s source (avoid source) target dat
+extend-universal-dataᵇ {W = W} source
+    (conceal-pairedᵇ s B C target avoid) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = concealed-endpoints W s (I.∀⊑∀ target-p) refl refl
+    (I.∀⊑∀ source-p) refl refl (data-endpointsᵇ dat)
+    (imprecise-value (data-endpointsᵇ dat) ↓ all)
+    (precise-value (data-endpointsᵇ dat) ↓ all)
+  chain = conceal-paired-chainᵇ W s target source (avoid target) dat
+extend-universal-dataᵇ {W = W} source
+    (reveal-dynᵇ d B C target) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = dyn-reveal-endpoints W d (I.∀⊑∀ source-p) refl
+    (I.∀⊑∀ target-p) refl (data-endpointsᵇ dat)
+    (precise-value (data-endpointsᵇ dat) ↑ all)
+  chain = reveal-dynamic-chainᵇ W d source target dat
+extend-universal-dataᵇ {W = W} source
+    (conceal-dynᵇ d B C target) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = dyn-conceal-endpoints W d (I.∀⊑∀ target-p) refl
+    (I.∀⊑∀ source-p) refl (data-endpointsᵇ dat)
+    (precise-value (data-endpointsᵇ dat) ↓ all)
+  chain = conceal-dynamic-chainᵇ W d target source dat
+extend-universal-dataᵇ {W = W} source
+    (reveal-aliasᵇ a B C target) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = alias-reveal-endpoints W a (I.∀⊑∀ source-p) refl
+    (I.∀⊑∀ target-p) refl (data-endpointsᵇ dat)
+    (precise-value (data-endpointsᵇ dat) ↑ all)
+  chain = reveal-alias-chainᵇ W a source target dat
+extend-universal-dataᵇ {W = W} source
+    (conceal-aliasᵇ a B C target) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = alias-conceal-endpoints W a (I.∀⊑∀ target-p) refl
+    (I.∀⊑∀ source-p) refl (data-endpointsᵇ dat)
+    (precise-value (data-endpointsᵇ dat) ↓ all)
+  chain = conceal-alias-chainᵇ W a target source dat
+extend-universal-dataᵇ {W = W} source
+    (reveal-inertᵇ s B C no-occur stored) dat pending =
+  source , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  endpoints = precise-reveal-endpoints W s (I.∀⊑∀ source-p)
+    no-occur refl (data-endpointsᵇ dat)
+    (precise-value (data-endpointsᵇ dat) ↑ all)
+  chain = reveal-inert-chainᵇ W s no-occur source dat
+extend-universal-dataᵇ {W = W} source
+    (conceal-inertᵇ s B C no-occur stored) dat pending =
+  source , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  endpoints = precise-conceal-endpoints W s (I.∀⊑∀ source-p)
+    no-occur refl (data-endpointsᵇ dat)
+    (precise-value (data-endpointsᵇ dat) ↓ all)
+  chain = conceal-inert-chainᵇ W s no-occur source dat
+extend-universal-dataᵇ {W = W} source
+    (reveal-impreciseᵇ s B C no-occur target avoid) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = imp-reveal-endpoints W s (I.∀⊑∀ source-p) refl
+    (I.∀⊑∀ target-p) refl (data-endpointsᵇ dat)
+    (imprecise-value (data-endpointsᵇ dat) ↑ all)
+  chain = reveal-imprecise-chainᵇ W s no-occur source target
+    avoid dat
+extend-universal-dataᵇ {W = W} source
+    (conceal-impreciseᵇ s B C no-occur target avoid) dat pending =
+  target , universal-dataᵇ endpoints chain pending
+  where
+  source-p = bodyPᵇ source
+  target-p = bodyPᵇ target
+  endpoints = imp-conceal-endpoints W s (I.∀⊑∀ target-p) refl
+    (I.∀⊑∀ source-p) refl (data-endpointsᵇ dat)
+    (imprecise-value (data-endpointsᵇ dat) ↓ all)
+  chain = conceal-imprecise-chainᵇ W s no-occur target source
+    avoid dat
 
 universal-dataᵇ-future : ∀
     {Δᴾ Δᴵ Δᶜ Δᴾ′ Δᴵ′ Δᶜ′}
