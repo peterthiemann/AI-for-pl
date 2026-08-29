@@ -1,7 +1,7 @@
 module proof.LR-narrow.UniversalInstantiation where
 
 -- File Charter:
---   * Eliminates ordinary and pending-target positive-index universal heads.
+--   * Eliminates ordinary positive-index universal heads.
 --   * Observes type application in the current, pre-allocation world.
 --   * Relates returned values at the instantiated-body imprecision.
 --   * Returns the endpoint body witnesses stored in ValueImprecision.
@@ -16,7 +16,6 @@ open import CastTerms
 import Imprecision as I
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
-open import LR-narrow.PendingTarget using (TargetTransparent)
 open import LR-narrow.Computation
 open import LR-narrow.LogicalRelation
 
@@ -42,29 +41,6 @@ related-universal-instantiation {Rᴾ = Rᴾ} {Rᴵ = Rᴵ} {W = W}
   Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
   (λ s → proj₁ (proj₁ (fam (future-refl {W = W}) [])) W
            (future-refl {W = W}) Rᴾ Rᴵ r s)
-
-related-universal-pending-instantiation : ∀
-    {Δᴾ Δᴵ Δᶜ} {Aᴾ Aᴵ : Ty (suc Δᶜ)}
-    {W : World Δᴾ Δᴵ Δᶜ}
-    {p : I.extᵐ (impEnv (core W)) I.⊢ Aᴾ ⊑ Aᴵ}
-    {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
-  → ValueImprecision W (I.∀⊑∀ p) (suc k) Vᴵ Vᴾ
-  → Σ[ Bᴾ ∈ Ty (suc Δᴾ) ]
-    Σ[ Bᴵ ∈ Ty (suc Δᴵ) ]
-      (embedPrecise (core W) (`∀ Bᴾ) ≡ `∀ Aᴾ)
-      × (embedImprecise (core W) (`∀ Bᴵ) ≡ `∀ Aᴵ)
-      × ((t : TargetSlot W) (Rᴾ : Ty Δᴾ) (Rᴵ : Ty Δᴵ)
-          (r : TargetTransparent W t Rᴾ Rᴵ)
-          (s : TargetTransparent W t
-            (Bᴾ [ Rᴾ ]ᵗ) (Bᴵ [ Rᴵ ]ᵗ))
-        → ComputationsRelated W
-            (PendingTargetValueRelation t
-              {Aᴾ = Bᴾ [ Rᴾ ]ᵗ} {Aᴵ = Bᴵ [ Rᴵ ]ᵗ} s)
-            (suc k) (Vᴵ ⦂∀ Bᴵ [ Rᴵ ]) (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
-related-universal-pending-instantiation {W = W}
-    (endpoints , Bᴾ , Bᴵ , eqᴾ , eqᴵ , fam) =
-  Bᴾ , Bᴵ , eqᴾ , eqᴵ ,
-  proj₁ (proj₁ (proj₂ (fam (future-refl {W = W}) [])))
 
 right-related-universal-instantiation : ∀
     {Δᴾ Δᴵ Δᶜ} {Aᴾ : Ty (suc Δᶜ)} {Aᴵ : Ty Δᶜ}

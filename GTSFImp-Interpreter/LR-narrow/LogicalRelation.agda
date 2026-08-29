@@ -22,7 +22,6 @@ open import Relation.Binary.PropositionalEquality using (_≡_; refl)
 
 open import Types
 open import CastTerms
-open import Conversion using (〖_,_↑_〗)
 open import Primitives
 import Consistency as C
 open C using (Env∼; _⊢_∼★; _⊢_∼_; idᵍ; _!; ground-nonstar)
@@ -31,7 +30,6 @@ import NarrowWiden as NW
 open import NarrowWidenIsomorphism using (narrowing→imprecision)
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
-open import LR-narrow.PendingTarget
 open import LR-narrow.Computation
 
 ------------------------------------------------------------------------
@@ -300,18 +298,6 @@ mutual
   FutureValueRelation p W′ W≼W′ k Vᴵ Vᴾ =
     ValueImprecisionᵏ k W′ (liftCenterImprecision W≼W′ p) Vᴵ Vᴾ
 
-  PendingTargetValueRelation : ∀ {Δᴾ Δᴵ Δᶜ}
-      {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
-      {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
-    → TargetTransparent W t Aᴾ Aᴵ
-    → IndexedValueRelation W
-  PendingTargetValueRelation t {Aᴵ = Aᴵ} p W′ W≼W′ k Vᴵ Vᴾ =
-    ValueImprecisionᵏ k W′ (liftCenterImprecision W≼W′ p)
-      (Vᴵ ↑ 〖 tslotXᴵ (target-slot-future t W≼W′) ,
-        tslotRᴵ (target-slot-future t W≼W′)
-        ↑ liftImpreciseTy W≼W′ Aᴵ 〗)
-      Vᴾ
-
   PostBindValueRelation : ∀
       {Δᴾ Δᴵ Δᶜ Δᴾᵇ Δᴵᵇ Δᶜᵇ Aᴾ Aᴵ}
       {W : World Δᴾ Δᴵ Δᶜ}
@@ -385,28 +371,19 @@ mutual
   PendingTargetUniversalsRelated W Bᴾ Bᴵ zero Vᴵ Vᴾ = ⊤
 
   PendingTargetUniversalsRelated W Bᴾ Bᴵ (suc k) Vᴵ Vᴾ =
-    (((t : TargetSlot W) (Rᴾ : Ty _) (Rᴵ : Ty _)
-          (r : TargetTransparent W t Rᴾ Rᴵ)
-          (s : TargetTransparent W t
-            (Bᴾ [ Rᴾ ]ᵗ) (Bᴵ [ Rᴵ ]ᵗ))
-        → ComputationsRelated W
-            (PendingTargetValueRelation t
-              {Aᴾ = Bᴾ [ Rᴾ ]ᵗ} {Aᴵ = Bᴵ [ Rᴵ ]ᵗ} s)
+    ((∀ {Bᴵ′ : Ty _} (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
+        (Rᴾ : Ty _) (Rᴵ : Ty _)
+        (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+      → let
+          step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
+          opened = openRelatedBodyImprecision {W = W}
+            (bodyPᵇ (imprecise-peel-targetᵇ peel)) r
+        in ComputationsRelated (impreciseBindWorld W Rᴵ)
+            (FutureValueRelation (liftCenterImprecision step opened))
             (suc k)
-            (Vᴵ ⦂∀ Bᴵ [ Rᴵ ]) (Vᴾ ⦂∀ Bᴾ [ Rᴾ ]))
-      × (∀ {Bᴵ′ : Ty _} (peel : ImprecisePeelᵇ W Bᴾ Bᴵ Bᴵ′)
-          (Rᴾ : Ty _) (Rᴵ : Ty _)
-          (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
-        → let
-            step = future-imprecise {Aᴵ = Rᴵ} (future-refl {W = W})
-            opened = openRelatedBodyImprecision {W = W}
-              (bodyPᵇ (imprecise-peel-targetᵇ peel)) r
-          in ComputationsRelated (impreciseBindWorld W Rᴵ)
-              (FutureValueRelation (liftCenterImprecision step opened))
-              (suc k)
-              (imprecise-peel-reductᴵᵇ peel Rᴵ Vᴵ)
-              (liftPreciseTerm step Vᴾ
-                ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])))
+            (imprecise-peel-reductᴵᵇ peel Rᴵ Vᴵ)
+            (liftPreciseTerm step Vᴾ
+              ⦂∀ liftPreciseBody step Bᴾ [ liftPreciseTy step Rᴾ ])))
     × PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
 
   RightUniversalsRelated : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ}
