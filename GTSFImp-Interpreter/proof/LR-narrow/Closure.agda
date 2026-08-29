@@ -686,6 +686,16 @@ pending-target-universals-related-transport : ∀
   → PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ′ Vᴾ′
 pending-target-universals-related-transport refl refl related = related
 
+pending-target-universals-related-body-transport : ∀
+    {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    {Bᴾ Bᴾ′ : Ty (suc Δᴾ)} {Bᴵ Bᴵ′ : Ty (suc Δᴵ)} {k : ℕ}
+    {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → Bᴾ ≡ Bᴾ′
+  → Bᴵ ≡ Bᴵ′
+  → PendingTargetUniversalsRelated W Bᴾ Bᴵ k Vᴵ Vᴾ
+  → PendingTargetUniversalsRelated W Bᴾ′ Bᴵ′ k Vᴵ Vᴾ
+pending-target-universals-related-body-transport refl refl related = related
+
 universal-family-reindex : ∀
     {Δᴾ Δᴵ Δᶜ Aᴾ Aᴵ Aᴾ′ Aᴵ′}
     {W : World Δᴾ Δᴵ Δᶜ}
