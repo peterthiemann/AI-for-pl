@@ -169,6 +169,21 @@ value-imprecision-downward-to {j = j} {k = suc k} j≤sk related
 value-imprecision-downward-to {j = j} {k = suc k} j≤sk related
     | inj₂ refl = related
 
+post-bind-value-downward-to : ∀
+    {Δᴾ Δᴵ Δᶜ Δᴾᵇ Δᴵᵇ Δᶜᵇ Δᴾ′ Δᴵ′ Δᶜ′ Aᴾ Aᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    {bound : World Δᴾᵇ Δᴵᵇ Δᶜᵇ}
+    {W′ : World Δᴾ′ Δᴵ′ Δᶜ′}
+    {W≼B : Future W bound} {W≼W′ : Future W W′}
+    {p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ}
+    {j k : ℕ} {Vᴵ : Term Δᴵ′} {Vᴾ : Term Δᴾ′}
+  → j ≤ k
+  → PostBindValueRelation W≼B p W′ W≼W′ k Vᴵ Vᴾ
+  → PostBindValueRelation W≼B p W′ W≼W′ j Vᴵ Vᴾ
+post-bind-value-downward-to j≤k
+    (bound≼W′ , factors , related) =
+  bound≼W′ , factors , value-imprecision-downward-to j≤k related
+
 right-dynamic-payload-downward : ∀ {Δᴾ Δᴵ Δᶜ Aᴾ}
     {W : World Δᴾ Δᴵ Δᶜ} {k Vᴵ Vᴾ}
   → RightDynamicPayloadRelated W Aᴾ (suc k) Vᴵ Vᴾ
