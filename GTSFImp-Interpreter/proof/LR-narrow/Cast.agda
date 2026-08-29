@@ -63,7 +63,9 @@ open import proof.ImprecisionConsistency using
    ext-injective; rename-occurs; renameᵗ-injective; shift-ground;
    shift-injectiveᵗ; ty-all-injective;
    toRenameᵗ-injective; ty-var-injective)
-open import proof.Imprecision using (ext-aliases-avoid-zero)
+open import proof.Imprecision using
+  (ext-aliases-avoid-zero; imprecision-to-fresh;
+   imprecision-no-star-to-bot)
 open import proof.LR-narrow.ImprecisionSize using (sizeᵖ)
 import proof.TypeSafety.Progress as Progress
 open import proof.TypeSafety.Progress using (no-bot-value)
@@ -115,10 +117,10 @@ open import proof.LR-narrow.Closure using
   (value-imprecision-downward-to)
 import proof.LR-narrow.Closure as ClosureProof
 open import proof.LR-narrow.AliasWorld using
-  (world-alias-atom; alias-mode-no-paired-holds;
-   alias-holds-chain; alias-no-imprecise-target)
+  (alias-mode-no-paired-holds; alias-holds-chain;
+   alias-no-imprecise-target)
 open import proof.LR-narrow.GroundReading using
-  (NoAliasImage; ground-readings-unique)
+  (NoAliasImage; ground-image-not-star; ground-readings-unique)
 
 reindex-center-imprecision : ∀ {Δ} {μ : I.ImpEnv Δ}
     {A B A′ B′ : Ty Δ}
@@ -454,76 +456,6 @@ size-reindex-center : ∀ {Δ} {μ : I.ImpEnv Δ}
     (p : μ I.⊢ A ⊑ B) (e₁ : A ≡ A′) (e₂ : B ≡ B′)
   → sizeᵖ (reindex-center-imprecision p e₁ e₂) ≡ sizeᵖ p
 size-reindex-center p refl refl = refl
-
--- Two derivations from one embedded precise ground to embedded
--- imprecise targets agree on the target: the alias chains both
--- follow the environment's representatives, which coincide.
-
-ground-imprecise-targets-agree : ∀ {Δᴾ Δᴵ Δᶜ}
-    (W : World Δᴾ Δᴵ Δᶜ) (fuel : ℕ)
-    {Gᴾ : Ty Δᴾ} (g : Ground Gᴾ)
-    {B₁ B₂ : Ty Δᶜ} {Hᴵ Dᴵ : Ty Δᴵ}
-  → (p : impEnv (core W) I.⊢ embedPrecise (core W) Gᴾ ⊑ B₁)
-  → (q : impEnv (core W) I.⊢ embedPrecise (core W) Gᴾ ⊑ B₂)
-  → sizeᵖ p ≤ fuel
-  → B₁ ≡ embedImprecise (core W) Hᴵ
-  → B₂ ≡ embedImprecise (core W) Dᴵ
-  → NonStar B₁ → NonStar B₂
-  → B₁ ≡ B₂
-ground-imprecise-targets-agree W fuel (＇ X)
-    I.X⊑X I.X⊑X size≤ e₁ e₂ ns₁ ns₂ = refl
-ground-imprecise-targets-agree W fuel (＇ X)
-    I.X⊑X (I.X⊑★ mode) size≤ e₁ e₂ ns₁ ()
-ground-imprecise-targets-agree W fuel (＇ X)
-    I.X⊑X (I.alias eq w₂) size≤ e₁ e₂ ns₁ ns₂ =
-  ⊥-elim (alias-no-imprecise-target W eq (sym e₁))
-ground-imprecise-targets-agree W fuel (＇ X)
-    (I.X⊑★ mode) q size≤ e₁ e₂ () ns₂
-ground-imprecise-targets-agree W fuel (＇ X)
-    (I.alias eq w) I.X⊑X size≤ e₁ e₂ ns₁ ns₂ =
-  ⊥-elim (alias-no-imprecise-target W eq (sym e₂))
-ground-imprecise-targets-agree W fuel (＇ X)
-    (I.alias eq w) (I.X⊑★ mode) size≤ e₁ e₂ ns₁ ()
-ground-imprecise-targets-agree W fuel (＇ X)
-    (I.alias {T = T} eq w) (I.alias {T = T₂} eq₂ w₂)
-    (s≤s le) e₁ e₂ ns₁ ns₂ =
-  ground-imprecise-targets-agree W _
-    (＇ aliasRepName atom)
-    (reindex-center-imprecision w (sym rep-eq) refl)
-    (reindex-center-imprecision w₂
-      (trans (alias-rep-injective (trans (sym eq₂) eq))
-        (sym rep-eq))
-      refl)
-    (subst≡ (_≤ _)
-      (sym (size-reindex-center w (sym rep-eq) refl)) le)
-    e₁ e₂ ns₁ ns₂
-  where
-  atom = world-alias-atom W _ eq
-  rep-eq = aliasRep-eq atom
-ground-imprecise-targets-agree W fuel (‵ ι)
-    I.ι⊑ι I.ι⊑ι size≤ e₁ e₂ ns₁ ns₂ = refl
-ground-imprecise-targets-agree W fuel (‵ ι)
-    I.ι⊑ι I.ι⊑★ size≤ e₁ e₂ ns₁ ()
-ground-imprecise-targets-agree W fuel (‵ ι)
-    I.ι⊑★ q size≤ e₁ e₂ () ns₂
-ground-imprecise-targets-agree W fuel ★⇒★
-    (I.⇒⊑⇒ I.★⊑★ I.★⊑★) (I.⇒⊑⇒ I.★⊑★ I.★⊑★)
-    size≤ e₁ e₂ ns₁ ns₂ = refl
-ground-imprecise-targets-agree W fuel ★⇒★
-    (I.⇒⊑⇒ I.★⊑★ I.★⊑★) (I.⇒⊑★ q₁ q₂) size≤ e₁ e₂ ns₁ ()
-ground-imprecise-targets-agree W fuel ★⇒★
-    (I.⇒⊑★ p₁ p₂) q size≤ e₁ e₂ () ns₂
-ground-imprecise-targets-agree W fuel ∀★
-    (I.∀⊑∀ I.★⊑★) (I.∀⊑∀ I.★⊑★) size≤ e₁ e₂ ns₁ ns₂ = refl
-ground-imprecise-targets-agree W fuel ∀★
-    (I.∀⊑∀ I.★⊑★) I.∀★⊑★ size≤ e₁ e₂ ns₁ ()
-ground-imprecise-targets-agree W fuel ∀★
-    (I.∀⊑∀ I.★⊑★) (I.∀⊑★ nonstar q₀) size≤ e₁ e₂ ns₁ ()
-ground-imprecise-targets-agree W fuel ∀★
-    I.∀★⊑★ q size≤ e₁ e₂ () ns₂
-ground-imprecise-targets-agree W fuel ∀★
-    (I.∀⊑★ nonstar p₀) q size≤ e₁ e₂ () ns₂
-
 
 variable-left-nonstar-target : ∀ {Δ} {μ : I.ImpEnv Δ}
     {X : TyVar Δ} {A : Ty Δ}
@@ -909,6 +841,151 @@ dynamic-payload-ground-tags-agree {W = W} {Hᴾ = Hᴾ}
   center-eq = ground-readings-unique ρᴵ (sizeᵖ payload-q′)
     (world-no-alias-image W) payload-q′ target-q ≤-refl hᴵ gᴵ refl refl
 
+ground-cast-readings-agree-nonvar : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (fuel : ℕ)
+    {A B₁ B₂ : Ty Δᶜ} {H G D : Ty Δᴵ}
+    {ν : C.Env∼ Δᴵ}
+  → NonVar A
+  → (h : Ground H)
+  → (g : Ground G)
+  → (p : impEnv (core W) I.⊢ A ⊑ B₁)
+  → (q : impEnv (core W) I.⊢ A ⊑ B₂)
+  → sizeᵖ p ≤ fuel
+  → ν C.⊢ G ∼ D
+  → NonStar D
+  → B₁ ≡ embedImprecise (core W) H
+  → B₂ ≡ embedImprecise (core W) D
+  → embedImprecise (core W) H ≡ embedImprecise (core W) G
+ground-cast-readings-agree-nonvar W fuel
+    {A = A} {H = H} {G = G} {D = D} {ν = ν}
+    nv h g p q size≤ c ns target₁ target₂ =
+  ground-readings-unique ρᴵ fuel (world-no-alias-image W)
+    payload-q ground-q payload-size≤ h g refl refl
+  where
+  ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
+
+  payload-q : impEnv (core W) I.⊢ A ⊑ renameᵗ ρᴵ H
+  payload-q = reindex-center-imprecision p refl target₁
+
+  payload-size≤ : sizeᵖ payload-q ≤ fuel
+  payload-size≤ = subst≡ (_≤ fuel)
+    (sym (size-reindex-center p refl target₁)) size≤
+
+  target-q : impEnv (core W) I.⊢ A ⊑ renameᵗ ρᴵ D
+  target-q = reindex-center-imprecision q refl target₂
+
+  source-star : impEnv (core W) I.⊢ A ⊑ ★
+  source-star = ground-target-nonvar-to-star⊑
+    (C.renameGround ρᴵ h) nv payload-q
+
+  center-c : C.renameEnv∼ (impreciseEmbedding (core W)) ν C.⊢
+      renameᵗ ρᴵ G ∼ renameᵗ ρᴵ D
+  center-c = C.rename∼ {μ = ν}
+    {μ′ = C.renameEnv∼ (impreciseEmbedding (core W)) ν}
+    ρᴵ (C.renameEnv∼-preserves (impreciseEmbedding (core W)) ν) c
+
+  ground-q : impEnv (core W) I.⊢ A ⊑ renameᵗ ρᴵ G
+  ground-q = expand-cast-source⊑ (C.renameGround ρᴵ g)
+    (C.renameNonStar ρᴵ ns) center-c source-star target-q
+
+ground-cast-readings-agree : ∀ {Δᴾ Δᴵ Δᶜ}
+    (W : World Δᴾ Δᴵ Δᶜ) (fuel : ℕ)
+    {A B₁ B₂ : Ty Δᶜ} {H G D : Ty Δᴵ}
+    {ν : C.Env∼ Δᴵ}
+  → (h : Ground H)
+  → (g : Ground G)
+  → (p : impEnv (core W) I.⊢ A ⊑ B₁)
+  → (q : impEnv (core W) I.⊢ A ⊑ B₂)
+  → sizeᵖ p ≤ fuel
+  → ν C.⊢ G ∼ D
+  → NonStar D
+  → B₁ ≡ embedImprecise (core W) H
+  → B₂ ≡ embedImprecise (core W) D
+  → embedImprecise (core W) H ≡ embedImprecise (core W) G
+ground-cast-readings-agree W fuel h g I.★⊑★ q size≤ c ns
+    target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W fuel h g I.ι⊑ι q size≤ c ns
+    target₁ target₂ =
+  ground-cast-readings-agree-nonvar W fuel nonvar-base h g
+    I.ι⊑ι q size≤ c ns target₁ target₂
+ground-cast-readings-agree W fuel h g I.ι⊑★ q size≤ c ns
+    target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W fuel {D = D} {ν = ν} h g
+    I.X⊑X I.X⊑X size≤ c ns target₁ target₂ =
+  cong (embedImprecise (core W)) (sym grounds-equal)
+  where
+  D≡H : D ≡ _
+  D≡H = renameᵗ-injective
+    (toRenameᵗ-injective (impreciseEmbedding (core W)))
+    (trans (sym target₂) target₁)
+
+  grounds-equal = grounds-consistent-equal g h
+    (subst≡ (λ D′ → ν C.⊢ _ ∼ D′) D≡H c)
+ground-cast-readings-agree W fuel h g I.X⊑X (I.X⊑★ mode)
+    size≤ c ns target₁ target₂ =
+  ⊥-elim (nonStar≢★
+    (C.renameNonStar
+      (C.toRenameᵗ (impreciseEmbedding (core W))) ns)
+    (sym target₂))
+ground-cast-readings-agree W fuel h g I.X⊑X (I.alias eq q)
+    size≤ c ns target₁ target₂ =
+  ⊥-elim (alias-no-imprecise-target W eq (sym target₁))
+ground-cast-readings-agree W fuel h g (I.X⊑★ mode) q
+    size≤ c ns target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W fuel h g (I.⇒⊑⇒ p₁ p₂) q
+    size≤ c ns target₁ target₂ =
+  ground-cast-readings-agree-nonvar W fuel nonvar-fun h g
+    (I.⇒⊑⇒ p₁ p₂) q size≤ c ns target₁ target₂
+ground-cast-readings-agree W fuel h g (I.⇒⊑★ p₁ p₂) q
+    size≤ c ns target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W fuel h g (I.∀⊑∀ p) q size≤ c ns
+    target₁ target₂ =
+  ground-cast-readings-agree-nonvar W fuel nonvar-all h g
+    (I.∀⊑∀ p) q size≤ c ns target₁ target₂
+ground-cast-readings-agree W fuel h g (I.∀⊑ nv occurs p) q
+    size≤ c ns target₁ target₂ =
+  ground-cast-readings-agree-nonvar W fuel nonvar-all h g
+    (I.∀⊑ nv occurs p) q size≤ c ns target₁ target₂
+ground-cast-readings-agree W fuel h g I.∀★⊑★ q size≤ c ns
+    target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W fuel h g (I.∀⊑★ nonstar p) q
+    size≤ c ns target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W fuel h g I.bot-elim q size≤ c ns
+    target₁ target₂ =
+  ground-cast-readings-agree-nonvar W fuel nonvar-all h g
+    I.bot-elim q size≤ c ns target₁ target₂
+ground-cast-readings-agree W fuel h g I.bot⊑★ q size≤ c ns
+    target₁ target₂ =
+  ⊥-elim (ground-image-not-star
+    (C.toRenameᵗ (impreciseEmbedding (core W))) h target₁)
+ground-cast-readings-agree W (suc fuel) h g
+    (I.alias eq p) q (s≤s size≤) c ns target₁ target₂
+    with variable-alias-premise eq q
+ground-cast-readings-agree W (suc fuel) h g
+    (I.alias eq p) q (s≤s size≤) c ns target₁ target₂
+    | inj₁ target≡var =
+  ⊥-elim (alias-no-imprecise-target W eq
+    (trans (sym target₂) target≡var))
+ground-cast-readings-agree W (suc fuel) h g
+    (I.alias eq p) q (s≤s size≤) c ns target₁ target₂
+    | inj₂ premise-q =
+  ground-cast-readings-agree W fuel h g p premise-q size≤ c ns
+    target₁ target₂
+ground-cast-readings-agree W zero h g (I.alias eq p) q () c ns
+    target₁ target₂
+
 dynamic-payload-projection-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
     {Hᴾ Gᴾ : Ty Δᴾ} {Hᴵ Gᴵ Dᴵ : Ty Δᴵ}
@@ -930,64 +1007,24 @@ dynamic-payload-projection-tags-agree {W = W} {Hᴾ = Hᴾ}
     {Gᴾ = Gᴾ} {Hᴵ = Hᴵ} {Gᴵ = Gᴵ} {Dᴵ = Dᴵ}
     {Bᴾ = Bᴾ} {Bᴵ = Bᴵ} {μᴵ = μᴵ}
     hᴵ gᴾ gᴵ Hᴾ≡Gᴾ payload-q cᴵ nsᴵ q targetᴾ targetᴵ =
-  sym (grounds-consistent-equal gᴵ hᴵ
-    (subst≡ (λ D → μᴵ C.⊢ Gᴵ ∼ D) (sym Hᴵ≡Dᴵ) cᴵ))
-  where
-  ρᴾ = C.toRenameᵗ (preciseEmbedding (core W))
-  ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
-
-  payload-q′ : impEnv (core W) I.⊢ renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Hᴵ
-  payload-q′ = reindex-center-imprecision payload-q
-    (cong (renameᵗ ρᴾ) Hᴾ≡Gᴾ) refl
-
-  target-q : impEnv (core W) I.⊢ renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Dᴵ
-  target-q = reindex-center-imprecision q (sym targetᴾ) (sym targetᴵ)
-
-  Hᴵ≡Dᴵ : Hᴵ ≡ Dᴵ
-  Hᴵ≡Dᴵ = renameᵗ-injective
-    (toRenameᵗ-injective (impreciseEmbedding (core W)))
-    (ground-imprecise-targets-agree W (sizeᵖ payload-q′) gᴾ
-      payload-q′ target-q ≤-refl refl refl
-      (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
-      (C.renameNonStar ρᴵ nsᴵ))
-
-dynamic-payload-projection-target-agrees : ∀ {Δᴾ Δᴵ Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ}
-    {Hᴾ Gᴾ : Ty Δᴾ} {Hᴵ Dᴵ : Ty Δᴵ}
-    {Bᴾ Bᴵ : Ty Δᶜ}
-  → (hᴵ : Ground Hᴵ)
-  → (gᴾ : Ground Gᴾ)
-  → Hᴾ ≡ Gᴾ
-  → impEnv (core W) I.⊢ embedPrecise (core W) Hᴾ
-      ⊑ embedImprecise (core W) Hᴵ
-  → NonStar Dᴵ
-  → (q : impEnv (core W) I.⊢ Bᴾ ⊑ Bᴵ)
-  → embedPrecise (core W) Gᴾ ≡ Bᴾ
-  → embedImprecise (core W) Dᴵ ≡ Bᴵ
-  → Dᴵ ≡ Hᴵ
-dynamic-payload-projection-target-agrees {W = W} {Hᴾ = Hᴾ}
-    {Gᴾ = Gᴾ} {Hᴵ = Hᴵ} {Dᴵ = Dᴵ}
-    {Bᴾ = Bᴾ} {Bᴵ = Bᴵ}
-    hᴵ gᴾ Hᴾ≡Gᴾ payload-q nsᴵ q targetᴾ targetᴵ =
   renameᵗ-injective
     (toRenameᵗ-injective (impreciseEmbedding (core W))) center-eq
   where
   ρᴾ = C.toRenameᵗ (preciseEmbedding (core W))
-  ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
 
-  payload-q′ : impEnv (core W) I.⊢ renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Hᴵ
+  payload-q′ : impEnv (core W) I.⊢
+      renameᵗ ρᴾ Gᴾ ⊑ embedImprecise (core W) Hᴵ
   payload-q′ = reindex-center-imprecision payload-q
     (cong (renameᵗ ρᴾ) Hᴾ≡Gᴾ) refl
 
-  target-q : impEnv (core W) I.⊢ renameᵗ ρᴾ Gᴾ ⊑ renameᵗ ρᴵ Dᴵ
+  target-q : impEnv (core W) I.⊢
+      renameᵗ ρᴾ Gᴾ ⊑ embedImprecise (core W) Dᴵ
   target-q = reindex-center-imprecision q (sym targetᴾ) (sym targetᴵ)
 
-  center-eq : renameᵗ ρᴵ Dᴵ ≡ renameᵗ ρᴵ Hᴵ
-  center-eq = sym
-    (ground-imprecise-targets-agree W (sizeᵖ payload-q′) gᴾ
-      payload-q′ target-q ≤-refl refl refl
-      (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
-      (C.renameNonStar ρᴵ nsᴵ))
+  center-eq : embedImprecise (core W) Hᴵ ≡
+      embedImprecise (core W) Gᴵ
+  center-eq = ground-cast-readings-agree W (sizeᵖ payload-q′)
+    hᴵ gᴵ payload-q′ target-q ≤-refl cᴵ nsᴵ refl refl
 
 dynamic-payload-cast-tags-agree : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ}
@@ -1075,32 +1112,11 @@ dynamic-payload-cast-tags-agree-nonvar {W = W} {Hᴾ = Hᴾ}
   center-eq = trans (sym payload-eq) cast-eq
 
 dynamic-payload-cast-tags-agree {W = W}
-    {Hᴵ = Hᴵ} {Gᴵ = Gᴵ} {Dᴵ = Dᴵ} {μᴵ = μᴵ}
     hᴵ (＇ X) gᴵ Hᴾ≡Gᴾ payload-q (C.id x) nsᴾ cᴵ nsᴵ
     q targetᴾ targetᴵ =
-  sym (grounds-consistent-equal gᴵ hᴵ
-    (subst≡ (λ D → μᴵ C.⊢ Gᴵ ∼ D) (sym Hᴵ≡Dᴵ) cᴵ))
-  where
-  ρᴾ = C.toRenameᵗ (preciseEmbedding (core W))
-  ρᴵ = C.toRenameᵗ (impreciseEmbedding (core W))
-
-  payload-q′ : impEnv (core W) I.⊢
-      renameᵗ ρᴾ (＇ X) ⊑ renameᵗ ρᴵ Hᴵ
-  payload-q′ = reindex-center-imprecision payload-q
-    (cong (renameᵗ ρᴾ) Hᴾ≡Gᴾ) refl
-
-  target-q : impEnv (core W) I.⊢
-      renameᵗ ρᴾ (＇ X) ⊑ renameᵗ ρᴵ Dᴵ
-  target-q = reindex-center-imprecision q (sym targetᴾ)
-    (sym targetᴵ)
-
-  Hᴵ≡Dᴵ : Hᴵ ≡ Dᴵ
-  Hᴵ≡Dᴵ = renameᵗ-injective
-    (toRenameᵗ-injective (impreciseEmbedding (core W)))
-    (ground-imprecise-targets-agree W (sizeᵖ payload-q′) (＇ X)
-      payload-q′ target-q ≤-refl refl refl
-      (C.renameNonStar ρᴵ (C.ground-nonstar hᴵ))
-      (C.renameNonStar ρᴵ nsᴵ))
+  dynamic-payload-projection-tags-agree {W = W}
+    hᴵ (＇ X) gᴵ Hᴾ≡Gᴾ payload-q cᴵ nsᴵ
+    q targetᴾ targetᴵ
 dynamic-payload-cast-tags-agree {W = W}
     hᴵ (＇ X) gᴵ Hᴾ≡Gᴾ payload-q
     ((C.gen_ ⦃ Bnv ⦄ ⦃ occurs ⦄ c) A≢★) nsᴾ cᴵ nsᴵ
@@ -1266,6 +1282,74 @@ no-precise-bottom-value {W = W} related =
   Vᴾ⊢bot = subst≡
     (λ A → ⟨ _ , preciseStore (core W) , [] ⟩ ⊢ _ ⦂ A)
     precise-type-eq (precise-typed endpoints)
+
+-- If the current precise source also reads as bottom on the imprecise
+-- side, a positive-index related value cannot exist.  Structural bottom
+-- forces an actual bottom-typed precise value; an alias source is chased
+-- through the semantic alias payload until that structural case is reached.
+
+bottom-imprecise-target-impossible : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {A B : Ty Δᶜ}
+    (p : impEnv (core W) I.⊢ A ⊑ B)
+  → impEnv (core W) I.⊢ A ⊑ (`∀ (＇ Fin.zero))
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W p (suc k) Vᴵ Vᴾ
+  → ⊥
+bottom-imprecise-target-impossible {W = W} p
+    (I.∀⊑∀ body) related =
+  no-bot-value (precise-value endpoints) Vᴾ⊢bot
+  where
+  endpoints = value-imprecision-endpoints related
+
+  body-eq = imprecision-to-fresh
+    (ext-aliases-avoid-zero (impEnv (core W))) body
+
+  precise-type-eq : preciseType endpoints ≡ `∀ (＇ Fin.zero)
+  precise-type-eq = renameᵗ-injective
+    (toRenameᵗ-injective (preciseEmbedding (core W)))
+    (trans (preciseEmbedded endpoints) (cong `∀ body-eq))
+
+  Vᴾ⊢bot = subst≡
+    (λ A → ⟨ _ , preciseStore (core W) , [] ⟩ ⊢ _ ⦂ A)
+    precise-type-eq (precise-typed endpoints)
+bottom-imprecise-target-impossible p
+    (I.∀⊑ nonvar occurs body) related =
+  ⊥-elim (imprecision-no-star-to-bot refl body occurs)
+bottom-imprecise-target-impossible {W = W} I.X⊑X
+    (I.alias eq q) (endpoints , paired-holds) =
+  ⊥-elim (alias-mode-no-paired-holds W eq paired-holds)
+bottom-imprecise-target-impossible (I.X⊑★ mode)
+    (I.alias eq q) related =
+  ⊥-elim (star-mode-not-alias (trans (sym mode) eq))
+bottom-imprecise-target-impossible {W = W}
+    (I.alias eq p) (I.alias eq′ q) (endpoints , holds)
+    with variable-alias-premise eq (I.alias eq′ q)
+bottom-imprecise-target-impossible {W = W}
+    (I.alias eq p) (I.alias eq′ q) (endpoints , holds)
+    | inj₁ ()
+bottom-imprecise-target-impossible {W = W}
+    (I.alias eq p) (I.alias eq′ q) (endpoints , holds)
+    | inj₂ premise-q
+    with alias-holds-payload (semanticEntry W _) eq holds
+bottom-imprecise-target-impossible {W = W}
+    (I.alias eq p) (I.alias eq′ q) (endpoints , holds)
+    | inj₂ premise-q | Uᴾ , payload-related =
+  bottom-imprecise-target-impossible p premise-q payload-related
+
+imprecise-bottom-cast-related : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {A B C D : Ty Δᶜ}
+    {q : impEnv (core W) I.⊢ C ⊑ D}
+    {μᴵ : C.Env∼ Δᴵ}
+    (p : impEnv (core W) I.⊢ A ⊑ B)
+  → impEnv (core W) I.⊢ A ⊑ (`∀ (＇ Fin.zero))
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W p k Vᴵ Vᴾ
+  → ComputationsRelated W (FutureValueRelation q) k
+      (Vᴵ ⟨ C.bot-intro {μ = μᴵ} ⟩) Vᴾ
+imprecise-bottom-cast-related p bottom-q {k = zero} related =
+  ClosureProof.computations-related-zero
+imprecise-bottom-cast-related p bottom-q {k = suc k} related =
+  ⊥-elim (bottom-imprecise-target-impossible p bottom-q related)
 
 nonvalue-computations-zero : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {R : IndexedValueRelation W}
@@ -3974,11 +4058,97 @@ related-value-casts {W = W} I.★⊑★ sourceᴾ sourceᴵ
         Hᴾ∼★ Hᴵ∼★ Uᴾ Uᴵ refl refl payload-q
     | projection-same
     | tag-matched Hᴾ≡Gᴾ precise-step precise-step-eq
-    | projection-expanded Dᴵ≠Gᴵ imprecise-step imprecise-step-eq =
-  ⊥-elim (Dᴵ≠Gᴵ (trans target-agrees tags-agree))
+    | projection-expanded Dᴵ≠Gᴵ imprecise-step imprecise-step-eq
+    with tag-projection-step-view {Σ = impreciseStore (core W)}
+      hᴵ gᴵ Hᴵ∼★ ★∼Gᴵ
+      (imprecise-value (value-imprecision-endpoints payload-related))
+related-value-casts {W = W} {Dᴵ = Dᴵ} I.★⊑★ sourceᴾ sourceᴵ
+    (C.？_ {G = Gᴾ} ⦃ Gᵍ = gᴾ ⦄ ⦃ ★∼G = ★∼Gᴾ ⦄
+      cᴾ ⦃ Bns = nsᴾ ⦄)
+    {μᴵ = μᴵ}
+    (C.？_ {G = Gᴵ} ⦃ Gᵍ = gᴵ ⦄ ⦃ ★∼G = ★∼Gᴵ ⦄
+      cᴵ ⦃ Bns = nsᴵ ⦄)
+    q targetᴾ targetᴵ {k = suc k}
+    (endpoints , inj₁ (shape , payload-related))
+    | dynamic-payload-shape Hᴾ Hᴵ hᴾ hᴵ μᴾ′ μᴵ′
+        Hᴾ∼★ Hᴵ∼★ Uᴾ Uᴵ refl refl payload-q
+    | projection-same
+    | tag-matched Hᴾ≡Gᴾ precise-step precise-step-eq
+    | projection-expanded Dᴵ≠Gᴵ imprecise-step imprecise-step-eq
+    | tag-matched Hᴵ≡Gᴵ inner-step inner-step-eq =
+  related-pure-step-expand (λ ()) (λ ())
+    (projection-cast-value-none gᴵ ★∼Gᴵ cᴵ nsᴵ
+      (imprecise-value endpoints))
+    (projection-cast-value-none gᴾ ★∼Gᴾ (C.idᵍ gᴾ)
+      (C.ground-nonstar gᴾ) (precise-value endpoints))
+    imprecise-step precise-step imprecise-step-eq precise-step-eq
+    after-outer
   where
-  target-agrees = dynamic-payload-projection-target-agrees {W = W}
-    hᴵ gᴾ Hᴾ≡Gᴾ payload-q nsᴵ q targetᴾ targetᴵ
+  imprecise-inner-value-eq = projection-cast-value-none
+    gᴵ ★∼Gᴵ (C.idᵍ gᴵ) (C.ground-nonstar gᴵ)
+    (imprecise-value endpoints)
+
+  payload-endpoints = value-imprecision-endpoints payload-related
+
+  imprecise-payload-type-eq : impreciseType payload-endpoints ≡ Gᴵ
+  imprecise-payload-type-eq = renameᵗ-injective
+    (toRenameᵗ-injective (impreciseEmbedding (core W)))
+    (trans (impreciseEmbedded payload-endpoints)
+      (cong (embedImprecise (core W)) Hᴵ≡Gᴵ))
+
+  imprecise-payload-typed = subst≡
+    (λ A → ⟨ _ , impreciseStore (core W) , [] ⟩ ⊢ Uᴵ ⦂ A)
+    imprecise-payload-type-eq (imprecise-typed payload-endpoints)
+
+  precise-source-eq = cong (embedPrecise (core W)) (sym Hᴾ≡Gᴾ)
+  imprecise-source-eq = cong (embedImprecise (core W)) (sym Hᴵ≡Gᴵ)
+
+  bottom-q : Dᴵ ≡ (`∀ (＇ Fin.zero))
+    → impEnv (core W) I.⊢
+        embedPrecise (core W) Hᴾ ⊑ (`∀ (＇ Fin.zero))
+  bottom-q Dᴵ≡bottom = reindex-center-imprecision q
+    (trans (sym targetᴾ)
+      (cong (embedPrecise (core W)) (sym Hᴾ≡Gᴾ)))
+    (trans (sym targetᴵ)
+      (cong (embedImprecise (core W)) Dᴵ≡bottom))
+
+  residual : ComputationsRelated W (FutureValueRelation q) k
+      (Uᴵ ⟨ cᴵ ⟩) Uᴾ
+  residual with ground-expanded-cast-view
+    gᴵ cᴵ nsᴵ (imprecise-value payload-endpoints)
+    imprecise-payload-typed Dᴵ≠Gᴵ
+  residual | ground-cast-value imprecise-cast-value =
+    related-value-imprecise-cast payload-q precise-source-eq
+      imprecise-source-eq cᴵ q targetᴾ targetᴵ payload-related
+  residual | ground-cast-blame =
+    imprecise-bottom-cast-related {μᴵ = μᴵ}
+      payload-q (bottom-q refl) payload-related
+
+  after-outer : ComputationsRelated W (FutureValueRelation q) k
+      (((Uᴵ ⟨ groundInjection hᴵ Hᴵ∼★ ⟩)
+        ⟨ groundProjection gᴵ ★∼Gᴵ (C.idᵍ gᴵ)
+          (C.ground-nonstar gᴵ) ⟩) ⟨ cᴵ ⟩) Uᴾ
+  after-outer = related-imprecise-keep-step-expand (λ ())
+    (cast-operand-nonvalue {c = cᴵ} imprecise-inner-value-eq)
+    (ξ-⟨⟩ (pure-step inner-step) refl)
+    (cast-operand-pure-step-question
+      {Σ = impreciseStore (core W)} {c = cᴵ} inner-step-eq)
+    residual
+related-value-casts {W = W} I.★⊑★ sourceᴾ sourceᴵ
+    (C.？_ {G = Gᴾ} ⦃ Gᵍ = gᴾ ⦄ ⦃ ★∼G = ★∼Gᴾ ⦄
+      cᴾ ⦃ Bns = nsᴾ ⦄)
+    (C.？_ {G = Gᴵ} ⦃ Gᵍ = gᴵ ⦄ ⦃ ★∼G = ★∼Gᴵ ⦄
+      cᴵ ⦃ Bns = nsᴵ ⦄)
+    q targetᴾ targetᴵ {k = suc k}
+    (endpoints , inj₁ (shape , payload-related))
+    | dynamic-payload-shape Hᴾ Hᴵ hᴾ hᴵ μᴾ′ μᴵ′
+        Hᴾ∼★ Hᴵ∼★ Uᴾ Uᴵ refl refl payload-q
+    | projection-same
+    | tag-matched Hᴾ≡Gᴾ precise-step precise-step-eq
+    | projection-expanded Dᴵ≠Gᴵ imprecise-step imprecise-step-eq
+    | tag-mismatched Hᴵ≠Gᴵ inner-step inner-step-eq =
+  ⊥-elim (Hᴵ≠Gᴵ tags-agree)
+  where
 
   tags-agree = dynamic-payload-projection-tags-agree {W = W}
     hᴵ gᴾ gᴵ Hᴾ≡Gᴾ payload-q cᴵ nsᴵ q targetᴾ targetᴵ
