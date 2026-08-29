@@ -1534,3 +1534,17 @@ precise ground source.  The general closure lemma `right-ground-tag-values`
 is derived from the existing `imprecise-cast-values` obligation and
 `related-computation-values`: ground injection is an imprecise-side cast,
 and both endpoints are values.  No new cast obligation is required.
+
+### J.7  One-sided alias-slot frames landed (2026-08-29)
+
+The alias-slot reveal and conceal transformations are now total for every
+imprecision shape.  They replace the precise endpoint by the alias
+representative, peel or rebuild the alias seal at the matching leaf, and
+thread alias wrappers through both stored universal-family variants.  The
+right-universal family kit has corresponding alias chain extensions: the
+inherited alias slot is handled by the new frame transformer, while the
+fresh instantiation slot remains the existing dynamic case.
+
+The implementation is in `proof/LR-narrow/AliasReveal.agda` and
+`proof/LR-narrow/AliasUniversalChain.agda`; `LR-narrow/SlotSequence.agda`
+now exposes `AliasSlot` plus the one-sided alias wrapper constructors.

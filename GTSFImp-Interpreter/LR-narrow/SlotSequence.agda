@@ -93,6 +93,57 @@ slotRᴵ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ} → PairedSlot 
 slotRᴵ s = impreciseRep (atom s)
 
 ------------------------------------------------------------------------
+-- Alias slots
+------------------------------------------------------------------------
+
+-- A mode-indexed view keeps the chosen alias atom definitionally tied to
+-- the world's semantic entry, just as `IsDynamicEntry` does for dynamic
+-- slots.  This is the precise-only, type-transparent slot used by the
+-- universal producer cascades.
+
+data IsAliasSlotEntry {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
+    {Z : TyVar Δᶜ} {T : Ty Δᶜ} (a : AliasSemanticAtom W Z T) :
+    ∀ {mode} → SemanticEntry W Z mode → Set where
+  is-alias-slot : IsAliasSlotEntry a (alias-entry a)
+
+record AliasSlot {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) : Set where
+  constructor alias-slot
+  field
+    acenter : TyVar Δᶜ
+    arepresentative : Ty Δᶜ
+    aatom : AliasSemanticAtom (core W) acenter arepresentative
+    aentry-is : IsAliasSlotEntry aatom (semanticEntry W acenter)
+
+open AliasSlot public
+
+is-alias-slot-mode : ∀ {Δᴾ Δᴵ Δᶜ} {W : CoreWorld Δᴾ Δᴵ Δᶜ}
+    {Z : TyVar Δᶜ} {T : Ty Δᶜ} {a : AliasSemanticAtom W Z T}
+    {mode} {e : SemanticEntry W Z mode}
+  → IsAliasSlotEntry a e
+  → mode ≡ I.X⊑ᵗ T
+is-alias-slot-mode is-alias-slot = refl
+
+amode-eq : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+    (a : AliasSlot W)
+  → impEnv (core W) (acenter a) ≡ I.X⊑ᵗ (arepresentative a)
+amode-eq a = is-alias-slot-mode (aentry-is a)
+
+aslotXᴾ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+  → AliasSlot W → TyVar Δᴾ
+aslotXᴾ a = aliasPreciseVariable (aatom a)
+
+aslotRᴾ : ∀ {Δᴾ Δᴵ Δᶜ} {W : World Δᴾ Δᴵ Δᶜ}
+  → AliasSlot W → Ty Δᴾ
+aslotRᴾ a = aliasRep (aatom a)
+
+fresh-alias-slot : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (rep : Ty Δᴾ)
+  → AliasSlot (aliasBindWorld W rep)
+fresh-alias-slot W rep =
+  alias-slot Fin.zero (⇑ᵗ (embedPrecise (core W) rep))
+    (fresh-alias-semantic-atom (core W) rep) is-alias-slot
+
+------------------------------------------------------------------------
 -- Universal slot-conversion wrappers
 ------------------------------------------------------------------------
 
@@ -274,6 +325,16 @@ data UniWrap {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → UniWrap W
         (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B) C
         B C
+  reveal-alias-slot : (a : AliasSlot W) (B : Ty (suc Δᴾ)) (C : Ty Δᴵ)
+    → BodyImprecision W
+        (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B) C
+    → UniWrap W B C
+        (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B) C
+  conceal-alias-slot : (a : AliasSlot W) (B : Ty (suc Δᴾ)) (C : Ty Δᴵ)
+    → BodyImprecision W B C
+    → UniWrap W
+        (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B) C
+        B C
   reveal-inert : (s : PairedSlot W) (B : Ty (suc Δᴾ)) (C : Ty Δᴵ)
     → slotXᴾ s ∉ᵗ `∀ B
     → BodyImprecision W B C
@@ -326,6 +387,10 @@ wrapTermᴾ₁ (reveal-dyn d B C i) V =
   V ↑ 〖 dslotXᴾ d , dslotRᴾ d ↑ `∀ B 〗
 wrapTermᴾ₁ (conceal-dyn d B C i) V =
   V ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d) (`∀ B)
+wrapTermᴾ₁ (reveal-alias-slot a B C i) V =
+  V ↑ 〖 aslotXᴾ a , aslotRᴾ a ↑ `∀ B 〗
+wrapTermᴾ₁ (conceal-alias-slot a B C i) V =
+  V ↓ makeConceal (aslotXᴾ a) (aslotRᴾ a) (`∀ B)
 wrapTermᴾ₁ (reveal-inert s B C avoid i) V =
   V ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗
 wrapTermᴾ₁ (conceal-inert s B C avoid i) V =
@@ -347,6 +412,8 @@ wrapTermᴵ₁ (conceal-paired s B C v i av) V =
   V ↓ makeConceal (slotXᴵ s) (slotRᴵ s) C
 wrapTermᴵ₁ (reveal-dyn d B C i) V = V
 wrapTermᴵ₁ (conceal-dyn d B C i) V = V
+wrapTermᴵ₁ (reveal-alias-slot a B C i) V = V
+wrapTermᴵ₁ (conceal-alias-slot a B C i) V = V
 wrapTermᴵ₁ (reveal-inert s B C avoid i) V = V
 wrapTermᴵ₁ (conceal-inert s B C avoid i) V = V
 wrapTermᴵ₁ (reveal-imprecise s B C sh ∉ᵇ i av) V =
@@ -452,6 +519,18 @@ data UniWrapᵇ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ) :
     → UniWrapᵇ W
         (replaceTy (Fin.suc (dslotXᴾ d)) (⇑ᵗ (dslotRᴾ d)) B) C
         B C
+  reveal-aliasᵇ : (a : AliasSlot W)
+      (B : Ty (suc Δᴾ)) (C : Ty (suc Δᴵ))
+    → BodyImprecisionᵇ W
+        (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B) C
+    → UniWrapᵇ W B C
+        (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B) C
+  conceal-aliasᵇ : (a : AliasSlot W)
+      (B : Ty (suc Δᴾ)) (C : Ty (suc Δᴵ))
+    → BodyImprecisionᵇ W B C
+    → UniWrapᵇ W
+        (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B) C
+        B C
   reveal-inertᵇ : (s : PairedSlot W)
       (B : Ty (suc Δᴾ)) (C : Ty (suc Δᴵ))
     → slotXᴾ s ∉ᵗ `∀ B
@@ -500,6 +579,10 @@ wrapTermᴾᵇ₁ (reveal-dynᵇ d B C i) V =
   V ↑ 〖 dslotXᴾ d , dslotRᴾ d ↑ `∀ B 〗
 wrapTermᴾᵇ₁ (conceal-dynᵇ d B C i) V =
   V ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d) (`∀ B)
+wrapTermᴾᵇ₁ (reveal-aliasᵇ a B C i) V =
+  V ↑ 〖 aslotXᴾ a , aslotRᴾ a ↑ `∀ B 〗
+wrapTermᴾᵇ₁ (conceal-aliasᵇ a B C i) V =
+  V ↓ makeConceal (aslotXᴾ a) (aslotRᴾ a) (`∀ B)
 wrapTermᴾᵇ₁ (reveal-inertᵇ s B C avoid i) V =
   V ↑ 〖 slotXᴾ s , slotRᴾ s ↑ `∀ B 〗
 wrapTermᴾᵇ₁ (conceal-inertᵇ s B C avoid i) V =
@@ -516,6 +599,8 @@ wrapTermᴵᵇ₁ (conceal-pairedᵇ s B C i av) V =
   V ↓ makeConceal (slotXᴵ s) (slotRᴵ s) (`∀ C)
 wrapTermᴵᵇ₁ (reveal-dynᵇ d B C i) V = V
 wrapTermᴵᵇ₁ (conceal-dynᵇ d B C i) V = V
+wrapTermᴵᵇ₁ (reveal-aliasᵇ a B C i) V = V
+wrapTermᴵᵇ₁ (conceal-aliasᵇ a B C i) V = V
 wrapTermᴵᵇ₁ (reveal-inertᵇ s B C avoid i) V = V
 wrapTermᴵᵇ₁ (conceal-inertᵇ s B C avoid i) V = V
 wrapTermᴵᵇ₁ (reveal-impreciseᵇ s B C no-occur i av) V =

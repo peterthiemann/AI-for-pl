@@ -63,4 +63,6 @@ import proof.LR-narrow.ImprecisionSize
 import proof.LR-narrow.GroundReading
 import proof.LR-narrow.ConsistencyAvoid
 import proof.LR-narrow.DynamicReveal
+import proof.LR-narrow.AliasReveal
+import proof.LR-narrow.AliasUniversalChain
 import proof.LR-narrow.UniversalFamilyKit

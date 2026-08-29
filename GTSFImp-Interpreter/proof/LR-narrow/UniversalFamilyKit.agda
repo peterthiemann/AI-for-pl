@@ -47,6 +47,11 @@ open import proof.LR-narrow.SlotLifting using
 import proof.LR-narrow.DynamicReveal
 open module DynKit = proof.LR-narrow.DynamicReveal using
   (dyn-reveal-endpoints; dyn-conceal-endpoints)
+import proof.LR-narrow.AliasReveal
+open module AliasKit = proof.LR-narrow.AliasReveal using
+  (alias-reveal-endpoints; alias-conceal-endpoints)
+open import proof.LR-narrow.AliasUniversalChain using
+  (reveal-alias-universal-head; conceal-alias-universal-head)
 import proof.LR-narrow.PreciseReveal
 open module PreciseKit = proof.LR-narrow.PreciseReveal using
   (precise-reveal-endpoints; precise-conceal-endpoints)
@@ -319,6 +324,67 @@ conceal-dyn-chain W d nonvar occurs p₀ nonvarʳ occursʳ q₀
       (below-all (suc m) (suc (sizeᵖ p₀))) ≤-refl dat
       W′ W≼W′ Rᴾ r★ t) ,
   conceal-dyn-chain W d nonvar occurs p₀ nonvarʳ occursʳ q₀
+    sourceᴾ sourceᴵ targetᴾ (data-downward dat)
+
+------------------------------------------------------------------------
+-- Extending a chain by one alias reveal or conceal
+------------------------------------------------------------------------
+
+reveal-alias-chain : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (a : AliasSlot W)
+    {B₀ᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty Δᴵ}
+    {Ac : Ty (suc Δᶜ)} {Bc : Ty Δᶜ}
+    (nonvar : NonVar Ac) (occurs : Fin.zero ∈ᵗ Ac)
+    (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
+  → (sourceᴾ : embedPrecise (core W) (`∀ B₀ᴾ) ≡ `∀ Ac)
+  → (sourceᴵ : embedImprecise (core W) Bᴵ ≡ Bc)
+  → ∀ {Acʳ : Ty (suc Δᶜ)} {Bcʳ : Ty Δᶜ}
+      (q₀ : I.instᵐ (impEnv (core W)) I.⊢ Acʳ ⊑ ⇑ᵗ Bcʳ)
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → RightUniversalData W nonvar occurs p₀ B₀ᴾ Bᴵ k Vᴵ Vᴾ
+  → RightUniversalsRelated W q₀
+      (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B₀ᴾ) Bᴵ k
+      Vᴵ (Vᴾ ↑ 〖 aslotXᴾ a , aslotRᴾ a ↑ `∀ B₀ᴾ 〗)
+reveal-alias-chain W a nonvar occurs p₀ sourceᴾ sourceᴵ q₀
+    {k = zero} dat = tt
+reveal-alias-chain W a nonvar occurs p₀ sourceᴾ sourceᴵ q₀
+    {k = suc m} dat =
+  (λ W′ W≼W′ Rᴾ r★ t →
+    reveal-alias-universal-head W a nonvar occurs p₀ sourceᴾ sourceᴵ
+      (below-all (suc m) (suc (sizeᵖ p₀))) ≤-refl dat
+      W′ W≼W′ Rᴾ r★ t) ,
+  reveal-alias-chain W a nonvar occurs p₀ sourceᴾ sourceᴵ q₀
+    (data-downward dat)
+
+conceal-alias-chain : ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (a : AliasSlot W)
+    {B₀ᴾ : Ty (suc Δᴾ)} {Bᴵ : Ty Δᴵ}
+    {Ac : Ty (suc Δᶜ)} {Bc : Ty Δᶜ} {Acʳ : Ty (suc Δᶜ)}
+    (nonvar : NonVar Ac) (occurs : Fin.zero ∈ᵗ Ac)
+    (p₀ : I.instᵐ (impEnv (core W)) I.⊢ Ac ⊑ ⇑ᵗ Bc)
+    (nonvarʳ : NonVar Acʳ) (occursʳ : Fin.zero ∈ᵗ Acʳ)
+    (q₀ : I.instᵐ (impEnv (core W)) I.⊢ Acʳ ⊑ ⇑ᵗ Bc)
+  → (sourceᴾ : embedPrecise (core W) (`∀ B₀ᴾ) ≡ `∀ Ac)
+  → (sourceᴵ : embedImprecise (core W) Bᴵ ≡ Bc)
+  → (targetᴾ : embedPrecise (core W)
+      (`∀ (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B₀ᴾ))
+      ≡ `∀ Acʳ)
+  → ∀ {k : ℕ} {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → RightUniversalData W nonvarʳ occursʳ q₀
+      (replaceTy (Fin.suc (aslotXᴾ a)) (⇑ᵗ (aslotRᴾ a)) B₀ᴾ)
+      Bᴵ k Vᴵ Vᴾ
+  → RightUniversalsRelated W p₀ B₀ᴾ Bᴵ k
+      Vᴵ (Vᴾ ↓ makeConceal (aslotXᴾ a) (aslotRᴾ a) (`∀ B₀ᴾ))
+conceal-alias-chain W a nonvar occurs p₀ nonvarʳ occursʳ q₀
+    sourceᴾ sourceᴵ targetᴾ {k = zero} dat = tt
+conceal-alias-chain W a nonvar occurs p₀ nonvarʳ occursʳ q₀
+    sourceᴾ sourceᴵ targetᴾ {k = suc m} dat =
+  (λ W′ W≼W′ Rᴾ r★ t →
+    conceal-alias-universal-head W a nonvar occurs p₀
+      nonvarʳ occursʳ q₀ sourceᴾ sourceᴵ targetᴾ
+      (below-all (suc m) (suc (sizeᵖ p₀))) ≤-refl dat
+      W′ W≼W′ Rᴾ r★ t) ,
+  conceal-alias-chain W a nonvar occurs p₀ nonvarʳ occursʳ q₀
     sourceᴾ sourceᴵ targetᴾ (data-downward dat)
 
 ------------------------------------------------------------------------
@@ -898,6 +964,27 @@ extend-wrap {W = W} (conceal-dyn d B C i) (some-data j dat) =
       (precise-value (data-endpoints dat) ↓ all))
     refl refl
     (conceal-dyn-chain W d (bodyNonvar i) (bodyOccurs i) (bodyP i)
+      (bodyNonvar j) (bodyOccurs j) (bodyP j)
+      refl refl refl dat))
+extend-wrap {W = W} (reveal-alias-slot a B C i) (some-data j dat) =
+  some-data i (universal-data
+    (alias-reveal-endpoints W a
+      (I.∀⊑ (bodyNonvar j) (bodyOccurs j) (bodyP j)) refl
+      (I.∀⊑ (bodyNonvar i) (bodyOccurs i) (bodyP i))
+      refl (data-endpoints dat)
+      (precise-value (data-endpoints dat) ↑ all))
+    refl refl
+    (reveal-alias-chain W a (bodyNonvar j) (bodyOccurs j) (bodyP j)
+      refl refl (bodyP i) dat))
+extend-wrap {W = W} (conceal-alias-slot a B C i) (some-data j dat) =
+  some-data i (universal-data
+    (alias-conceal-endpoints W a
+      (I.∀⊑ (bodyNonvar i) (bodyOccurs i) (bodyP i)) refl
+      (I.∀⊑ (bodyNonvar j) (bodyOccurs j) (bodyP j))
+      refl (data-endpoints dat)
+      (precise-value (data-endpoints dat) ↓ all))
+    refl refl
+    (conceal-alias-chain W a (bodyNonvar i) (bodyOccurs i) (bodyP i)
       (bodyNonvar j) (bodyOccurs j) (bodyP j)
       refl refl refl dat))
 extend-wrap {W = W} (reveal-inert s B C avoid i)

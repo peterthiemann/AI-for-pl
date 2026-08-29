@@ -158,6 +158,40 @@ DynConcealAt k = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
       Vᴵ (Vᴾ ↓ makeConceal (dslotXᴾ d) (dslotRᴾ d) Bᴾ)
 
 ------------------------------------------------------------------------
+-- Alias slots
+------------------------------------------------------------------------
+
+-- Alias slots have the same one-sided operational shape as dynamic slots,
+-- but replacing the source variable exposes the premise of `I.alias` rather
+-- than a representation derivation below `★`.
+
+AliasRevealAt : ℕ → Set
+AliasRevealAt k = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (a : AliasSlot W) {Bᴾ : Ty Δᴾ} {Aᴾ Aᴵ : Ty Δᶜ}
+    (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
+  → embedPrecise (core W) Bᴾ ≡ Aᴾ
+  → ∀ {Cᴾ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Cᴾ ⊑ Aᴵ)
+  → embedPrecise (core W)
+      (replaceTy (aslotXᴾ a) (aslotRᴾ a) Bᴾ) ≡ Cᴾ
+  → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W p k Vᴵ Vᴾ
+  → ComputationsRelated W (FutureValueRelation q) k
+      Vᴵ (Vᴾ ↑ 〖 aslotXᴾ a , aslotRᴾ a ↑ Bᴾ 〗)
+
+AliasConcealAt : ℕ → Set
+AliasConcealAt k = ∀ {Δᴾ Δᴵ Δᶜ} (W : World Δᴾ Δᴵ Δᶜ)
+    (a : AliasSlot W) {Bᴾ : Ty Δᴾ} {Aᴾ Aᴵ : Ty Δᶜ}
+    (p : impEnv (core W) I.⊢ Aᴾ ⊑ Aᴵ)
+  → embedPrecise (core W) Bᴾ ≡ Aᴾ
+  → ∀ {Cᴾ : Ty Δᶜ} (q : impEnv (core W) I.⊢ Cᴾ ⊑ Aᴵ)
+  → embedPrecise (core W)
+      (replaceTy (aslotXᴾ a) (aslotRᴾ a) Bᴾ) ≡ Cᴾ
+  → ∀ {Vᴵ : Term Δᴵ} {Vᴾ : Term Δᴾ}
+  → ValueImprecision W q k Vᴵ Vᴾ
+  → ComputationsRelated W (FutureValueRelation p) k
+      Vᴵ (Vᴾ ↓ makeConceal (aslotXᴾ a) (aslotRᴾ a) Bᴾ)
+
+------------------------------------------------------------------------
 -- The bundle, and everything lexicographically below a pair
 ------------------------------------------------------------------------
 

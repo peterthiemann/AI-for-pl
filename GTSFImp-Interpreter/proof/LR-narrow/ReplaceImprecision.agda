@@ -457,6 +457,86 @@ replace-left-⊑ Z mode r★ avoid (I.alias eq {notSelf} p)
     | no _ =
   I.alias eq {notSelf = notSelf} p
 
+-- Replacing an alias variable on the left by the representative recorded in
+-- its mode.  At the matching alias leaf the replacement is exactly the
+-- leaf's premise; all other clauses are structural.  The right endpoint's
+-- non-occurrence excludes a matching paired leaf.
+
+alias-rep-injective : ∀ {Δ} {T T′ : Ty Δ}
+  → I.X⊑ᵗ T ≡ I.X⊑ᵗ T′
+  → T ≡ T′
+alias-rep-injective refl = refl
+
+replace-left-alias-⊑ : ∀ {Δ} {μ : I.ImpEnv Δ} (Z : TyVar Δ)
+    {T A B : Ty Δ}
+  → μ Z ≡ I.X⊑ᵗ T
+  → Z ∉ᵗ B
+  → μ I.⊢ A ⊑ B
+  → μ I.⊢ replaceTy Z T A ⊑ B
+replace-left-alias-⊑ Z mode avoid I.★⊑★ = I.★⊑★
+replace-left-alias-⊑ Z mode avoid I.ι⊑ι = I.ι⊑ι
+replace-left-alias-⊑ Z mode avoid (I.X⊑X {X = X}) with Z ≟ X
+replace-left-alias-⊑ Z mode (∉-var Z≢Z) I.X⊑X | yes refl =
+  ⊥-elim (≢ᶠ→≢ Z≢Z refl)
+replace-left-alias-⊑ Z mode avoid I.X⊑X | no _ = I.X⊑X
+replace-left-alias-⊑ Z mode avoid (I.⇒⊑⇒ p q) with avoid
+replace-left-alias-⊑ Z mode avoid (I.⇒⊑⇒ p q)
+    | ∉-fun avoidA avoidB =
+  I.⇒⊑⇒ (replace-left-alias-⊑ Z mode avoidA p)
+    (replace-left-alias-⊑ Z mode avoidB q)
+replace-left-alias-⊑ Z mode avoid (I.∀⊑∀ p) with avoid
+replace-left-alias-⊑ Z mode avoid (I.∀⊑∀ p) | ∉-all avoidB =
+  I.∀⊑∀ (replace-left-alias-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
+    avoidB p)
+replace-left-alias-⊑ Z mode avoid (I.⇒⊑★ p q) =
+  I.⇒⊑★ (replace-left-alias-⊑ Z mode ∉-star p)
+    (replace-left-alias-⊑ Z mode ∉-star q)
+replace-left-alias-⊑ Z mode avoid I.ι⊑★ = I.ι⊑★
+replace-left-alias-⊑ Z mode avoid (I.X⊑★ {X = X} eq) with Z ≟ X
+replace-left-alias-⊑ Z mode avoid (I.X⊑★ eq) | yes refl
+    with trans (sym mode) eq
+replace-left-alias-⊑ Z mode avoid (I.X⊑★ eq) | yes refl | ()
+replace-left-alias-⊑ Z mode avoid (I.X⊑★ eq) | no _ = I.X⊑★ eq
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.∀⊑ nonvar occurs p) =
+  I.∀⊑ (replaceTy-nonvar (Fin.suc Z) (⇑ᵗ T) nonvar)
+    (replaceTy-occurs (Fin.suc Z) (⇑ᵗ T) (λ ())
+      (shift-no-zero T) occurs)
+    (replace-left-alias-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode)
+      (renameᵗ-∉ᵗ Fin.suc fin-suc-injective avoid) p)
+replace-left-alias-⊑ Z mode avoid I.∀★⊑★ = I.∀★⊑★
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.∀⊑★ {A = A} nonstar p)
+    with star-or-not (replaceTy (Fin.suc Z) (⇑ᵗ T) A)
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.∀⊑★ {A = A} nonstar p) | inj₁ eq =
+  subst≡ (λ R → _ I.⊢ `∀ R ⊑ ★) (sym eq) I.∀★⊑★
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.∀⊑★ {A = A} nonstar p) | inj₂ nonstar′ =
+  I.∀⊑★ nonstar′
+    (replace-left-alias-⊑ (Fin.suc Z) (cong I.⇑ᵛ mode) ∉-star p)
+replace-left-alias-⊑ Z mode avoid I.bot-elim = I.bot-elim
+replace-left-alias-⊑ Z mode avoid I.bot⊑★ = I.bot⊑★
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.alias {X = X} {T = T′} eq {notSelf} p) with Z ≟ X
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.alias eq p) | yes refl
+    with alias-rep-injective (trans (sym mode) eq)
+replace-left-alias-⊑ Z {T = T} mode avoid
+    (I.alias eq p) | yes refl | refl = p
+replace-left-alias-⊑ Z mode avoid (I.alias eq {notSelf} p) | no _ =
+  I.alias eq {notSelf = notSelf} p
+
+replace-left-alias-eq-⊑ : ∀ {Δ} {μ : I.ImpEnv Δ} (Z : TyVar Δ)
+    {T R A B : Ty Δ}
+  → μ Z ≡ I.X⊑ᵗ T
+  → R ≡ T
+  → Z ∉ᵗ B
+  → μ I.⊢ A ⊑ B
+  → μ I.⊢ replaceTy Z R A ⊑ B
+replace-left-alias-eq-⊑ Z mode refl avoid p =
+  replace-left-alias-⊑ Z mode avoid p
+
 ------------------------------------------------------------------------
 -- Occurrence reflection through a replacement
 ------------------------------------------------------------------------
