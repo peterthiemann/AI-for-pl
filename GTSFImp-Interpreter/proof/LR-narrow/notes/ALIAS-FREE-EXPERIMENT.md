@@ -722,6 +722,118 @@ the return theorem and the checked rebasing bridge. The earlier maker
 theorems supply the preceding private allocation; these are staged runs,
 not a new general theorem about universal instantiation.
 
+## Family-indexed universal clauses
+
+`ScopedUniversal.agda` now constructs paired and right-only universal
+semantic types. Both have proved downward and independent-future closure;
+both observe actual type applications in their physical result scopes.
+This is a family-indexed interpretation, not yet a recursive interpretation
+of every type-imprecision derivation.
+
+### Small result families
+
+The model's value relations live in `Set`, while the record `ScopedType`
+lives in `Set₁`. Quantifying directly over all such records inside the
+universal value relation would therefore leave the current universe. This
+checkpoint does not add resizing, impredicativity, or a termination escape.
+
+A `PairedFamily Cᴵ Cᴾ` instead supplies, for every independent physical
+scope pair `S,T`:
+
+- a small set `Argument(S,T)` of argument codes/evidence;
+- endpoint argument types `Rᴵ(a)` and `Rᴾ(a)`;
+- an interpreted result type `F(S,T,a)` rooted at `store(S),store(T)`;
+- endpoint equalities
+  `F(S,T,a)ᴵ = (S Cᴵ)[Rᴵ(a)/α]` and
+  `F(S,T,a)ᴾ = (T Cᴾ)[Rᴾ(a)/α]`.
+
+Here `S C` lifts the free physical names under the bound variable `α`.
+The new `scopeBody` laws justify that action. Codes may include syntactic
+types and admissibility derivations; they do not contain arbitrary
+`ScopedType` records. A fixed family itself may be large without making
+quantification over its codes large.
+
+`RightFamily Cᴵ Cᴾ` supplies the same data except that only the precise
+argument is selected, and the imprecise endpoint of `F(S,T,a)` is `S Cᴵ`.
+The precise argument is not restricted to `★`.
+
+These records contain result interpretations and their typing equations,
+not wrapper-compatibility hypotheses. They deliberately do **not** yet
+assert that a chosen argument family covers every live imprecision rule,
+or that different argument presentations have coherent interpretations.
+Those properties must come from a body/type-environment interpretation.
+
+### Paired and right-only tests
+
+By definition, typed universal values `U,V` are related at
+`universal F`, scopes `S,T`, and index `k` if, for all independent futures
+`p:S→S′`, `q:T→T′`, all `j<k`, and all `a:Argument(S′,T′)`,
+
+    Observed(F(S′,T′,a), root, root, j,
+             (p U)[Rᴵ(a)], (q V)[Rᴾ(a)]).
+
+The result model is rooted at the actual call-site stores. Subsequent
+bindings, including surplus wrapper bindings, remain in its independent
+result scopes. The usual valuehood and endpoint-typing requirements are
+part of the clause even at index zero.
+
+For `rightUniversal F`, the corresponding clause is
+
+    Observed(F(S′,T′,a), root, root, j,
+             p U, (q V)[Rᴾ(a)])
+
+for all `j≤k`, **including `j=k`**. The imprecise term performs no type
+application, so there is no imprecise step to pay for an index decrement.
+`right-at-same-index` explicitly exercises this boundary. Paired tests use
+`j<k`; right-only tests must not inherit that strict bound accidentally.
+
+Downward closure follows by composing the index inequalities. Future
+closure composes the physical future paths and uses `lift-term-comp`.
+Neither proof assumes that evaluation is equivariant under arbitrary
+allocation or that returned syntax lowers to a visible root.
+
+### Occurring-binder identity and wrapper regressions
+
+`ScopedIdentity.identity-related` proves that `λx.x` belongs to
+`arrow A A` for every scoped semantic type `A`, at every index. Its call
+clause uses actual one-step beta returns and all three observation clauses.
+
+`ScopedUniversalExperiment.IdentityFamily` then proves that
+`Λα.λx:α.x` belongs to the constructed paired universal for **any supplied
+small, scope-indexed family of semantic arguments**. The argument's
+interpretation is supplied at the current physical scope pair, so it is
+not restricted to types mentioning only the original roots.
+
+For each argument interpretation `A`, instantiation allocates fresh
+`Xᴵ:Aᴵ` and `Xᴾ:Aᴾ` and returns
+
+    (λx.x) ↑ (seal Xᴵ Aᴵ ↦↑ unseal Xᴵ Aᴵ)
+    (λx.x) ↑ (seal Xᴾ Aᴾ ↦↑ unseal Xᴾ Aᴾ).
+
+The abstract identity is related at the fresh nominal type. General
+function-seal compatibility yields the public adapters, and `arrow-from`
+transfers that result from the rebased roots back to the actual allocated
+result scopes. Thus the binder really occurs and the result is higher
+order; this is not just a constant-body test.
+
+An infinite nonempty family uses naturals and iterated endofunction types.
+`tower-instantiations` eliminates the universal relation for every code
+in that family. The fully applied `((Λα.λx:α.x)[ℕ]) n` has a typing proof,
+an explicit four-step reduction chain, and an exact interpreter result `n`.
+
+The constant-body family admits **all** syntactic type-argument pairs.
+It relates `Λα.n` to `(Λα.n) ↑ ∀(id ℕ)` at every index and future scope;
+their instantiations take two and five steps respectively. The wrapped
+run allocates its outer argument slot and then a second slot representing
+the first, exactly as in the original raw-store counterexample.
+
+The right-only family relates `n` to that wrapped universal. Its tests
+compare the zero-step imprecise return with the five-step precise return,
+for every precise type argument and without reducing the index. This
+isolates the asymmetric observation boundary; the constant body does not
+satisfy the live `∀⊑` rule's bound-variable-occurrence premise, so this
+test is **not** a fundamental-property instance of that rule.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -752,15 +864,26 @@ physical stores. Old meanings, computation observations, and arrow tests
 survive rebasing; the private-before-visible regression retains and uses
 its escaping seal. No new counterexample was found at this checkpoint.
 
-The next critical step is the **universal-type interpretation**: specify
-which semantic arguments and extended environments a universal value
-must support, including the one-sided allocation needed by the wrapper
-case. Establish the interpretation's weakening/substitution laws as
-needed, rather than treating the present paired nominal environment as
-an interpretation of missing-endpoint world entries. Then prove the
-absent-slot universal-wrapper case. Dynamic types and the full world
-interpretation also remain outside this fragment. Do not integrate the
-replacement into the live LR before the universal-wrapper case checks.
+Paired and right-only family-indexed universal constructors now check,
+including the same-index right-only boundary. The occurring-binder identity
+inhabits the paired clause for arbitrary supplied small argument families;
+constant wrappers exercise the extra allocation under both clauses.
+
+The next critical step is **deriving coherent result families from the
+body/type environment**, with the needed weakening/substitution laws.
+In particular, a universal wrapper tests its inner value at a freshly
+allocated name, while the outer observation expects the original argument
+interpretation. The present arbitrary-family interface alone does not
+equate those interpretations. Prove that coherence from the interpretation,
+and supply observation expansion through one-sided allocating prefixes;
+then use them for general absent-slot universal-wrapper compatibility.
+
+The identity proof already combines fresh nominal interpretation,
+function-seal compatibility, and rebasing, but does not establish that
+combination for arbitrary universal bodies. Dynamic types, missing-endpoint
+world interpretation, and the full syntax interpretation remain outside
+this fragment. Do not integrate the replacement into the live LR before
+the universal-wrapper case checks.
 
 General evaluation transport, full universal-wrapper closure, and the four
 `RevealObligations` remain open. No live obligation has been discharged by

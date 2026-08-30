@@ -7,8 +7,9 @@ module proof.LR-narrow.ScopedBehavior where
 --     arrow, and nominal-seal types have proved index/future closure.
 --   * The closure fields are semantic-type invariants, proved by each type
 --     constructor, not assumed function-reveal compatibility obligations.
---   * Dynamic and universal types are absent. ScopeRebase and
---     VisibleEnvironment provide root changes and visible-name extension.
+--   * ScopedUniversal supplies family-indexed universal constructors;
+--     dynamic types remain absent. ScopeRebase and VisibleEnvironment
+--     provide root changes and visible-name extension.
 
 open import Data.List using ([])
 open import Data.Nat using (ℕ; _≤_; _<_; _∸_)

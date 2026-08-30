@@ -67,6 +67,39 @@ scope-arrow : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ
 scope-arrow root A B = refl
 scope-arrow (allocate S C) A B = cong ⇑ᵗ (scope-arrow S A B)
 
+-- The bound variable stays fixed while physical names move underneath it.
+
+scopeBody : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀}
+  → PhysicalScope Σ₀ Δ → Ty (suc Δ₀) → Ty (suc Δ)
+scopeBody root B = B
+scopeBody (allocate S A) B = renameᵗ (extᵗ Fin.suc) (scopeBody S B)
+
+scope-universal : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀}
+    (S : PhysicalScope Σ₀ Δ) B
+  → scopeTy S (`∀ B) ≡ `∀ (scopeBody S B)
+scope-universal root B = refl
+scope-universal (allocate S A) B = cong ⇑ᵗ (scope-universal S B)
+
+scope-body-natural : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀}
+    (S : PhysicalScope Σ₀ Δ)
+  → scopeBody S (‵ `ℕ) ≡ ‵ `ℕ
+scope-body-natural root = refl
+scope-body-natural (allocate S A) =
+  cong (renameᵗ (extᵗ Fin.suc)) (scope-body-natural S)
+
+scope-body-bound : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+  → scopeBody S (＇ Fin.zero) ≡ ＇ Fin.zero
+scope-body-bound root = refl
+scope-body-bound (allocate S A) =
+  cong (renameᵗ (extᵗ Fin.suc)) (scope-body-bound S)
+
+scope-body-arrow : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀}
+    (S : PhysicalScope Σ₀ Δ) A B
+  → scopeBody S (A ⇒ B) ≡ (scopeBody S A ⇒ scopeBody S B)
+scope-body-arrow root A B = refl
+scope-body-arrow (allocate S C) A B =
+  cong (renameᵗ (extᵗ Fin.suc)) (scope-body-arrow S A B)
+
 data ScopeFuture {Δ₀} {Σ₀ : TyStore Δ₀} : ∀ {Δ Δ′}
     → PhysicalScope Σ₀ Δ → PhysicalScope Σ₀ Δ′ → Set where
   stay : ∀ {Δ} {S : PhysicalScope Σ₀ Δ} → ScopeFuture S S

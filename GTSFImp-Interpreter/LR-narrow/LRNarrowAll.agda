@@ -85,3 +85,6 @@ import proof.LR-narrow.ScopedFunctionSealExperiment
 import proof.LR-narrow.ScopeRebase
 import proof.LR-narrow.VisibleEnvironment
 import proof.LR-narrow.VisibleEnvironmentExperiment
+import proof.LR-narrow.ScopedIdentity
+import proof.LR-narrow.ScopedUniversal
+import proof.LR-narrow.ScopedUniversalExperiment
