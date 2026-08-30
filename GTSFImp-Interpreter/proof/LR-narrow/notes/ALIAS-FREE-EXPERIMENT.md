@@ -206,6 +206,48 @@ Diagram:
 `bare-use-⊢` and `wrapped-use-⊢` prove typing; `bare-use-eval` and
 `wrapped-use-eval` check exact interpreter returns at fuel `20`.
 
+## Third experiment: behavioral elimination of private seal adapters
+
+`proof/LR-narrow/PrivateSealBehavior.agda` introduces a syntax certificate
+`PrivateIdentity Σ A F`, with these explicit clauses:
+
+- `λx. x` is certified at `A ⇒ A` in every store `Σ`.
+- If `Σ(X) = R` and `F` is certified at `X ⇒ X`, then
+  `F ↑ (seal X R ↦↑ unseal X R)` is certified at `R ⇒ R`.
+- If `F` is certified at `A ⇒ A`, then
+  `F ↑ (id↓ A ↦↑ id↑ A)` is certified at `A ⇒ A`.
+
+The certificate contains no assumed application or compatibility premise.
+`private-value` and `private-typed` derive valuehood and typing.
+`private-rename` proves preservation under every lookup-preserving store
+embedding, including embeddings that retain private names below later
+allocations.
+
+`private-application`: if `F` is certified and `V` is a value, then
+`F V` reduces to **exactly `V`**, with only store-preserving steps.
+The proof is induction on the certificate. At a seal adapter, apply the
+induction hypothesis to `V ↓ seal X R`, lifted through the matching
+unseal, and then cancel that seal/unseal pair. There is no restriction
+to natural arguments: `V` may itself contain functions, universals,
+casts, or private seals.
+
+`private-pair-application`: if two certified functions receive typed value
+arguments related by any relation `S` across their physical scopes, then
+their applications return `S`-related values in the same physical stores.
+This follows from the exact-result theorem; it does not require a common
+raw-store future, a representation alias, or lowering the functions.
+
+`bare-certificate` and `wrapped-certificate` certify the exact closures of
+the escaping-seal experiment, for **any closed root representation**.
+The precise certificate retains `Z`; the imprecise certificate has no
+corresponding private slot. Thus this is a behavioral treatment of the
+actual escaping functions, not an erasure of their syntax.
+
+The next check within this experiment is to pass a universal value through
+these adapters, instantiate it, and verify the resulting allocation and
+data observation. The present elimination theorem concerns reduction
+traces; it is not yet the live step-indexed computation relation.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a

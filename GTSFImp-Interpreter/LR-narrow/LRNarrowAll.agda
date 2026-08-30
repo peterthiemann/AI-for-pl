@@ -67,3 +67,4 @@ import proof.LR-narrow.UniversalFamilyKit
 import proof.LR-narrow.ScopeExperiment
 import proof.LR-narrow.ScopedReturnsExperiment
 import proof.LR-narrow.EscapingSealExperiment
+import proof.LR-narrow.PrivateSealBehavior
