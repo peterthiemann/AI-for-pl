@@ -5432,10 +5432,10 @@ related-value-casts (I.⇒⊑⇒ p q) sourceᴾ sourceᴵ ((C.gen cᴾ) Aᴾ≢�
   paired-cast-values ob (I.⇒⊑⇒ p q)
     sourceᴾ sourceᴵ ((C.gen cᴾ) Aᴾ≢★) cᴵ
     open-function-precise-generalization r targetᴾ targetᴵ related
-related-value-casts {W = W}
-    {Cᴾ = `∀ Aᴾ₀} {Dᴾ = `∀ Aᴾ₁}
-    {Cᴵ = `∀ Aᴵ₀} {Dᴵ = `∀ Aᴵ₁}
-    (I.∀⊑∀ p) sourceᴾ sourceᴵ (C.∀ᶜ cᴾ) (C.∀ᶜ cᴵ)
+related-value-casts (I.∀⊑∀ p) sourceᴾ sourceᴵ cᴾ cᴵ q targetᴾ
+    targetᴵ related =
+  paired-cast-values ob (I.∀⊑∀ p)
+    sourceᴾ sourceᴵ cᴾ cᴵ open-universals q targetᴾ targetᴵ related
 related-value-casts (I.⇒⊑★ p q) sourceᴾ sourceᴵ cᴾ cᴵ r targetᴾ
     targetᴵ related =
   paired-cast-values ob (I.⇒⊑★ p q)

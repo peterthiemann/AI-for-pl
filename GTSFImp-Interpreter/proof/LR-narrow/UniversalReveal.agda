@@ -146,17 +146,54 @@ imprecise-peel-step-question
 -- fresh target name.  Its beta step is lifted through the inherited peel
 -- conversion and the outer fresh reveal.
 
+imprecise-peel-inner-reductᴵᵇ : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
+    {C D : Ty (suc Δᴵ)}
+  → ImprecisePeelᵇ W B C D → Ty Δᴵ → Term (suc Δᴵ)
+  → Term (suc (suc Δᴵ))
+imprecise-peel-inner-reductᴵᵇ
+    (reveal-imprecise-peelᵇ s C no-occur i av) R V =
+  Frame.plug revealFrame
+    (Frame.transport revealFrame (bind (＇ Fin.zero)) outer)
+    (Frame.plug revealFrame
+      (Frame.transport revealFrame (bind (＇ Fin.zero)) old)
+      (renameᵗᵐ (keep wk↪ᵗ) V
+        ↑ 〖 Fin.zero , ⇑ᵗ (＇ Fin.zero) ↑
+          renameᵗ (extᵗ Fin.suc) C 〗))
+  where
+  old = reveal-frm
+    〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗
+  outer = reveal-frm
+    〖 Fin.zero , ⇑ᵗ R ↑
+      replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C 〗
+imprecise-peel-inner-reductᴵᵇ
+    (conceal-imprecise-peelᵇ s C no-occur i av) R V =
+  Frame.plug revealFrame
+    (Frame.transport revealFrame (bind (＇ Fin.zero)) outer)
+    (Frame.plug concealFrame
+      (Frame.transport concealFrame (bind (＇ Fin.zero)) old)
+      (renameᵗᵐ (keep wk↪ᵗ) V
+        ↑ 〖 Fin.zero , ⇑ᵗ (＇ Fin.zero) ↑
+          renameᵗ (extᵗ Fin.suc)
+            (replaceTy (Fin.suc (slotXᴵ s))
+              (⇑ᵗ (slotRᴵ s)) C) 〗))
+  where
+  old = conceal-frm
+    (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+  outer = reveal-frm 〖 Fin.zero , ⇑ᵗ R ↑ C 〗
+
 imprecise-peel-inner-step-question : ∀ {Δᴾ Δᴵ Δᶜ}
     {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
     {C D : Ty (suc Δᴵ)}
     (peel : ImprecisePeelᵇ W B C D)
     {Σ : TyStore (suc Δᴵ)} {R : Ty Δᴵ} {V : Term (suc Δᴵ)}
   → Value V
-  → Σ[ N ∈ Term (suc (suc Δᴵ)) ]
-      Σ[ step ∈ imprecise-peel-reductᴵᵇ peel R (Λ V)
-          —→[ bind (＇ Fin.zero) ] N ]
-        E.step? Σ (imprecise-peel-reductᴵᵇ peel R (Λ V))
-          ≡ just (E.step-result (bind (＇ Fin.zero)) N step)
+  → Σ[ step ∈ imprecise-peel-reductᴵᵇ peel R (Λ V)
+          —→[ bind (＇ Fin.zero) ]
+            imprecise-peel-inner-reductᴵᵇ peel R V ]
+      E.step? Σ (imprecise-peel-reductᴵᵇ peel R (Λ V))
+        ≡ just (E.step-result (bind (＇ Fin.zero))
+            (imprecise-peel-inner-reductᴵᵇ peel R V) step)
 imprecise-peel-inner-step-question
     (reveal-imprecise-peelᵇ s C no-occur i av)
     {Σ = Σ} {R = R} vV
@@ -167,7 +204,7 @@ imprecise-peel-inner-step-question
     (reveal-imprecise-peelᵇ s C no-occur i av)
     {Σ = Σ} {R = R} vV
     | vV′ , step-eq =
-  _ , outer-step , outer-step-eq
+  outer-step , outer-step-eq
   where
   old = reveal-frm
     〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗
@@ -189,7 +226,7 @@ imprecise-peel-inner-step-question
     (conceal-imprecise-peelᵇ s C no-occur i av)
     {Σ = Σ} {R = R} vV
     | vV′ , step-eq =
-  _ , outer-step , outer-step-eq
+  outer-step , outer-step-eq
   where
   old = conceal-frm
     (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
