@@ -378,6 +378,62 @@ closure behavior. Independent interpreter equalities check the exact
 fuel and final stores: two names on the bare side and three on the private
 side. For example, `n = 7` and `m = 9` returns `7`, not `9`.
 
+## Backward observations and fuel accounting
+
+`proof/LR-narrow/FunctionSealObservation.agda` now connects an **actual
+interpreter return** to the abstract-body return. This is not a theorem
+restricted to the forward traces constructed in the previous experiment.
+
+`unseal-return-invert`: if `Σ(Y) = B`, `M : Y` is closed, and
+`M ↑ unseal Y B` returns `U` at fuel `n`, then there are body fuel `b`
+and changes `χ` such that the interpreter returns
+`U ↓ seal (χY) (χB)` from `M` at fuel `b`, `b + 1 ≤ n`, and the
+observed history is exactly `χ` followed by one `keep`. The body return
+is in the **observed final physical context**, and `U : χB` in `χΣ`.
+
+`reveal-function-return-invert`: if `Σ(X) = A`, `Σ(Y) = B`,
+`F : X ⇒ Y` and `V : A` are closed values, and
+`reveal-function X A Y B F V` returns `U` at fuel `n`, then the
+interpreter returns `U ↓ seal (χY) (χB)` from `F (V ↓ seal X A)`
+at some fuel `b`, where
+
+    b + 2 ≤ n
+    observed changes = keep ∷ (χ ++ [keep]).
+
+All private allocations belong to `χ`; neither administrative step
+changes the physical store or the action on caller terms. The payload
+in the recovered body return is exactly the observed `U`, not a lowered
+term or a merely related replacement.
+
+The proof inverts the initial function-reveal step, uses the existing
+evaluation-frame phase theorem to recover the operand run, then applies
+preservation and canonical forms to its returned value. The final
+matching unseal must take one step and cannot allocate. Frame transport
+is normalized at one boundary using an equality of context, changes, and
+term; no equality of unrelated trace witnesses is assumed.
+
+`function-seal-body-budget`: if `b + 2 ≤ n` and `n < k`, then `b < k`
+and `k ∸ n ≤ k ∸ b`. Thus the recovered observation fits below the same
+cutoff, and a downward-closed result relation at the body's residual
+index can be lowered to the observer's residual index. This arithmetic
+fact does not itself establish that value relation's downward closure.
+
+### Regression with arbitrary surplus fuel
+
+`proof/LR-narrow/FunctionSealObservationExperiment.agda` reuses the
+allocating, non-identity closure maker above. For every natural `n` and
+every surplus fuel `s`, its public application returns `Uᴾ` at fuel
+`4 + s`, with the same exact four-step trace and three-name final store.
+
+The general inversion theorem is applied to that interpreter equality.
+`recovered-body-fuel` checks that its computed body fuel is always `2`;
+`recovered-body-changes` checks that its computed history is exactly one
+`keep` followed by the private `ℕ` allocation. `recovered-body-store`
+checks the resulting physical store. These tests inspect the witnesses
+computed by the general proof, rather than supplying a separate body run.
+The earlier fully applied observations still check that both returned
+closures yield the captured `n` when subsequently applied to any natural.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -392,18 +448,17 @@ physical private scopes and relate the returned values behaviorally;
 do not replace the live `PairedReturns` with `ScopedReturns`, which still
 requires literal lowering of every returned value.
 
-The next critical step is a **proof-local, scope-aware computation
-observation** with a backward return decomposition and fuel bounds for
-these function reveals. The new generic theorems are forward reduction
-transport; they do not yet decompose every observed return of an adapter
-into a body return, or establish the step-indexed LR clause. The exact
-interpreter checks above are regression evidence, not that general
-decomposition theorem.
+Backward return decomposition and its two-step fuel bound now check for
+arbitrary typed function bodies. No new counterexample was found in this
+step. The next critical step is a **proof-local, scope-aware computation
+observation** using those results, together with a value relation whose
+function clause and nominal seal lifting retain physical private scopes.
 
-Then give the value relation its function clause and nominal seal lifting,
-prove closure under later visible/private allocations, and derive the
-function-reveal case using the local compatibility theorem. The supplied
-body-result relation `S` must come from that relation's induction/future
+Prove downward closure and closure under later visible/private allocations,
+then derive the function-reveal case. Complete the interpreter-level
+assembly needed for the forward-return and forward-blame clauses, reusing
+the existing frame machinery and the forward trace lemmas. The supplied
+body-result relation `S` must come from the relation's induction/future
 structure, not be added as an assumed compatibility field. Only integrate
 the new observation interface into the live LR after this bridge checks.
 
