@@ -1,14 +1,16 @@
 module proof.LR-narrow.PhysicalScope where
 
 -- File Charter:
---   * Physical stores extending a fixed visible root by fresh allocations.
+--   * Physical stores extending a fixed physical root by fresh allocations.
 --   * Futures retain every old physical name, including private names, and
 --     provide coherent actions on types, terms, values, and store lookups.
 --   * Interpreter histories determine their result scopes independently.
---   * This fixed-root prototype does not extend the visible type environment.
+--   * Grafting changes the root while preserving stores and future paths.
+--     VisibleEnvironment separately selects the visible semantic names.
 
 open import Data.List using ([])
 open import Data.Nat using (suc)
+open import Data.Product using (_,_; ∃; ∃-syntax)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
   using (_≡_; refl; cong; cong₂; trans) renaming (subst to subst≡)
@@ -200,3 +202,64 @@ lift-root-seal stay X R U = refl
 lift-root-seal {S = S} (grow p) X R U
     rewrite toRename-wk-eq (scopeVar S X) | renameᵗ-wk-eq (scopeTy S R) =
   lift-root-seal p X R (⇑ᵗᵐ U)
+
+-- Re-rooting does not discard the allocation prefix. Grafting a local
+-- scope onto that prefix recovers the original physical history.
+
+graft : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+  → PhysicalScope (scopeStore S) Δ′ → PhysicalScope Σ₀ Δ′
+graft S root = S
+graft S (allocate T A) = allocate (graft S T) A
+
+graft-store : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (T : PhysicalScope (scopeStore S) Δ′)
+  → scopeStore (graft S T) ≡ scopeStore T
+graft-store S root = refl
+graft-store S (allocate T A) = cong (λ Σ → store-bind Σ A) (graft-store S T)
+
+graft-type : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (T : PhysicalScope (scopeStore S) Δ′) A
+  → scopeTy (graft S T) A ≡ scopeTy T (scopeTy S A)
+graft-type S root A = refl
+graft-type S (allocate T B) A = cong ⇑ᵗ (graft-type S T A)
+
+graft-variable : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (T : PhysicalScope (scopeStore S) Δ′) X
+  → scopeVar (graft S T) X ≡ scopeVar T (scopeVar S X)
+graft-variable S root X = refl
+graft-variable S (allocate T B) X = cong Fin.suc (graft-variable S T X)
+
+graft-future : ∀ {Δ₀ Δ Δ′ Δ″} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    {T : PhysicalScope (scopeStore S) Δ′}
+    {U : PhysicalScope (scopeStore S) Δ″}
+  → ScopeFuture T U → ScopeFuture (graft S T) (graft S U)
+graft-future S stay = stay
+graft-future S (grow p) = grow (graft-future S p)
+
+graft-lift : ∀ {Δ₀ Δ Δ′ Δ″} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    {T : PhysicalScope (scopeStore S) Δ′}
+    {U : PhysicalScope (scopeStore S) Δ″} (p : ScopeFuture T U) M
+  → liftTerm (graft-future S p) M ≡ liftTerm p M
+graft-lift S stay M = refl
+graft-lift S (grow p) M = graft-lift S p (⇑ᵗᵐ M)
+
+graft-advance : ∀ {Δ₀ Δ Δ′ Δ″} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (T : PhysicalScope (scopeStore S) Δ′) (χs : StoreChanges Δ′ Δ″)
+  → advance (graft S T) χs ≡ graft S (advance T χs)
+graft-advance S T [] = refl
+graft-advance S T (keep ∷ χs) = graft-advance S T χs
+graft-advance S T (bind A ∷ χs) = graft-advance S (allocate T A) χs
+
+-- Every future from a grafted scope is itself grafted. This rules out
+-- losing future tests when an arrow is interpreted at the new root.
+
+factor-future : ∀ {Δ₀ Δ Δ′ Δ″} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (T : PhysicalScope (scopeStore S) Δ′) {U : PhysicalScope Σ₀ Δ″}
+  → (p : ScopeFuture (graft S T) U)
+  → ∃[ V ] ∃ λ (q : ScopeFuture T V) →
+      _≡_ {A = ∃[ W ] ScopeFuture (graft S T) W}
+        (U , p) (graft S V , graft-future S q)
+factor-future S T stay = T , stay , refl
+factor-future S T (grow {A = A} p)
+    with factor-future S (allocate T A) p
+factor-future S T (grow {A = A} p) | V , q , refl = V , grow q , refl

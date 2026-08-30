@@ -621,6 +621,107 @@ using an actual right blame run and terminal uniqueness. Exact public
 three-step blame runs are checked, and `forward-blame-through-compatibility`
 invokes the forward-blame clause obtained from the general value theorem.
 
+## Visible-environment extension after private allocations
+
+The next checkpoint separates the **physical model roots** from the
+**visible semantic names**. A root contains the complete physical store,
+including private slots. Visibility is a separate pair of injective,
+order-preserving embeddings into the endpoint roots. Changing roots never
+erases a slot or rewrites a runtime term.
+
+### Physical rebasing and semantic stability
+
+`PhysicalScope.graft S P` regards an extension `P` of `store(S)` as an
+extension of the original root. The checked equations include
+
+    store(graft S P) = store(P)
+    type(graft S P, A) = type(P, type(S, A))
+    graft S (advance P χ) = advance (graft S P) χ.
+
+The variable and future-term actions satisfy corresponding equations.
+Every future of `graft S P` factors through a future of `P`, with equality
+of both the endpoint scope and the future path. Thus rebasing does not
+remove any of the later calls tested by an arrow relation.
+
+`ScopeRebase.Rebase S T` takes old semantic types to the model rooted at
+the complete stores of `S` and `T`. Its value relation is defined by
+
+    related(rebase A, P, Q, k, U, V)
+      = related(A, graft S P, graft T Q, k, U, V).
+
+Endpoint types are transported through `S` and `T`; `U` and `V` are
+unchanged. Valuehood, typing, downward closure, and future closure are
+proved for the rebased type. The observation and Kripke-computation
+relations transfer **in both directions**, at the same index and with
+the same runtime terms. This includes forward return, backward return,
+and forward blame, not just terminating examples.
+
+Rebasing commutes with natural and nominal value relations. It commutes
+with arrows in the following precise sense: if two values belong to
+`rebase (arrow A B)`, then they belong to `arrow (rebase A) (rebase B)`,
+and conversely. These are proved implications between value relations,
+not asserted equality of the proof-carrying semantic records. The
+converse uses the future-factorization theorem.
+
+### Visible names and fresh extension
+
+`VisibleEnvironment Σᴵ Σᴾ n` consists of
+
+- two embeddings from the `n` visible names into the physical roots;
+- a semantic representation type for each visible name;
+- actual endpoint store lookups at that type's endpoint representations.
+
+The meaning of a visible name is the nominal lifting of its representation
+at the two selected slots. Rerooting through independent physical scopes
+keeps the visible count unchanged and skips their private allocations.
+Every old meaning agrees with its rebased relation.
+
+`Extend env A` adds one physical binding of `Aᴵ` and one of `Aᴾ`, and
+one visible name selecting those fresh slots. Its head represents the
+rebased `A`; old representations are rebased through the paired bindings.
+`old-meaning` proves preservation of every old name's value relation in
+arbitrary subsequent physical scopes. The embeddings retain their skips,
+so adding a visible pair does not expose intervening private names.
+
+This environment deliberately describes **paired nominal names**. It is
+not yet a general interpretation of syntactic type substitution or of
+world entries with a missing endpoint. Neither a universal type nor its
+compatibility rule is defined by this checkpoint.
+
+### Private-before-visible regression
+
+`VisibleEnvironmentExperiment.agda` starts with the earlier visible names
+`X : ℕ` and `Y : ℕ⇒ℕ`. The precise maker allocates private `Z : ℕ` and
+returns its non-identity closure. After rerooting, a new visible pair
+`W : ℕ⇒ℕ` is added. The precise physical order is `W, Z, Y, X`, while
+the visible order is `W, Y, X`. A checked exclusion theorem states that
+no visible name maps to `Z`.
+
+At every index, the old escaped closures remain related at their rebased
+arrow type and at the new model's arrow of rebased component types.
+Consequently their arrow clause still tests arbitrary independent future
+allocations. Sealing these closures at the fresh `W` pair satisfies its
+new nominal meaning. The precise closure continues to contain `Z`; no
+root-scoped replacement or alias is used.
+
+The module also performs the later allocation in the interpreter. For
+the bare and private closures `F`, respectively, it checks the typed
+continuation
+
+    ((Λα. F) [ℕ⇒ℕ]) m.
+
+Here `α` is unused in the result type, but instantiation still allocates
+the fresh function slot. The closure syntax is weakened under the binder
+in Agda. For every captured natural `n` and input natural `m`, both calls
+return `n`: six steps on the bare side and eight on the private side.
+Each run records exactly one new binding and otherwise only `keep`
+steps; the final stores are exactly the extension's endpoint roots.
+Explicit reduction chains show the private seal used after that binding.
+All three computation-observation clauses also hold at every index by
+the return theorem and the checked rebasing bridge. The earlier maker
+theorems supply the preceding private allocation; these are staged runs,
+not a new general theorem about universal instantiation.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -646,18 +747,20 @@ and value relations, including all three observation directions. This
 closes the local bridge identified in the previous checkpoint. It does
 not discharge the live structural reveal cases or the universal wrapper.
 
-The next critical step is **visible-root/type-environment extension**.
-The present physical futures retain allocations but cannot make a newly
-allocated slot available to the semantic type environment. Define that
-extension explicitly across independently grown physical stores and prove
-that existing semantic types are stable under it. Test the extension with
-the unmatched private allocation followed by a paired visible allocation;
-the old private seal must remain usable throughout.
+Visible-environment extension now checks across independently grown
+physical stores. Old meanings, computation observations, and arrow tests
+survive rebasing; the private-before-visible regression retains and uses
+its escaping seal. No new counterexample was found at this checkpoint.
 
-Then construct universal types and prove the absent-slot universal-wrapper
-case. Dynamic types and the full world interpretation also remain outside
-this fragment. Do not integrate the replacement into the live LR before
-the universal-wrapper case checks.
+The next critical step is the **universal-type interpretation**: specify
+which semantic arguments and extended environments a universal value
+must support, including the one-sided allocation needed by the wrapper
+case. Establish the interpretation's weakening/substitution laws as
+needed, rather than treating the present paired nominal environment as
+an interpretation of missing-endpoint world entries. Then prove the
+absent-slot universal-wrapper case. Dynamic types and the full world
+interpretation also remain outside this fragment. Do not integrate the
+replacement into the live LR before the universal-wrapper case checks.
 
 General evaluation transport, full universal-wrapper closure, and the four
 `RevealObligations` remain open. No live obligation has been discharged by

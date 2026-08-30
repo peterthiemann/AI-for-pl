@@ -2,12 +2,13 @@ module proof.LR-narrow.ScopedBehavior where
 
 -- File Charter:
 --   * Proof-local semantic types over two independently growing physical
---     scopes, with fixed visible roots. Results need not lower to the roots.
+--     scopes, with fixed physical roots. Results need not lower to the roots.
 --   * The computation observation has the DGG's three directions. Natural,
 --     arrow, and nominal-seal types have proved index/future closure.
 --   * The closure fields are semantic-type invariants, proved by each type
 --     constructor, not assumed function-reveal compatibility obligations.
---   * Dynamic types, universal types, and visible-root extension are absent.
+--   * Dynamic and universal types are absent. ScopeRebase and
+--     VisibleEnvironment provide root changes and visible-name extension.
 
 open import Data.List using ([])
 open import Data.Nat using (ℕ; _≤_; _<_; _∸_)
