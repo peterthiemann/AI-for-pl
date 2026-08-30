@@ -834,6 +834,89 @@ isolates the asymmetric observation boundary; the constant body does not
 satisfy the live `∀⊑` rule's bound-variable-occurrence premise, so this
 test is **not** a fundamental-property instance of that rule.
 
+## Body-derived result families and one-sided allocation
+
+`ScopedBodyInterpretation` interprets a checked fragment of the existing
+`Ty` syntax: naturals, variables, and arrows. There is no second type
+language. Dynamic, boolean, and nested universal constructors are outside
+this fragment; an environment entry can nevertheless denote **any**
+already constructed `ScopedType`, including a nominal or universal type.
+
+### Interpretation and coherence
+
+The interpretation is defined by the following clauses:
+
+- `⟦ℕ⟧η = natural`.
+- `⟦X⟧η = η(X)`.
+- `⟦A ⇒ B⟧η = arrow (⟦A⟧η) (⟦B⟧η)`.
+
+If `C` and each `σ(X)` belong to the fragment, then
+`⟦C[σ]⟧η = ⟦C⟧(X ↦ ⟦σ(X)⟧η)`.
+`interpret-substitution` proves equality of the constructed records by
+structural induction; `interpret-renaming` proves the renaming analogue.
+The two endpoint types are exactly the syntactic endpoint substitutions.
+
+`ScopedTypeEquivalence` records equal endpoint types and both directions
+of the value relation, at every index and independent physical scope.
+It does not require equality of records carrying proofs. It transports
+all three computation-observation clauses and respects arrows, using the
+reverse direction in the domain and the forward direction in the result.
+
+If `S` and `T` are physical future roots, then
+`rebase(S,T,⟦C⟧η) ≃ ⟦C⟧(X ↦ rebase(S,T,η(X)))`.
+`BodyRebase.interpret-rebase` proves this equivalence recursively using
+the already checked natural and arrow rebasing theorems.
+
+If visible environments are extended by fresh slots `Xᴵ:Aᴵ` and
+`Xᴾ:Aᴾ`, then interpreting a body in the extended environment is
+equivalent to interpreting it with the fresh **nominal** meaning at its
+head and rebased old meanings in its tail.
+`VisibleBodyExtension.interpret-extended` proves this for every body in
+the fragment. The new head is not identified with its representation.
+
+### Derived paired families
+
+`ScopedBodyFamily.BodyFamily` now constructs `PairedFamily` from a body
+`C`, an old semantic environment `η`, and small argument codes with
+denotations. At physical scopes `S,T`, an argument denoting `A` has result
+
+    ⟦C⟧(α ↦ A, X ↦ rebase(S,T,η(X))).
+
+Thus result interpretations are no longer independent assignments in this
+construction. `ScopedTypeSubstitution.scope-instantiate` proves their
+endpoint opening equations, allowing `A` to mention newly allocated
+physical slots. The syntactic scope/opening, body-shift, and grafting laws
+hold for all `Ty` syntax, not only the interpreted fragment.
+
+Small codes still determine the tested arguments. This construction does
+not assert coverage of all semantic types or invent a future action on
+arbitrary codes. It derives the result from each given denotation.
+
+`ScopedBodyFamilyExperiment` transfers the existing polymorphic identity
+proof to the derived family and eliminates it for the nonempty infinite
+natural/endofunction argument tower. It also checks the higher-order body
+`(α ⇒ X) ⇒ (α ⇒ X)` with both a bound argument and an old environment
+entry under arbitrary independent physical scopes. The existing typed,
+four-step natural-result identity regression remains in the aggregate.
+
+### Same-index right-only step expansion
+
+`ScopedStepExpansion.observed-right-step` proves: if the evaluator takes
+`N —→[χ] N′` from `T`, `N` is neither blame nor a value, and `M,N′`
+are observed at index `k` in `S,step-scope(χ,T)`, then `M,N` are observed
+at the **same** index `k` in `S,T`.
+
+For `χ = bind A`, the continuation scope is `allocate T A`. Every returned
+or blamed history is prefixed by the actual step. Forward return and
+forward blame preserve their witnesses; backward return inverts the
+precise step and uses downward closure from `k−n` to `k−(n+1)`.
+There is no loss of the outer index and no lowering of returned syntax.
+
+`ScopedStepExpansionExperiment` checks a right beta-return prefix, a
+right beta prefix ending in blame, and a type-beta allocation with the
+imprecise natural unchanged. These are all three-clause observations,
+not just forward simulation tests.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -869,14 +952,19 @@ including the same-index right-only boundary. The occurring-binder identity
 inhabits the paired clause for arbitrary supplied small argument families;
 constant wrappers exercise the extra allocation under both clauses.
 
-The next critical step is **deriving coherent result families from the
-body/type environment**, with the needed weakening/substitution laws.
-In particular, a universal wrapper tests its inner value at a freshly
-allocated name, while the outer observation expects the original argument
-interpretation. The present arbitrary-family interface alone does not
-equate those interpretations. Prove that coherence from the interpretation,
-and supply observation expansion through one-sided allocating prefixes;
-then use them for general absent-slot universal-wrapper compatibility.
+Body-derived paired result families now check for the natural/variable/
+arrow fragment, including renaming, substitution, rebasing, and fresh
+visible-environment coherence. Same-index expansion through one-sided
+allocating steps also checks. No new counterexample was found.
+
+The next critical step is **structural seal/unseal compatibility for the
+interpreted body**. A universal wrapper tests its inner value at a freshly
+allocated nominal name, whereas the outer result uses the original
+argument interpretation. These are different endpoint types and different
+relations: substitution coherence does **not** equate them. Generalize
+the existing function-seal proof through the interpreted body (including
+contravariant arrow domains), then combine it with rebasing and the
+allocating-step expansion to prove absent-slot universal-wrapper closure.
 
 The identity proof already combines fresh nominal interpretation,
 function-seal compatibility, and rebasing, but does not establish that
@@ -885,7 +973,7 @@ world interpretation, and the full syntax interpretation remain outside
 this fragment. Do not integrate the replacement into the live LR before
 the universal-wrapper case checks.
 
-General evaluation transport, full universal-wrapper closure, and the four
+General evaluation equivariance, full universal-wrapper closure, and the four
 `RevealObligations` remain open. No live obligation has been discharged by
 these experiments, and the fundamental property is not yet complete.
 `VarImp` and the live LR remain unchanged.

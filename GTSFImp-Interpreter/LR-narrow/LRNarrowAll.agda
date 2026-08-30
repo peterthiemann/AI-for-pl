@@ -88,3 +88,12 @@ import proof.LR-narrow.VisibleEnvironmentExperiment
 import proof.LR-narrow.ScopedIdentity
 import proof.LR-narrow.ScopedUniversal
 import proof.LR-narrow.ScopedUniversalExperiment
+
+-- Body-derived result families and same-index right-only allocating steps.
+import proof.LR-narrow.ScopedTypeSubstitution
+import proof.LR-narrow.ScopedTypeEquivalence
+import proof.LR-narrow.ScopedBodyInterpretation
+import proof.LR-narrow.ScopedBodyFamily
+import proof.LR-narrow.ScopedBodyFamilyExperiment
+import proof.LR-narrow.ScopedStepExpansion
+import proof.LR-narrow.ScopedStepExpansionExperiment
