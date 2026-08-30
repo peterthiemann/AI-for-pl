@@ -1609,3 +1609,29 @@ be justified. No additional closure or live-relation redesign was started.
   are unchanged.
 - `Imprecision.agda`, the reduction rules, and the live cast-term-imprecision
   relation are unchanged from `7df863bb`.
+
+## Example-driven LR reassessment (2026-08-30)
+
+The current review document is
+[LR principles from imprecision examples](LR-PRINCIPLE-REGRESSIONS.md).
+It catalogs fifteen new example families, including eight whole-program CTI
+pairs, against seventeen earlier regression groups. It distinguishes checked
+counterexamples, positive executions, historical proof obstructions, and
+unproved cast obligations.
+
+The strongest new contrast is nominal: equal representations do not suffice
+for matching projection tags, but unconditional tag matching is too strong.
+A checked universal-erasure CTI pair has precise blame and imprecise natural
+return. The review therefore separates matched nominal capabilities from
+precise-only semantic payloads and retains directional observations.
+
+The note proposes constraints on a future LR, not live changes: independent
+physical result scopes, the occupancy-sensitive nominal split, and
+conversion-aware producer computations. It does not claim that the complete
+redesign passes the outstanding universal/dynamic cast cases. The old
+`RevealObligations` impossibility and the withdrawn milestone estimates remain
+in force.
+
+The new modules are in the aggregate check. The historical occupied-slot
+projection regression was ported from removed source-conceal APIs and is now
+also part of `make check`, alongside the ground-cast-target regressions.

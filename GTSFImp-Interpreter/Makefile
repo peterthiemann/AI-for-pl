@@ -9,6 +9,12 @@ check-isomorphism:
 check-lr:
 	$(AGDA) -i . -i ../GTSFImp LR-narrow/LRNarrowAll.agda
 
-check: check-interpreter check-isomorphism check-lr
+check-lr-regressions:
+	$(AGDA) -i . -i ../GTSFImp \
+		../GTSFImp/proof/DGG/GroundCastTargetExamples.agda
+	$(AGDA) -i . -i ../GTSFImp -i ../GTSFImp/proof/DGG/notes \
+		../GTSFImp/proof/DGG/notes/ProjectionMismatchStarRepScratch.agda
 
-.PHONY: check check-interpreter check-isomorphism check-lr
+check: check-interpreter check-isomorphism check-lr check-lr-regressions
+
+.PHONY: check check-interpreter check-isomorphism check-lr check-lr-regressions

@@ -1,7 +1,10 @@
 module ProjectionMismatchStarRepScratch where
 
--- Scratch probe: source seal representation is literally `★`, so the
--- refined partner predicate permits a direct target tag.
+-- File Charter:
+--   * Rechecks the historical source-seal/target-tag projection mismatch.
+--   * Proves that occupied-slot CTI cannot derive the problematic pair under
+--     the current source-conceal rules, while retaining its runtime traces.
+--   * Depends on CtxImp's nonoccupancy gate and CastTermImprecision.
 
 open import Data.Empty using (⊥)
 import Data.Fin as Fin
@@ -135,23 +138,23 @@ one-center-occupied {W = W} no-target =
     (Y , trans (one-rename-zero (CTX.ηᴿʷ W))
               (sym (one-rename-zero (CTX.ηᴸʷ W))))
 
-target-tagged-partner-empty : ∀ {W : World 1 1 1} {P Xᴿ?}
-  → CTX.SourceConcealPartnerOK W P (seal X ★) Xᴿ? target-tagged
+target-tagged-source-ok-empty : ∀ {W : World 1 1 1} {P Xᴿ?}
+  → CTX.SourceConcealOK W P (seal X ★) Xᴿ? target-tagged
   → ⊥
-target-tagged-partner-empty {W = W}
-    (CTX.seal-partner-ok {X = .X}
-      (CTX.star-rep-target no-target _)) =
-  one-center-occupied {W = W} no-target
-target-tagged-partner-empty
-    (CTX.seal-partner-ok (CTX.plain-target ()))
+target-tagged-source-ok-empty
+    (CTX.seal-nonstar-unmatched-ok () _)
 
 source-sealed-target-tagged-empty :
   ∀ {p : ＇ X ⊑ᵂ⟨ probe-world ⟩ ★}
   → probe-world ∣ [] ⊢² source-term ⊑ target-tagged ∶ p
   → ⊥
 source-sealed-target-tagged-empty
-    (CTI2.conceal⊑² ok _ _ _ _ _ _) =
-  target-tagged-partner-empty ok
+    (CTI2.conceal⊑²-seal-star-open {W′ = W′}
+      no-target _ _ _ _ _ _) =
+  one-center-occupied {W = W′} no-target
+source-sealed-target-tagged-empty
+    (CTI2.conceal⊑²-source-ok ok _ _ _ _ _ _) =
+  target-tagged-source-ok-empty ok
 source-sealed-target-tagged-empty
     (CTI2.⊑cast² {p = p} _ _ _)
     with p
@@ -205,7 +208,7 @@ source-projected-target-tagged-empty
 
 -- RESOLVED-BY-LG1: the unrestricted paired-cast route used to derive this
 -- projection mismatch through source-seal see-through.  The live
--- `star-rep-target` gate now makes the required source-seal/bare-target
+-- `NoTargetOccupantAtSource` gate makes the source-seal/bare-target
 -- input empty in the one-cell probe world.
 projection-mismatch-empty :
   probe-world ∣ [] ⊢²
