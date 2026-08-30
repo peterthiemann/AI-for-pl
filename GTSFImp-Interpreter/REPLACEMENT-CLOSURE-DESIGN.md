@@ -1,5 +1,11 @@
 # Replacement-closed universal clauses — design note
 
+Branch note (2026-08-30): `codex/gtsf-alias-free-experiment` starts from
+`7df863bb` and tests an alternative to the alias-mode extension proposed
+below. Its active record is
+[Alias-free scope-transport experiment](proof/LR-narrow/notes/ALIAS-FREE-EXPERIMENT.md).
+The historical plan below is retained for context, not resumed on this branch.
+
 Status: design (2026-08-24), not yet implemented.  This is the
 resolution design for Finding E (see FUNDAMENTAL-PROPERTY-PLAN.md):
 the termination obstruction in the dynamic-slot universal reveal, and

@@ -61,3 +61,7 @@ import proof.LR-narrow.ReplaceImprecision
 import proof.LR-narrow.ImprecisionSize
 import proof.LR-narrow.DynamicReveal
 import proof.LR-narrow.UniversalFamilyKit
+
+-- Alias-free scope experiment: a checked counterexample to the raw-store
+-- return interface, without changing the live relation.
+import proof.LR-narrow.ScopeExperiment
