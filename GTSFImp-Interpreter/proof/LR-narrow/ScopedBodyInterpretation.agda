@@ -12,14 +12,16 @@ module proof.LR-narrow.ScopedBodyInterpretation where
 import Data.Fin as Fin
 open import Data.Nat using (suc)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; cong₂; sym) renaming (subst to subst≡)
+  using (_≡_; refl; cong; cong₂; sym; trans) renaming (subst to subst≡)
 
 open import Types
 open import TyStore
+open import Consistency using (_↪ᵗ_; toRenameᵗ)
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.ScopeRebase
 open import proof.LR-narrow.ScopedBehavior
 open import proof.LR-narrow.ScopedTypeEquivalence
+open import proof.LR-narrow.ScopedTypeSubstitution using (scope-body-shift)
 open import proof.LR-narrow.VisibleEnvironment
 
 data BodyFragment {n : TyCtx} : Ty n → Set where
@@ -42,6 +44,21 @@ subst-body σ ps natural-body = natural-body
 subst-body σ ps (variable-body {X}) = ps X
 subst-body σ ps (arrow-body p q) =
   arrow-body (subst-body σ ps p) (subst-body σ ps q)
+
+scoped-body-visible : ∀ {Δ₀ Δ n} {Σ₀ : TyStore Δ₀}
+    (T : PhysicalScope Σ₀ Δ) (ρ : n ↪ᵗ Δ₀) {C : Ty (suc n)}
+  → BodyFragment C
+  → scopeBody T (substᵗ (extsᵗ (λ X → ＇ toRenameᵗ ρ X)) C)
+      ≡ renameᵗ (extᵗ (toRenameᵗ (scopeNames T ρ))) C
+scoped-body-visible T ρ natural-body = scope-body-natural T
+scoped-body-visible T ρ (variable-body {Fin.zero}) = scope-body-bound T
+scoped-body-visible T ρ (variable-body {Fin.suc X}) = trans
+  (scope-body-shift T (＇ toRenameᵗ ρ X))
+  (cong ⇑ᵗ (trans (scope-variable T (toRenameᵗ ρ X))
+    (cong ＇_ (sym (scope-names T ρ X)))))
+scoped-body-visible T ρ (arrow-body p q) = trans
+  (scope-body-arrow T _ _)
+  (cong₂ _⇒_ (scoped-body-visible T ρ p) (scoped-body-visible T ρ q))
 
 module Interpretation {Δᴵ Δᴾ} (Σᴵ : TyStore Δᴵ) (Σᴾ : TyStore Δᴾ) where
 

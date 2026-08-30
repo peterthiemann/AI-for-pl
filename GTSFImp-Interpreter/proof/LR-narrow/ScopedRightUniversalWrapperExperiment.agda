@@ -145,7 +145,7 @@ target-runtime-return n = refl
 
 module Root = Model store-empty store-empty
 module Wrapper = RW.Compatibility store-empty store-empty Root.natural
-  RI.identity-body
+  (RI.emptyEnvironment store-empty store-empty) RI.identity-body
 module Identity = RI.Identity store-empty store-empty (‵ `ℕ)
   Wrapper.Args.Code Wrapper.Args.denote Wrapper.Args.imprecise-denote
 
@@ -192,7 +192,7 @@ runtime-observed n k = Root.observed-from-returns {gasᴵ = 1} {gasᴾ = 8}
 -- value shape. Reuse their proved instantiation behavior with our codes.
 
 module ConstantWrapper = RW.Compatibility store-empty store-empty
-  Root.natural natural-body
+  Root.natural (RI.emptyEnvironment store-empty store-empty) natural-body
 module Constants = SU.ConstantFamilies store-empty store-empty
 
 constant-wrapped-related : ∀ n k

@@ -10,7 +10,7 @@ module proof.LR-narrow.VisibleEnvironment where
 open import Data.Nat using (suc)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; sym; cong) renaming (subst to subst≡)
+  using (_≡_; refl; sym; trans; cong) renaming (subst to subst≡)
 
 open import Types
 open import TyStore
@@ -20,6 +20,7 @@ open import Consistency using (_↪ᵗ_; toRenameᵗ)
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.ScopedBehavior
 open import proof.LR-narrow.ScopeRebase
+open import proof.LR-narrow.ScopedTypeEquivalence
 
 record VisibleEnvironment {Δᴵ Δᴾ} (Σᴵ : TyStore Δᴵ) (Σᴾ : TyStore Δᴾ)
     (visible : TyCtx) : Set₁ where
@@ -89,6 +90,26 @@ reroot-meaning {Σᴵ₀ = Σᴵ₀} {Σᴾ₀} S T env X P Q k U V
       | graft-variable T Q (toRenameᵗ (preciseNames env) X)
       | graft-type S P (Model.impreciseTy (representation env X))
       | graft-type T Q (Model.preciseTy (representation env X)) = refl
+
+reroot-meaning-equivalent : ∀ {Δᴵ₀ Δᴾ₀ Δᴵ Δᴾ n}
+    {Σᴵ₀ : TyStore Δᴵ₀} {Σᴾ₀ : TyStore Δᴾ₀}
+    (S : PhysicalScope Σᴵ₀ Δᴵ) (T : PhysicalScope Σᴾ₀ Δᴾ)
+    (env : VisibleEnvironment Σᴵ₀ Σᴾ₀ n) X
+  → Equivalence.Equivalent (scopeStore S) (scopeStore T)
+      (Rebase.rebase S T (meaning env X))
+      (meaning (rerootEnvironment S T env) X)
+reroot-meaning-equivalent S T env X = record
+  { imprecise-type = trans
+      (scope-variable S (toRenameᵗ (impreciseNames env) X))
+      (cong ＇_ (sym (scope-names S (impreciseNames env) X)))
+  ; precise-type = trans
+      (scope-variable T (toRenameᵗ (preciseNames env) X))
+      (cong ＇_ (sym (scope-names T (preciseNames env) X)))
+  ; to = λ { {S = P} {T = Q} {k} {U} {V} r →
+      subst≡ (λ B → B) (reroot-meaning S T env X P Q k U V) r }
+  ; from = λ { {S = P} {T = Q} {k} {U} {V} r →
+      subst≡ (λ B → B) (sym (reroot-meaning S T env X P Q k U V)) r }
+  }
 
 module Extend {Δᴵ Δᴾ n} {Σᴵ : TyStore Δᴵ} {Σᴾ : TyStore Δᴾ}
     (env : VisibleEnvironment Σᴵ Σᴾ n) (A : Model.ScopedType Σᴵ Σᴾ) where

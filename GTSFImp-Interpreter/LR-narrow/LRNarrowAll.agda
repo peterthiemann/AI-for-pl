@@ -134,3 +134,4 @@ import proof.LR-narrow.ScopedRightArgumentExperiment
 -- Same-index identity universal reveal-wrapper closure for body families.
 import proof.LR-narrow.ScopedRightUniversalWrapper
 import proof.LR-narrow.ScopedRightUniversalWrapperExperiment
+import proof.LR-narrow.ScopedVisibleUniversalWrapperExperiment

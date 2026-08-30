@@ -1381,6 +1381,53 @@ This closes the identity **reveal** wrapper for the stated body fragment
 and code family. It is not yet the general structural universal conversion,
 the conceal-wrapper case, or an interpretation of bodies with old variables.
 
+## Identity reveal wrappers over old visible names
+
+`ScopedRightUniversalWrapper.Compatibility` now takes an arbitrary paired
+`VisibleEnvironment`, not an empty assignment. Its body may contain old
+visible variables as well as the new precise-only binder. Write `C[ρᵀ]`
+for capture-avoiding renaming of the old visible names into target scope
+`T`, leaving the new parameter `α` bound. If `M` and `V` are related by
+the body-derived right-universal family at index `k` and physical scopes
+`S,T`, then `M` and `V ↑ ∀↑ id(C[ρᵀ])` are related by the same family
+at the same scopes and index. The source term is unchanged.
+
+The extension needs two separate coherence facts. Rebasing a visible
+variable's nominal meaning agrees with its meaning in the rebased visible
+environment. Rebasing directly into a fresh target allocation also agrees
+with rebasing first to the current roots and then allocating there. Both
+facts preserve endpoint types and the value relation in both directions;
+the wrapper proof uses them under arbitrary future scopes, not only at the
+initial empty history.
+
+`ScopedBodyInterpretation.scoped-body-visible` identifies the current body
+annotation with the old-name embedding extended by the fresh binder. Thus
+the canonical generated reveal is still the evaluator's actual conversion,
+including shifted old names. The existing empty-environment identity,
+constant, repeated-wrapper, and unequal-growth tests use the generalized
+API directly.
+
+`ScopedVisibleUniversalWrapperExperiment` supplies a nonempty-environment
+inhabitant: `λf. f` is related to `Λα. λf. f` at
+`(ℕ⇒X)⇒(ℕ⇒X)` versus `∀α. (α⇒X′)⇒(α⇒X′)`, with the old paired names
+`X,X′` representing naturals. Both single and repeated reveal wrapping
+preserve this relation at every index. A further test first allocates one
+private source slot and two target slots, wraps at those non-root scopes,
+and instantiates at a target nominal argument distinct from `X′`.
+
+The fully applied regression supplies `λx. seal X x`, applies the returned
+function to `n`, and unseals the old result name. It returns `n` in three
+source steps and eighteen target steps. The target allocates two fresh
+names in addition to the old visible name. The exact interpreter-return
+theorem exposes its proof-carrying trace as an existential witness, which
+the reduction theorem reuses with the explicit allocation history and final
+data value. Typing and computation observations check as well.
+
+This is still identity reveal-wrapper closure for the natural/variable/
+arrow fragment. It does not prove structural non-identity universal
+conversions, conceal wrappers, dynamic bodies, or the live fundamental
+property.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -1446,13 +1493,13 @@ values, at arbitrary current scopes and without decreasing the right-only
 index. Repeated wrapping and constant-body tests exercise the theorem beyond
 the original identity inhabitance proof.
 
-The next critical step is to extend this closure to a visible old environment
-and the actual structural body conversion required by universal reveal.
-Tie the old assignment to visible meanings and prove its rebase coherence;
-an arbitrary semantic assignment does not supply the old-name data required
-by canonical generation. The identity conceal-wrapper analogue also remains
-to be proved. These are still proof-local extensions, not permission to
-change the live term-imprecision relation or replace its obligations.
+The visible-old-environment extension and its rebase coherence now check.
+The next critical step is the actual structural body conversion required
+by universal reveal, followed by the conceal-wrapper analogue. An arbitrary
+semantic assignment does not supply the old-name data required by canonical
+generation; use the visible environment established here. These are still
+proof-local extensions, not permission to change the live term-imprecision
+relation or replace its obligations.
 
 The structural theorem covers the current body fragment, not arbitrary
 universal bodies. Dynamic types, nested universal syntax, missing-endpoint
@@ -1464,6 +1511,45 @@ General evaluation equivariance, full universal-wrapper closure, and the four
 `RevealObligations` remain open. No live obligation has been discharged by
 these experiments, and the fundamental property is not yet complete.
 `VarImp` and the live LR remain unchanged.
+
+## Remaining work estimate (2026-08-30)
+
+At the start of this checkpoint (`669d1c15`), a reasonable planning estimate
+was **5–7 substantial work packages for universal-wrapper/conversion closure**
+and **12–18 for the full fundamental property**, including this checkpoint.
+After the visible-environment step, that leaves approximately **4–6** and
+**11–17**, respectively. These are work packages, not predicted chat turns
+or a count of equally difficult lemmas. Some packages may split, and the
+dynamic/full-syntax cases still carry mathematical risk.
+
+The wrapper/conversion path is:
+
+- [x] Preserve old visible meanings through the identity reveal wrapper.
+- [ ] Generalize to the structural generated body conversion and align its
+  statement with the precise reveal obligation.
+- [ ] Prove the conceal-wrapper counterpart and its precise obligation
+  alignment.
+- [ ] Handle dynamic universal reveal and conceal, where replacement changes
+  the compared endpoint rather than only introducing an inert wrapper.
+- [ ] Extend body interpretation to the needed dynamic and nested universal
+  syntax, and interpret the required missing-endpoint worlds.
+- [ ] Once the general cases check, connect the scoped model to the live
+  relation and discharge the four fields of `RevealObligations` in
+  `proof/LR-narrow/RevealStatements.agda`.
+
+Full fundamental-property work also includes the independently parameterized
+`CastValueObligations`, paired and right/smart universal introductions,
+source/target and paired reveal/conceal compatibility, the seal-star cases,
+nonstructural type applications, and final assembly. The exact outstanding
+interface is `RemainingObligations` in
+`proof/LR-narrow/FundamentalAssembly.agda`; its fourteen fields are not
+fourteen independent next steps, because they share lower-level machinery.
+
+The main uncertainty is whether dynamic types, nested universals, and the
+full world interpretation admit the intended closure with the current
+invariants. Cast-value compatibility is separate debt and may expose an
+independent obstruction. Successful local wrapper experiments do not, by
+themselves, resolve those questions.
 
 ## Verification
 

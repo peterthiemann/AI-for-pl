@@ -13,7 +13,7 @@ open import Data.Product using (_×_; _,_; ∃-syntax)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Relation.Binary.PropositionalEquality
   using (_≡_; refl; sym; trans; cong; cong₂)
-  renaming (subst to subst≡)
+  renaming (subst to subst≡; subst₂ to subst₂≡)
 
 open import Types
 open import TyStore
@@ -24,6 +24,21 @@ open import LR-narrow.Computation using (BlamesFrom)
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.ScopeRebase as ScopeRebase
 open import proof.LR-narrow.ScopedBehavior
+
+private
+  graft-root : ∀ {Δ Δ′} {Σ : TyStore Δ}
+      (P : PhysicalScope Σ Δ′)
+    → graft root P ≡ P
+  graft-root root = refl
+  graft-root (allocate P A) = cong (λ Q → allocate Q A) (graft-root P)
+
+  graft-right-allocation : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+      (T : PhysicalScope Σ₀ Δ) (R : Ty Δ)
+      (Q : PhysicalScope (store-bind (scopeStore T) R) Δ′)
+    → graft T (graft (allocate root R) Q) ≡ graft (allocate T R) Q
+  graft-right-allocation T R root = refl
+  graft-right-allocation T R (allocate Q A) =
+    cong (λ P → allocate P A) (graft-right-allocation T R Q)
 
 module Equivalence {Δᴵ Δᴾ} (Σᴵ : TyStore Δᴵ) (Σᴾ : TyStore Δᴾ) where
 
@@ -161,7 +176,18 @@ module RebaseEquivalence {Δᴵ₀ Δᴾ₀ Δᴵ Δᴾ}
   module R = ScopeRebase.Rebase S T
   module Old = Model Σᴵ₀ Σᴾ₀
   module New = Model (scopeStore S) (scopeStore T)
+  module OldEq = Equivalence Σᴵ₀ Σᴾ₀
   module Eq = Equivalence (scopeStore S) (scopeStore T)
+
+  rebase-cong : ∀ {B C : Old.ScopedType}
+    → OldEq.Equivalent B C
+    → Eq.Equivalent (R.rebase B) (R.rebase C)
+  rebase-cong eq = record
+    { imprecise-type = cong (scopeTy S) (OldEq.imprecise-type eq)
+    ; precise-type = cong (scopeTy T) (OldEq.precise-type eq)
+    ; to = OldEq.to eq
+    ; from = OldEq.from eq
+    }
 
   natural : Eq.Equivalent (R.rebase Old.natural) New.natural
   natural = record
@@ -180,3 +206,39 @@ module RebaseEquivalence {Δᴵ₀ Δᴾ₀ Δᴵ Δᴾ}
     ; to = R.arrow-to A B
     ; from = R.arrow-from A B
     }
+
+  right-allocation : ∀ {Rᵀ : Ty Δᴾ} (B : Old.ScopedType)
+    → Equivalence.Equivalent (scopeStore S) (store-bind (scopeStore T) Rᵀ)
+        (ScopeRebase.Rebase.rebase S (allocate T Rᵀ) B)
+        (ScopeRebase.Rebase.rebase root (allocate root Rᵀ) (R.rebase B))
+  right-allocation {Rᵀ} B = record
+    { imprecise-type = refl
+    ; precise-type = refl
+    ; to = to-relation
+    ; from = from-relation
+    }
+    where
+    module Direct = ScopeRebase.Rebase S (allocate T Rᵀ)
+    module Step = ScopeRebase.Rebase root (allocate root Rᵀ)
+
+    to-relation : ∀ {Δᴵ′ Δᴾ′}
+        {P : PhysicalScope (scopeStore S) Δᴵ′}
+        {Q : PhysicalScope (store-bind (scopeStore T) Rᵀ) Δᴾ′}
+        {k U V}
+      → Direct.New.related (Direct.rebase B) P Q k U V
+      → Direct.New.related (Step.rebase (R.rebase B)) P Q k U V
+    to-relation {P = P} {Q} {k} {U} {V} r =
+      subst₂≡ (λ P′ Q′ → Old.related B P′ Q′ k U V)
+        (cong (graft S) (sym (graft-root P)))
+        (sym (graft-right-allocation T Rᵀ Q)) r
+
+    from-relation : ∀ {Δᴵ′ Δᴾ′}
+        {P : PhysicalScope (scopeStore S) Δᴵ′}
+        {Q : PhysicalScope (store-bind (scopeStore T) Rᵀ) Δᴾ′}
+        {k U V}
+      → Direct.New.related (Step.rebase (R.rebase B)) P Q k U V
+      → Direct.New.related (Direct.rebase B) P Q k U V
+    from-relation {P = P} {Q} {k} {U} {V} r =
+      subst₂≡ (λ P′ Q′ → Old.related B P′ Q′ k U V)
+        (cong (graft S) (graft-root P))
+        (graft-right-allocation T Rᵀ Q) r

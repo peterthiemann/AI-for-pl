@@ -58,7 +58,7 @@ module Identity {Δᴵ₀ Δᴾ₀} (Σᴵ₀ : TyStore Δᴵ₀)
   module U = Universals Σᴵ₀ Σᴾ₀
 
   module F = RightBodyFamily {n = zero} Σᴵ₀ Σᴾ₀ identity-body
-    (λ ()) Aᴵ Code denote denote-left
+    (meaning (emptyEnvironment Σᴵ₀ Σᴾ₀)) Aᴵ Code denote denote-left
 
   related : ∀ k → Root.related (U.rightUniversal F.family) root root k
     (ƛ (` zero)) SU.polymorphic-identity
