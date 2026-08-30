@@ -120,3 +120,8 @@ import proof.LR-narrow.ScopedRightSealClosureExperiment
 import proof.LR-narrow.ScopedRightBodyConversion
 import proof.LR-narrow.ScopedRightBodyCompatibility
 import proof.LR-narrow.ScopedRightBodyCompatibilityExperiment
+
+-- Fresh precise-only body meanings, canonical generation, and type beta.
+import proof.LR-narrow.ScopedRightFreshBodyCompatibility
+import proof.LR-narrow.ScopedRightFreshBodyCompatibilityExperiment
+import proof.LR-narrow.ScopedRightFreshInstantiationExperiment

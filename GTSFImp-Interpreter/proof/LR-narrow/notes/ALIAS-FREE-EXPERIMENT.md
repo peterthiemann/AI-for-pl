@@ -1197,6 +1197,68 @@ the fragment. It does not yet identify an arbitrary freshly extended
 right-only environment with the canonical generator, construct the
 required admissible fresh-name argument, or prove universal-wrapper closure.
 
+## Fresh precise-only generation and allocating type application
+
+`ScopedRightFreshBodyCompatibility` now specializes the asymmetric body
+theorem to a fresh precise slot. Given an old paired visible environment
+`η` and scoped argument interpretation `A`, the new physical roots are
+`Σᴵ` and `Σᴾ, α ↦ Aᴾ`. Only the precise root grows.
+
+The fresh body meaning assigns `right-nominal (rebase A) α` to the new
+variable and the rerooted old nominal meanings to old variables. This is
+a local semantic assignment, not a paired `VisibleEnvironment` extension:
+there is no imprecise name or lookup for `α`. The proof identifies the
+compiled abstract body with this assignment. It also identifies the public
+body with the rebased original body interpretation whose binder denotes
+`A`. These are semantic equivalences, preserving both endpoint types and
+value membership in both directions.
+
+If `C` is in `BodyFragment`, let `Cᴾ` be its spelling under the old precise
+visible-name embedding extended by `α`. The compiled precise reveal is
+`〖 α , ⇑ Aᴾ ↑ Cᴾ 〗`, and its conceal is
+`makeConceal α (⇑ Aᴾ) Cᴾ`. The general proof handles old variables as
+identities and reverses directions in arrow domains. Both equalities hold
+under every subsequent precise physical future: the pivot, representation,
+and body are transported together. The imprecise future remains independent.
+
+If `M,N` are observed in the fresh abstract body, then `M` and the canonical
+reveal of `N` are observed in the rebased public body, at the same index.
+Canonical conceal proves the reverse direction. These statements preserve
+all three observation clauses and leave `M` literally unchanged.
+
+The operational corollary `instantiate-observed` also incorporates the
+actual allocating type-beta step. If `V` is a value and `M,V` are observed
+in the fresh abstract body at index `k`, then `M` and `(Λα. V)[Aᴾ]` are
+observed in the original public body at index `k`. The proof first performs
+canonical reveal compatibility, transfers its observation back to the old
+model with the precise allocation retained, and expands the precise
+type-beta step. It requires the supplied body observation; it does not
+derive a fundamental property for `V` or construct a universal-family
+argument.
+
+### Canonical and allocating regressions
+
+`ScopedRightFreshBodyCompatibilityExperiment` instantiates the general
+specialization with one old natural name and body
+`(α ⇒ X) ⇒ (α ⇒ X)`. Both canonical observation APIs are exercised at
+arbitrary independent future scopes. The generated reveal and conceal
+are also checked after two further precise allocations, where the fresh
+pivot is `2` and the old pivot is `3`. A concrete observation combines
+those with one further imprecise allocation. A compiler equality connects
+the specialization to the existing three-step/nine-step runtime fixture;
+its runtime definitions and traces are reused directly, not re-exported
+under wrapper aliases.
+
+`ScopedRightFreshInstantiationExperiment` tests the actual allocating call.
+It instantiates `Λα. λf. f`, passes the old-name sealing function, applies
+the result to `n`, and unseals at the old name. The precise program first
+allocates `α`, then reaches the existing nine-step precise runtime fixture;
+it returns `n` in ten steps. The unchanged imprecise program returns `n`
+in three steps and does not allocate. The higher-order type application
+is observed at every index by applying `instantiate-observed` to the
+abstract identity-body observation. Separate typing, explicit reduction,
+and exact interpreter proofs check the fully applied data endpoint.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -1247,11 +1309,15 @@ independent physical futures and unchanged old nominal names. Precise-only
 nominal interpretation and structural same-index seal/unseal compatibility
 also check through the body fragment, including contravariant arrow domains,
 without inventing an imprecise slot or altering its program.
-The next critical step is to specialize the asymmetric body theorem to
-a fresh precise-only allocation: identify its body meanings and canonical
-generators across rebasing, then connect that interface to the absent-slot
-universal clause. Small argument families still need an appropriate
-admissible fresh-name argument; arbitrary code families do not promise one.
+Fresh precise-only body meanings and canonical generators now agree across
+rebasing and independent futures. The same-index allocating type-beta
+corollary also checks, given the post-allocation body observation.
+The next critical step is to derive the body-based `RightFamily`, with a
+fixed imprecise endpoint and suitable small argument codes, and connect its
+instantiation clause to this new bridge. Prove the required admissible
+fresh-name argument rather than assuming an arbitrary code family provides
+one. This boundary concerns one new precise-only slot over an old paired
+visible environment, not a general interpretation of all missing endpoints.
 
 The structural theorem covers the current body fragment, not arbitrary
 universal bodies. Dynamic types, nested universal syntax, missing-endpoint
