@@ -4,6 +4,8 @@ module proof.LR-narrow.ScopedConversionCompatibility where
 --   * Scoped operational tools for structural reveal/conceal compatibility.
 --   * Related values survive identity conversions; arrow wrapper calls expand
 --     through their actual beta steps, in all three observation directions.
+--   * Paired and precise-only variants share the same operational interface;
+--     the latter leave the imprecise term and outer index unchanged.
 --   * ScopedApplication separately handles argument computations; these
 --     lemmas supply the value and administrative-step boundaries.
 
@@ -19,6 +21,7 @@ open import proof.LR-narrow.Application using (value-return-exact)
 open import proof.LR-narrow.RevealSteps
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.ScopedBehavior
+open import proof.LR-narrow.ScopedStepExpansion using (observed-right-step)
 import proof.LR-narrow.ScopedFunctionSeal as FS
 
 module Compatibility {Δᴵ₀ Δᴾ₀} (Σᴵ₀ : TyStore Δᴵ₀)
@@ -71,6 +74,32 @@ module Compatibility {Δᴵ₀ Δᴾ₀} (Σᴵ₀ : TyStore Δᴵ₀)
       (conceal-id-value-none (scopeTy T (preciseTy A)) vV)
       (id-conceal vV) stepV (values-observed A r)
 
+  right-identity-reveals : ∀ {Δᴵ Δᴾ} (A : ScopedType)
+      {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ} {k U V}
+    → related A S T k U V
+    → ObservedComputations A S T k U
+        (V ↑ id↑ (scopeTy T (preciseTy A)))
+  right-identity-reveals A {T = T} r
+      with reveal-id-step-question {Σ = scopeStore T}
+        (scopeTy T (preciseTy A)) (precise-value A r)
+  right-identity-reveals A {T = T} r | vV , stepV =
+    observed-right-step (λ ())
+      (reveal-id-value-none (scopeTy T (preciseTy A)) vV)
+      (pure-step (id-reveal vV)) stepV (values-observed A r)
+
+  right-identity-conceals : ∀ {Δᴵ Δᴾ} (A : ScopedType)
+      {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ} {k U V}
+    → related A S T k U V
+    → ObservedComputations A S T k U
+        (V ↓ id↓ (scopeTy T (preciseTy A)))
+  right-identity-conceals A {T = T} r
+      with conceal-id-step-question {Σ = scopeStore T}
+        (scopeTy T (preciseTy A)) (precise-value A r)
+  right-identity-conceals A {T = T} r | vV , stepV =
+    observed-right-step (λ ())
+      (conceal-id-value-none (scopeTy T (preciseTy A)) vV)
+      (pure-step (id-conceal vV)) stepV (values-observed A r)
+
   reveal-applications : ∀ {Δᴵ Δᴾ} {B : ScopedType}
       {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ}
       {k F G U V Aᴵ Aᴵ′ Bᴵ Bᴵ′ Aᴾ Aᴾ′ Bᴾ Bᴾ′}
@@ -89,6 +118,21 @@ module Compatibility {Δᴵ₀ Δᴾ₀} (Σᴵ₀ : TyStore Δᴵ₀)
     observed-pure-steps (λ ()) refl (β-reveal-⇒ vF′ vU′) stepᴵ
       (λ ()) refl (β-reveal-⇒ vG′ vV′) stepᴾ c
 
+  right-reveal-applications : ∀ {Δᴵ Δᴾ} {B : ScopedType}
+      {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ}
+      {k F G U V Aᴾ Aᴾ′ Bᴾ Bᴾ′}
+      (cᴾ : Conv↓ Δᴾ Aᴾ′ Aᴾ) (dᴾ : Conv↑ Δᴾ Bᴾ Bᴾ′)
+    → Value G → Value V
+    → ObservedComputations B S T k
+        (F · U) ((G · (V ↓ cᴾ)) ↑ dᴾ)
+    → ObservedComputations B S T k
+        (F · U) ((G ↑ (cᴾ ↦↑ dᴾ)) · V)
+  right-reveal-applications {T = T} cᴾ dᴾ vG vV c
+      with reveal-fun-app-step-question {Σ = scopeStore T} cᴾ dᴾ vG vV
+  right-reveal-applications cᴾ dᴾ vG vV c | vG′ , vV′ , stepᴾ =
+    observed-right-step (λ ()) (reveal-fun-app-value-none cᴾ dᴾ)
+      (pure-step (β-reveal-⇒ vG′ vV′)) stepᴾ c
+
   conceal-applications : ∀ {Δᴵ Δᴾ} {B : ScopedType}
       {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ}
       {k F G U V Aᴵ Aᴵ′ Bᴵ Bᴵ′ Aᴾ Aᴾ′ Bᴾ Bᴾ′}
@@ -106,3 +150,18 @@ module Compatibility {Δᴵ₀ Δᴾ₀} (Σᴵ₀ : TyStore Δᴵ₀)
       | vF′ , vU′ , stepᴵ | vG′ , vV′ , stepᴾ =
     observed-pure-steps (λ ()) refl (β-conceal-⇒ vF′ vU′) stepᴵ
       (λ ()) refl (β-conceal-⇒ vG′ vV′) stepᴾ c
+
+  right-conceal-applications : ∀ {Δᴵ Δᴾ} {B : ScopedType}
+      {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ}
+      {k F G U V Aᴾ Aᴾ′ Bᴾ Bᴾ′}
+      (cᴾ : Conv↑ Δᴾ Aᴾ′ Aᴾ) (dᴾ : Conv↓ Δᴾ Bᴾ Bᴾ′)
+    → Value G → Value V
+    → ObservedComputations B S T k
+        (F · U) ((G · (V ↑ cᴾ)) ↓ dᴾ)
+    → ObservedComputations B S T k
+        (F · U) ((G ↓ (cᴾ ↦↓ dᴾ)) · V)
+  right-conceal-applications {T = T} cᴾ dᴾ vG vV c
+      with conceal-fun-app-step-question {Σ = scopeStore T} cᴾ dᴾ vG vV
+  right-conceal-applications cᴾ dᴾ vG vV c | vG′ , vV′ , stepᴾ =
+    observed-right-step (λ ()) (conceal-fun-app-value-none cᴾ dᴾ)
+      (pure-step (β-conceal-⇒ vG′ vV′)) stepᴾ c

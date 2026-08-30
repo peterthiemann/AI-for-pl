@@ -115,3 +115,8 @@ import proof.LR-narrow.ScopedRightFrameComposition
 import proof.LR-narrow.ScopedRightSealCompatibility
 import proof.LR-narrow.ScopedRightSealExperiment
 import proof.LR-narrow.ScopedRightSealClosureExperiment
+
+-- Structural precise-only body conversions, including arrow contravariance.
+import proof.LR-narrow.ScopedRightBodyConversion
+import proof.LR-narrow.ScopedRightBodyCompatibility
+import proof.LR-narrow.ScopedRightBodyCompatibilityExperiment

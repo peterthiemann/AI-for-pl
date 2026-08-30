@@ -1128,6 +1128,75 @@ imprecise closure returns `n` in two steps.
 These results discharge the one-sided nominal base case, not structural
 one-sided conversion for whole bodies or the absent-slot universal wrapper.
 
+## Structural precise-only body compatibility
+
+`ScopedRightBodyConversion` lifts the right-only nominal interpretation
+through `BodyFragment`. A variable description is either an unchanged
+semantic type `A` or a precise slot `Y ↦ Aᴾ`. Its abstract meaning is,
+respectively, `A` or `right-nominal A Y`; its public meaning is `A` in
+both cases. These descriptions contain store evidence, not compatibility
+assumptions.
+
+If `C` is a body in the fragment, write `⟦C⟧abs` and `⟦C⟧pub` for its
+interpretations under the abstract and public variable meanings.
+Their imprecise endpoints are equal. This equality transports typing of
+the unchanged imprecise term; it does not identify the two value relations.
+
+Only precise conversions are compiled. At naturals and unchanged variables
+they are identities; at a precise slot they are `unseal Y Aᴾ` and
+`seal Y Aᴾ`. If the compiled reveal and conceal for a body `C` are
+`rC` and `cC`, then the arrow clauses are
+`r(C ⇒ D) = cC ↦↑ rD` and `c(C ⇒ D) = rC ↦↓ cD`.
+Both conversions are proved well-typed in the precise root store.
+
+`ScopedRightBodyCompatibility` proves the following two statements at
+every physical scope pair `S,T` and every index `k`:
+
+- If `M,N` are observed at `⟦C⟧abs`, then `M` and
+  `N ↑ scope↑ T rC` are observed at `⟦C⟧pub`.
+- If `M,N` are observed at `⟦C⟧pub`, then `M` and
+  `N ↓ scope↓ T cC` are observed at `⟦C⟧abs`.
+
+Both preserve forward return, backward return, and forward blame. No
+identity conversion or administrative step is inserted on the imprecise
+side. General computation operands use precise-only frame composition,
+retaining their independent allocation histories.
+
+For a revealed arrow, related public arguments `U,V` first give observed
+abstract arguments `U, V ↓ cC`. Scoped application uses the original
+related functions at these arguments. The recursive result theorem then
+relates `F · U` to `(G · (V ↓ cC)) ↑ rD`. Precise-only beta expansion
+finishes at `(G ↑ (cC ↦↑ rD)) · V`, with `F · U` unchanged. Conceal
+exchanges the two directions. The arrow call uses its usual strict index
+bound; precise administrative reductions do not decrease the outer
+compatibility index. The value-level induction helpers remain private.
+
+### Mixed-name contravariant regression
+
+`ScopedRightBodyCompatibilityExperiment` uses
+`C = (α ⇒ X) ⇒ (α ⇒ X)`. The imprecise root has only the old natural
+slot `X`; the precise root additionally has the fresh natural slot `α`.
+The old name retains its paired nominal meaning. Both body-compatibility
+directions are tested with the higher-order identity at arbitrary physical
+scopes and indices. The concrete compiled reveal agrees with the canonical
+generator for this fixture. A further instantiation uses one imprecise
+allocation and two precise allocations, checking the generated reveal with
+the precise fresh pivot at `2` and old pivot at `3`.
+
+The imprecise program is the unconverted higher-order identity applied to
+`λn. n ↓ seal X ℕ`, then to `n`, followed by `unseal X ℕ`. It returns
+`n` in three steps. Its precise counterpart applies the generated reveal
+to the higher-order identity and returns `n` in nine steps. The additional
+precise reductions exercise arrow conceal, fresh argument seal/unseal,
+and identity conversions at the unchanged old name. Both endpoints have
+typing derivations, explicit data-ending traces, and exact interpreter
+equations.
+
+This closes structural precise-only compatibility for existing slots in
+the fragment. It does not yet identify an arbitrary freshly extended
+right-only environment with the canonical generator, construct the
+required admissible fresh-name argument, or prove universal-wrapper closure.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -1173,13 +1242,14 @@ fragment, including contravariant arrow domains and computation operands.
 The proof converts between nominal and representation interpretations
 operationally; it does not equate them by substitution coherence.
 
-Canonical fresh-generator alignment now checks, including arbitrary
+Canonical paired fresh-generator alignment now checks, including arbitrary
 independent physical futures and unchanged old nominal names. Precise-only
-nominal interpretation and its same-index seal/unseal compatibility now
-also check, without inventing an imprecise slot or altering its program.
-The next critical step is to lift this asymmetric compatibility through
-the body fragment, including contravariant arrow domains, then connect
-its fresh precise-only slot to canonical generation and the absent-slot
+nominal interpretation and structural same-index seal/unseal compatibility
+also check through the body fragment, including contravariant arrow domains,
+without inventing an imprecise slot or altering its program.
+The next critical step is to specialize the asymmetric body theorem to
+a fresh precise-only allocation: identify its body meanings and canonical
+generators across rebasing, then connect that interface to the absent-slot
 universal clause. Small argument families still need an appropriate
 admissible fresh-name argument; arbitrary code families do not promise one.
 
