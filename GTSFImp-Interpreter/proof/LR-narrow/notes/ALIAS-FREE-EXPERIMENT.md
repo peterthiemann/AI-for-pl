@@ -434,6 +434,106 @@ computed by the general proof, rather than supplying a separate body run.
 The earlier fully applied observations still check that both returned
 closures yield the captured `n` when subsequently applied to any natural.
 
+## Fixed-root scope-aware semantic model
+
+`proof/LR-narrow/PhysicalScope.agda` keeps a fixed visible root store and
+extends its physical store by arbitrary fresh bindings. Every physical
+name survives later extensions, including names private to one endpoint.
+The two endpoints extend independently. A physical extension need not have
+a partner or satisfy the live world's allocation rules.
+
+Write `S` and `T` for physical scopes over their respective roots, and
+`p : S ≤ S′` for a future allocation sequence. The maps `pM` and `pA`
+shift terms and types through that sequence. Typing and valuehood are
+preserved; composition agrees with successive shifting. For an interpreter
+history `χ`, the canonical result scope `S·χ` satisfies
+
+    store(S·χ) = χ(store(S))
+    (S ≤ S·χ) M = χM.
+
+These are the proved `advance-store` and `advance-term` equations. No
+runtime term or store entry is lowered, erased, or equated with a different
+name. The root remains fixed: extending the visible semantic environment
+is a separate operation not yet defined by this prototype.
+
+### Semantic types and computation observations
+
+`proof/LR-narrow/ScopedBehavior.agda` defines `ScopedType`: two root types
+and a relation `V_A(S,T,k,U,V)` on physical values, with typing, downward
+closure, and independent-future closure. It constructs three such types:
+
+- `natural`: `V_ℕ(S,T,k,U,V)` iff `U = n` and `V = n` for some natural
+  `n`, at every index including zero.
+- `arrow A B`: the functions are typed values, and for all independent
+  futures `p : S ≤ S′`, `q : T ≤ T′`, all `j < k`, and all
+  `V_A(S′,T′,j,U,V)`, their applications satisfy
+  `O_B(S′,T′,j,(pF) U,(qG) V)`.
+- `nominal A X Y`: if the root entries at `X` and `Y` are the respective
+  types of `A`, then the relation contains exactly
+  `U ↓ seal (S X) (S Aᴵ)` and `V ↓ seal (T Y) (T Aᴾ)` with
+  `V_A(S,T,k,U,V)`. The payload keeps the same index. The constructor uses
+  actual store-lookup proofs; it introduces no name-to-representation
+  imprecision rule.
+
+Here `O_B`, implemented by `ObservedComputations`, has three clauses:
+
+- If `M` returns `U` with history `χ` at fuel `n < k`, then either `N`
+  eventually blames or it returns `V` with history `ψ` and
+  `V_B(S·χ,T·ψ,k−n,U,V)`.
+- If `N` returns `V` with history `ψ` at fuel `n < k`, then `M` returns
+  `U` with history `χ` and `V_B(S·χ,T·ψ,k−n,U,V)`.
+- If `M` blames at fuel `n < k`, then `N` eventually blames.
+
+The result terms are interpreted directly in their independently computed
+physical scopes. There is no existential join of raw stores and no premise
+requiring either returned value to be a weakening of root syntax.
+
+`ScopedComputations` is the Kripke closure of this observation:
+
+    C_B(S,T,k,M,N) iff
+      for all p : S ≤ S′ and q : T ≤ T′,
+      O_B(S′,T′,k,pM,qN).
+
+Downward closure is proved for both `O` and `C`. Independent-future closure
+is proved for `C` by composing futures. This is not an assertion that
+arbitrary evaluation commutes with allocation. The typing and closure
+invariants of all three semantic-type constructors are proved, not assumed
+as new function-reveal compatibility fields. In particular, the arrow
+clause quantifies over every smaller index, so downward closure does not
+require lifting a domain relation to a larger index.
+
+### Non-vacuous tests of the model
+
+`proof/LR-narrow/ScopedBehaviorExperiment.agda` supplies the following
+witnesses, without changing the live logical relation:
+
+- `closures-related` relates the actual non-identity `Uᴵ` and `Uᴾ` above
+  at `arrow natural natural`, for every captured natural `n` and every
+  index. Their calls are checked after arbitrary independent future
+  allocations. The precise function still carries its private `Z` seal.
+  Generic interpreter lemmas establish the two- and four-step returns in
+  those future stores; determinism then proves all bounded observations.
+- `closures-future-related` applies the model's future-closure theorem to
+  these escaping values. `body-results-related` relates their sealed body
+  results at the model's nominal type for `Y`.
+- `decoded-body-results` supplies this nominal/arrow relation to the
+  earlier general function-seal return theorem. The payload relation now
+  comes from the constructed semantic model rather than an ad hoc
+  relation on these two functions.
+- `makers-observed` proves all three observation clauses for the public
+  maker computations at every index in their initial scopes. This is an
+  `ObservedComputations` witness, not yet a `ScopedComputations` witness
+  for makers placed under arbitrary prior allocations.
+- `literal-wrapper-observed` accepts the original bare/wrapped literal
+  computations at every index despite their different final store sizes.
+  Their result type is natural; this is not a universal-value theorem.
+
+`observed-from-returns` is the general introduction lemma used by these
+tests: two known interpreter returns with related results at index `k`
+imply the three observation clauses at `k`. Fuel-independent uniqueness
+identifies all later observed returns; downward closure supplies the
+residual index, and terminal uniqueness excludes left blame.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -448,24 +548,32 @@ physical private scopes and relate the returned values behaviorally;
 do not replace the live `PairedReturns` with `ScopedReturns`, which still
 requires literal lowering of every returned value.
 
-Backward return decomposition and its two-step fuel bound now check for
-arbitrary typed function bodies. No new counterexample was found in this
-step. The next critical step is a **proof-local, scope-aware computation
-observation** using those results, together with a value relation whose
-function clause and nominal seal lifting retain physical private scopes.
+The fixed-root model now proves downward and independent-physical-future
+closure for naturals, arrows, and nominal seals. The allocating maker and
+its escaping non-identity closure inhabit the new observation and value
+relations. No new counterexample was found in this step. This supports
+continuing the same behavioral line, without claiming a full LR model.
 
-Prove downward closure and closure under later visible/private allocations,
-then derive the function-reveal case. Complete the interpreter-level
-assembly needed for the forward-return and forward-blame clauses, reusing
-the existing frame machinery and the forward trace lemmas. The supplied
-body-result relation `S` must come from the relation's induction/future
-structure, not be added as an assumed compatibility field. Only integrate
-the new observation interface into the live LR after this bridge checks.
+The next critical step is **general function-seal compatibility for the
+new observation**, using the proved backward decomposition and fuel bound.
+Complete the interpreter-level forward-return/blame assembly and the
+typed blame inversion required by the three observation clauses. Reuse
+the frame machinery and forward trace lemmas. Derive the body-result
+relation from the model's arrow/nominal clauses, rather than introducing
+an assumed compatibility field. The checked maker instance is evidence
+for this bridge, not its general proof.
 
-General evaluation transport, the complete observation interface for
-escaping closures, and the four `RevealObligations` remain open. No field
-has been discharged by these experiments, and the fundamental property is
-not yet complete. `VarImp` and the live LR remain unchanged.
+Then add visible-root/type-environment extension and universal types;
+the present physical futures cannot promote newly allocated slots into
+that environment. Dynamic types and the full world interpretation also
+remain outside this fragment. Only integrate the replacement into the
+live LR after the general compatibility bridge and the universal-wrapper
+case check.
+
+General evaluation transport, full universal-wrapper closure, and the four
+`RevealObligations` remain open. No live obligation has been discharged by
+these experiments, and the fundamental property is not yet complete.
+`VarImp` and the live LR remain unchanged.
 
 ## Verification
 

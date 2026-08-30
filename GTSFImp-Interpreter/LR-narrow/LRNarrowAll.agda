@@ -74,3 +74,9 @@ import proof.LR-narrow.FunctionSealCompatibility
 import proof.LR-narrow.FunctionSealClosureExperiment
 import proof.LR-narrow.FunctionSealObservation
 import proof.LR-narrow.FunctionSealObservationExperiment
+
+-- Fixed-visible-root semantic prototype: independent physical scopes,
+-- proved index/future invariants, and non-identity private-seal closures.
+import proof.LR-narrow.PhysicalScope
+import proof.LR-narrow.ScopedBehavior
+import proof.LR-narrow.ScopedBehaviorExperiment
