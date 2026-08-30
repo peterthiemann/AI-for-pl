@@ -8,13 +8,15 @@ module proof.LR-narrow.TargetReveal where
 --   * Does not change the ordinary type-imprecision relation.
 
 open import Data.Nat using (ℕ; suc; _≤_)
+open import Data.Product using (_,_)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
   using (_≡_; cong; cong₂; refl; subst; sym; trans)
 
 open import Types
-open import CastTerms using (Term; Value; _↑_)
-open import Conversion using (replaceTy; 〖_,_↑_〗)
+open import CastTerms using (Term; _↑_; _↓_)
+open import Conversion using (replaceTy; 〖_,_↑_〗; seal)
+open import Reduction using (pure-step; conceal-reveal)
 import Imprecision as I
 open import LR-narrow.World
 open import LR-narrow.SlotSequence
@@ -40,6 +42,12 @@ open import proof.LR-narrow.SlotLifting using
 open import proof.LR-narrow.AliasAvoid using (AliasAvoid★ᵖ)
 open import proof.LR-narrow.ImpreciseReveal using
   (replace-right-body-⊑; embI-replace-body-eq)
+open import proof.LR-narrow.CastComposition using
+  (computations-related-future-compose)
+open import proof.LR-narrow.KeepStepExpansion using
+  (related-imprecise-keep-step-expand)
+open import proof.LR-narrow.RevealSteps using
+  (unseal-step-question; unseal-value-none)
 
 open ImpreciseComposition revealFrame using () renaming
   (imprecise-frame-computations-related to
@@ -80,15 +88,6 @@ target-transparent-future {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} {W = W} {W′ = W′}
         (embedImprecise-lift W≼W′
           (replaceTy (tslotXᴵ t) (tslotRᴵ t) Aᴵ))))
       (liftCenterImprecision W≼W′ p))
-
-target-transparent-derivation : ∀ {Δᴾ Δᴵ Δᶜ}
-    {W : World Δᴾ Δᴵ Δᶜ} (t : TargetSlot W)
-    {Aᴾ : Ty Δᴾ} {Aᴵ : Ty Δᴵ}
-  → TargetTransparent W t Aᴾ Aᴵ
-  → impEnv (core W) I.⊢ embedPrecise (core W) Aᴾ
-      ⊑ embedImprecise (core W)
-          (replaceTy (tslotXᴵ t) (tslotRᴵ t) Aᴵ)
-target-transparent-derivation t p = p
 
 ------------------------------------------------------------------------
 -- Fresh target readings created by a one-sided bind
@@ -243,11 +242,42 @@ PendingTargetValueRelation : ∀ {Δᴾ Δᴵ Δᶜ}
   → TargetTransparent W t Aᴾ Aᴵ
   → IndexedValueRelation W
 PendingTargetValueRelation t {Aᴵ = Aᴵ} p W′ W≼W′ k Vᴵ Vᴾ =
-  ValueImprecisionᵏ k W′ (liftCenterImprecision W≼W′ p)
+  ComputationsRelated W′
+    (λ W″ W′≼W″ → FutureValueRelation p W″
+      (future-trans W≼W′ W′≼W″)) k
     (Vᴵ ↑ 〖 tslotXᴵ (target-slot-future t W≼W′) ,
       tslotRᴵ (target-slot-future t W≼W′)
       ↑ liftImpreciseTy W≼W′ Aᴵ 〗)
     Vᴾ
+
+-- A pending reveal need not be a value: at the fresh variable it unseals.
+-- The producer records the resulting computation, including that step.
+
+fresh-target-sealed-values : ∀ {Δᴾ Δᴵ Δᶜ}
+    {Rᴾ : Ty Δᴾ} {Rᴵ : Ty Δᴵ}
+    {W : World Δᴾ Δᴵ Δᶜ}
+    (r : Rᴾ ⊑ᵂ⟨ core W ⟩ Rᴵ)
+    {k : ℕ} {Uᴵ : Term (suc Δᴵ)} {Vᴾ : Term Δᴾ}
+  → ValueImprecision (impreciseBindWorld W Rᴵ)
+      (fresh-target-variable-transparent {W = W} r) k Uᴵ Vᴾ
+  → PendingTargetValueRelation (fresh-target-slot W Rᴵ)
+      (fresh-target-variable-transparent {W = W} r)
+      (impreciseBindWorld W Rᴵ) future-refl k
+      (Uᴵ ↓ seal Fin.zero (⇑ᵗ Rᴵ)) Vᴾ
+fresh-target-sealed-values {Rᴵ = Rᴵ} {W = W} r related
+    with unseal-step-question
+      {Σ = impreciseStore (core (impreciseBindWorld W Rᴵ))}
+      Fin.zero (⇑ᵗ Rᴵ)
+      (imprecise-value (ClosureProof.value-imprecision-endpoints related))
+... | vUᴵ , step-eq =
+  computations-related-future-compose future-refl
+    (fresh-target-variable-transparent {W = W} r)
+    (related-imprecise-keep-step-expand (λ ())
+      (unseal-value-none Fin.zero (⇑ᵗ Rᴵ) vUᴵ)
+      (pure-step (conceal-reveal vUᴵ)) step-eq
+      (related-values-return vUᴵ
+        (precise-value (ClosureProof.value-imprecision-endpoints related))
+        (λ j j≤k → value-imprecision-downward-to j≤k related)))
 
 ------------------------------------------------------------------------
 -- Materializing the target reveal
@@ -261,43 +291,29 @@ pending-target-reveal-computations : ∀ {Δᴾ Δᴵ Δᶜ}
   → ComputationsRelated W
       (PendingTargetValueRelation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)
       k Mᴵ Mᴾ
-  → ComputationsRelated W
-      (FutureValueRelation (target-transparent-derivation t
-        {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)) k
+  → ComputationsRelated W (FutureValueRelation p) k
       (Mᴵ ↑ 〖 tslotXᴵ t , tslotRᴵ t ↑ Aᴵ 〗) Mᴾ
 pending-target-reveal-computations {W = W} t {Aᴾ = Aᴾ}
     {Aᴵ = Aᴵ} p {k = k} {Mᴵ = Mᴵ} {Mᴾ = Mᴾ} related =
   reveal-imprecise-composition
     {R = PendingTargetValueRelation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p}
-    {S = FutureValueRelation (target-transparent-derivation t
-      {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)}
+    {S = FutureValueRelation p}
     (reveal-frm 〖 tslotXᴵ t , tslotRᴵ t ↑ Aᴵ 〗) k Mᴵ Mᴾ
     plug-values related
   where
   plug-values : RevealImprecisePlugValues W
       (PendingTargetValueRelation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)
-      (FutureValueRelation (target-transparent-derivation t
-        {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)) k
+      (FutureValueRelation p) k
       (reveal-frm 〖 tslotXᴵ t , tslotRᴵ t ↑ Aᴵ 〗)
   plug-values {W′ = W′} W≼W′ {χsᴵ = χsᴵ}
       storeᴵ storeᴾ termsᴵ termsᴾ {j = i} i≤k
       {Vᴵ = Uᴵ} {Vᴾ = Uᴾ} value-related =
-    related-values-return
-      {R = λ W″ W′≼W″ → FutureValueRelation
-        (target-transparent-derivation t {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)
-        W″ (future-trans W≼W′ W′≼W″)}
-      (subst Value (sym term-eq) (imprecise-value endpoints))
-      (precise-value endpoints)
-      (λ j j≤i → subst
-        (λ M → ValueImprecisionᵏ j W′
-          (liftCenterImprecision W≼W′
-            (target-transparent-derivation t
-              {Aᴾ = Aᴾ} {Aᴵ = Aᴵ} p)) M Uᴾ)
-        (sym term-eq)
-        (value-imprecision-downward-to j≤i value-related))
+    subst
+      (λ M → ComputationsRelated W′
+        (λ W″ W′≼W″ → FutureValueRelation p W″
+          (future-trans W≼W′ W′≼W″)) i M Uᴾ)
+      (sym term-eq) value-related
     where
-    endpoints = ClosureProof.value-imprecision-endpoints value-related
-
     term-eq : Frame.plug revealFrame
         (Frame.transports revealFrame χsᴵ
           (reveal-frm 〖 tslotXᴵ t , tslotRᴵ t ↑ Aᴵ 〗)) Uᴵ

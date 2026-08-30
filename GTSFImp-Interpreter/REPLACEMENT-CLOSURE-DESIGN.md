@@ -1,7 +1,9 @@
 # Replacement-closed universal clauses — design note
 
-Status: design (2026-08-24), not yet implemented.  This is the
-resolution design for Finding E (see FUNDAMENTAL-PROPERTY-PLAN.md):
+Status: partially implemented (2026-08-30).  The world extension and
+replacement-closed consumers are implemented; the two-sided universal
+producers and the total fundamental property remain open (see J.12–J.13).
+This is the resolution design for Finding E (see FUNDAMENTAL-PROPERTY-PLAN.md):
 the termination obstruction in the dynamic-slot universal reveal, and
 the canonical-forms obstruction in the one-sided universal reveal.
 
@@ -1675,3 +1677,60 @@ the missing staggered observation follows from the current logical relation.
 Any future attempt to close `open-universals` internally must first strengthen
 the universal value clause with that producer-owned observation (or adopt an
 equivalent operational normalization theorem).
+
+### J.13  Pending target observations must allow reduction (2026-08-30)
+
+The scoped helper in `proof/LR-narrow/TargetReveal.agda` previously defined
+`PendingTargetValueRelation` by requiring the explicitly revealed target to
+be a related **value**.  That excludes even a correctly sealed natural:
+`(7 ↓ seal Y′) ↑ unseal Y′` reduces to `7`, but is not a value at any index.
+It also excludes identity reveals at atomic types.
+
+The helper now records a **computation** after the target reveal, at the
+same index and with the same future-composed result relation.  The existing
+frame-composition theorem materializes that observation without requiring
+the reveal to be value-forming.  `fresh-target-sealed-values` constructs the
+atomic observation from related payload values.  The regression module
+`proof/LR-narrow/TargetRevealExamples.agda` checks typing, evaluation to `7`,
+materialization at every index, and impossibility of the old value premise.
+The aggregate check now includes this module, `TargetReveal`, and
+`UniversalIntroduction`; the latter two were previously outside the aggregate.
+
+This fixes the helper, not the producer gap.  After the first paired bind,
+name the precise and target binders `X` and `X′`.  The surplus target bind
+introduces `Y′ ↦ X′`.  The insertion-generalized body induction hypothesis
+supplies the pair
+
+`Vᴵ[X′/α]` and `Vᴾ[X/α]`,
+
+lifted past `Y′`.  The inner operational beta instead needs the pair
+
+`Vᴵ[Y′/α] ↑ 〖 Y′ , X′ ↑ Bᴵ[Y′/α] 〗` and `Vᴾ[X/α]`.
+
+These are not related by a renaming equality: the first target body uses
+`X′`, and the second uses `Y′`.  In this exact paired-then-target world,
+`X ⊑ Y′` is uninhabited, although `X ⊑ replace Y′ X′ Y′` is inhabited.
+Both facts are checked in `TargetRevealExamples`.  Consequently neither an
+ordinary `WorldInsert` nor the proved target-reading equation supplies the
+needed body computation.
+
+The same regression module applies the polymorphic identity, with and without
+each imprecise-only peel, to the natural `7`.  All three terms are typed and
+their interpreter results are proved to be `7`.  The name mismatch above is
+a limitation of this proof route, not an operational counterexample.
+
+The next substantive theorem is therefore scope closing for syntactic
+bodies: if a body and its closing environments are related under a fresh
+paired binder, then replacing that target binder by a fresh target-only
+alias and revealing its result preserves the computation relation.  Its
+function case must account for concealed arguments, and its universal case
+must preserve pending observations.  This requires a scoped fundamental
+motive (or an independently proved operational scope-normalization theorem),
+not another assumption on `UniversalDataᵇ`.  The experimental bare-producer
+proof has been removed rather than committing its two unresolved holes.
+`universal-intro` and `CastValueObligations.open-universals` remain explicit
+obligations; they have not been discharged or moved to new fields.
+
+The incomplete universal-cast dispatcher left by the J.12 deletion is also
+repaired: every `∀⊑∀` cast routes through the existing `open-universals`
+boundary, as J.12 intended.  The complete interpreter check passes.

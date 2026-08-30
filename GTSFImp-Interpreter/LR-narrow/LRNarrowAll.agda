@@ -67,3 +67,6 @@ import proof.LR-narrow.AliasReveal
 import proof.LR-narrow.AliasUniversalChain
 import proof.LR-narrow.UniversalFamilyKit
 import proof.LR-narrow.UniversalFamilyData
+import proof.LR-narrow.UniversalIntroduction
+import proof.LR-narrow.TargetReveal
+import proof.LR-narrow.TargetRevealExamples
