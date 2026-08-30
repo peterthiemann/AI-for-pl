@@ -200,6 +200,17 @@ imprecise-peel-inner-step-question
   old-step-eq = Frame.plug-step? concealFrame old {Σ = Σ} step-eq
   outer-step-eq = Frame.plug-step? revealFrame outer {Σ = Σ} old-step-eq
 
+imprecise-peel-inner-nonvalue : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
+    {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D)
+    (R : Ty Δᴵ) (V : Term (suc Δᴵ))
+  → E.value? (imprecise-peel-reductᴵᵇ peel R (Λ V)) ≡ nothing
+imprecise-peel-inner-nonvalue
+    (reveal-imprecise-peelᵇ s C no-occur i av) R V = refl
+imprecise-peel-inner-nonvalue
+    (conceal-imprecise-peelᵇ s C no-occur i av) R V = refl
+
 ------------------------------------------------------------------------
 -- The slot allocated by a paired type application
 ------------------------------------------------------------------------
