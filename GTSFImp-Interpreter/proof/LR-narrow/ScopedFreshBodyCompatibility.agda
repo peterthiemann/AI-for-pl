@@ -6,22 +6,29 @@ module proof.LR-narrow.ScopedFreshBodyCompatibility where
 --   * Relates the fresh nominal-body interpretation to the extended visible
 --     environment and the public-body interpretation to the rebased original
 --     body with the semantic argument substituted.
---   * Provides reveal/conceal observation wrappers only; it does not claim
---     canonical generator equality or universal-wrapper compatibility.
+--   * Identifies compiled conversions with the canonical runtime generators,
+--     then derives canonical reveal/conceal observations. Universal-wrapper
+--     compatibility, in particular its one-sided case, is not claimed here.
 
 import Data.Fin as Fin
 
 open import Data.Nat using (suc)
-open import Relation.Binary.PropositionalEquality using (refl)
+open import Relation.Binary.PropositionalEquality
+  using (_≡_; refl; cong; cong₂; trans) renaming (subst₂ to subst₂≡)
 open import Types
 open import TyStore
 open import CastTerms
+open import Conversion using (〖_,_↑_〗; makeConceal)
+open import Consistency using (toRenameᵗ)
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.ScopedBehavior
 open import proof.LR-narrow.ScopedConversionTransport
-  using (scope↑; scope↓)
+  using (scope↑; scope↓; scope↑-cong; scope↓-cong;
+         scope↑-generated; scope↓-generated)
 open import proof.LR-narrow.ScopedBodyInterpretation
-  using (BodyFragment)
+  using (BodyFragment; natural-body; variable-body; arrow-body)
+open import proof.LR-narrow.TypeRenamingComposition
+  using (pack↑; pack↓; pack-↦↑; pack-↦↓; apply↑; apply↓)
 open import proof.LR-narrow.ScopedTypeEquivalence as Eq
 open import proof.LR-narrow.VisibleEnvironment
 open import proof.LR-narrow.ScopedBodyCompatibility as SBC
@@ -58,6 +65,90 @@ module Fresh {Δᴵ Δᴾ n} {Σᴵ : TyStore Δᴵ} {Σᴾ : TyStore Δᴾ}
   assignment (Fin.suc X) = C.unchanged (E.R.rebase (meaning env X))
 
   private
+    mutual
+      root-revealᴵ : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
+        → pack↑ (C.revealᴵ p assignment)
+          ≡ pack↑ 〖 Fin.zero , ⇑ᵗ (Model.impreciseTy A)
+              ↑ renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ 〗
+      root-revealᴵ natural-body = refl
+      root-revealᴵ (variable-body {Fin.zero}) = refl
+      root-revealᴵ (variable-body {Fin.suc X}) = refl
+      root-revealᴵ (arrow-body p q) =
+        cong₂ pack-↦↑ (root-concealᴵ p) (root-revealᴵ q)
+
+      root-concealᴵ : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
+        → pack↓ (C.concealᴵ p assignment)
+          ≡ pack↓ (makeConceal Fin.zero (⇑ᵗ (Model.impreciseTy A))
+              (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ))
+      root-concealᴵ natural-body = refl
+      root-concealᴵ (variable-body {Fin.zero}) = refl
+      root-concealᴵ (variable-body {Fin.suc X}) = refl
+      root-concealᴵ (arrow-body p q) =
+        cong₂ pack-↦↓ (root-revealᴵ p) (root-concealᴵ q)
+
+      root-revealᴾ : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
+        → pack↑ (C.revealᴾ p assignment)
+          ≡ pack↑ 〖 Fin.zero , ⇑ᵗ (Model.preciseTy A)
+              ↑ renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ 〗
+      root-revealᴾ natural-body = refl
+      root-revealᴾ (variable-body {Fin.zero}) = refl
+      root-revealᴾ (variable-body {Fin.suc X}) = refl
+      root-revealᴾ (arrow-body p q) =
+        cong₂ pack-↦↑ (root-concealᴾ p) (root-revealᴾ q)
+
+      root-concealᴾ : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
+        → pack↓ (C.concealᴾ p assignment)
+          ≡ pack↓ (makeConceal Fin.zero (⇑ᵗ (Model.preciseTy A))
+              (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ))
+      root-concealᴾ natural-body = refl
+      root-concealᴾ (variable-body {Fin.zero}) = refl
+      root-concealᴾ (variable-body {Fin.suc X}) = refl
+      root-concealᴾ (arrow-body p q) =
+        cong₂ pack-↦↓ (root-revealᴾ p) (root-concealᴾ q)
+
+  revealᴵ-generated : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ) {Δᴵ′}
+      (S : PhysicalScope (store-bind Σᴵ (Model.impreciseTy A)) Δᴵ′)
+    → pack↑ (scope↑ S (C.revealᴵ p assignment))
+      ≡ pack↑ 〖 scopeVar S Fin.zero , scopeTy S (⇑ᵗ (Model.impreciseTy A))
+          ↑ scopeTy S
+              (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ) 〗
+  revealᴵ-generated {Cᵀ} p S = trans (scope↑-cong S (root-revealᴵ p))
+    (scope↑-generated S Fin.zero (⇑ᵗ (Model.impreciseTy A))
+      (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ))
+
+  concealᴵ-generated : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ) {Δᴵ′}
+      (S : PhysicalScope (store-bind Σᴵ (Model.impreciseTy A)) Δᴵ′)
+    → pack↓ (scope↓ S (C.concealᴵ p assignment))
+      ≡ pack↓ (makeConceal (scopeVar S Fin.zero)
+          (scopeTy S (⇑ᵗ (Model.impreciseTy A)))
+          (scopeTy S
+            (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ)))
+  concealᴵ-generated {Cᵀ} p S = trans (scope↓-cong S (root-concealᴵ p))
+    (scope↓-generated S Fin.zero (⇑ᵗ (Model.impreciseTy A))
+      (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ))
+
+  revealᴾ-generated : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ) {Δᴾ′}
+      (T : PhysicalScope (store-bind Σᴾ (Model.preciseTy A)) Δᴾ′)
+    → pack↑ (scope↑ T (C.revealᴾ p assignment))
+      ≡ pack↑ 〖 scopeVar T Fin.zero , scopeTy T (⇑ᵗ (Model.preciseTy A))
+          ↑ scopeTy T
+              (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ) 〗
+  revealᴾ-generated {Cᵀ} p T = trans (scope↑-cong T (root-revealᴾ p))
+    (scope↑-generated T Fin.zero (⇑ᵗ (Model.preciseTy A))
+      (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ))
+
+  concealᴾ-generated : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ) {Δᴾ′}
+      (T : PhysicalScope (store-bind Σᴾ (Model.preciseTy A)) Δᴾ′)
+    → pack↓ (scope↓ T (C.concealᴾ p assignment))
+      ≡ pack↓ (makeConceal (scopeVar T Fin.zero)
+          (scopeTy T (⇑ᵗ (Model.preciseTy A)))
+          (scopeTy T
+            (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ)))
+  concealᴾ-generated {Cᵀ} p T = trans (scope↓-cong T (root-concealᴾ p))
+    (scope↓-generated T Fin.zero (⇑ᵗ (Model.preciseTy A))
+      (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ))
+
+  private
     abstract-assignment-equivalent : ∀ X
       → EqNew.Equivalent (C.abstract-type (assignment X))
           (New.extend-meaning
@@ -91,7 +182,7 @@ module Fresh {Δᴵ Δᴾ n} {Σᴵ : TyStore Δᴵ} {Σᴾ : TyStore Δᴾ}
     (New.interpret-cong p public-assignment-equivalent)
     (EqNew.eq-sym (R.interpret-rebase p (Old.extend-meaning A (meaning env))))
 
-  fresh-reveal-observed : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
+  canonical-reveal-observed : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
       {Δᴵ′ Δᴾ′}
       {S : PhysicalScope (store-bind Σᴵ (Model.impreciseTy A)) Δᴵ′}
       {T : PhysicalScope (store-bind Σᴾ (Model.preciseTy A)) Δᴾ′}
@@ -106,14 +197,25 @@ module Fresh {Δᴵ Δᴾ n} {Σᴵ : TyStore Δᴵ} {Σᴾ : TyStore Δᴾ}
         (E.R.rebase
           (Old.interpret-body p (Old.extend-meaning A (meaning env))))
         S T k
-        (M ↑ scope↑ S (C.revealᴵ p assignment))
-        (N ↑ scope↑ T (C.revealᴾ p assignment))
-  fresh-reveal-observed p c =
-    EqNew.observed-to (public-equivalent p)
-      (K.reveal-observed p assignment
-        (EqNew.observed-to (EqNew.eq-sym (abstract-equivalent p)) c))
+        (M ↑ 〖 scopeVar S Fin.zero , scopeTy S (⇑ᵗ (Model.impreciseTy A))
+          ↑ scopeTy S
+              (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ) 〗)
+        (N ↑ 〖 scopeVar T Fin.zero , scopeTy T (⇑ᵗ (Model.preciseTy A))
+          ↑ scopeTy T
+              (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ) 〗)
+  canonical-reveal-observed p {S = S} {T} {k} {M} {N} c =
+    subst₂≡ (Model.ObservedComputations
+        (store-bind Σᴵ (Model.impreciseTy A))
+        (store-bind Σᴾ (Model.preciseTy A))
+        (E.R.rebase
+          (Old.interpret-body p (Old.extend-meaning A (meaning env)))) S T k)
+      (cong (apply↑ M) (revealᴵ-generated p S))
+      (cong (apply↑ N) (revealᴾ-generated p T))
+      (EqNew.observed-to (public-equivalent p)
+        (K.reveal-observed p assignment
+          (EqNew.observed-to (EqNew.eq-sym (abstract-equivalent p)) c)))
 
-  fresh-conceal-observed : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
+  canonical-conceal-observed : ∀ {Cᵀ : Ty (suc n)} (p : BodyFragment Cᵀ)
       {Δᴵ′ Δᴾ′}
       {S : PhysicalScope (store-bind Σᴵ (Model.impreciseTy A)) Δᴵ′}
       {T : PhysicalScope (store-bind Σᴾ (Model.preciseTy A)) Δᴾ′}
@@ -128,9 +230,21 @@ module Fresh {Δᴵ Δᴾ n} {Σᴵ : TyStore Δᴵ} {Σᴾ : TyStore Δᴾ}
         (store-bind Σᴵ (Model.impreciseTy A))
         (store-bind Σᴾ (Model.preciseTy A))
         (New.interpret-body p (meaning E.extended)) S T k
-        (M ↓ scope↓ S (C.concealᴵ p assignment))
-        (N ↓ scope↓ T (C.concealᴾ p assignment))
-  fresh-conceal-observed p c =
-    EqNew.observed-to (abstract-equivalent p)
-      (K.conceal-observed p assignment
-        (EqNew.observed-to (EqNew.eq-sym (public-equivalent p)) c))
+        (M ↓ makeConceal (scopeVar S Fin.zero)
+          (scopeTy S (⇑ᵗ (Model.impreciseTy A)))
+          (scopeTy S
+            (renameᵗ (extᵗ (toRenameᵗ (impreciseNames env))) Cᵀ)))
+        (N ↓ makeConceal (scopeVar T Fin.zero)
+          (scopeTy T (⇑ᵗ (Model.preciseTy A)))
+          (scopeTy T
+            (renameᵗ (extᵗ (toRenameᵗ (preciseNames env))) Cᵀ)))
+  canonical-conceal-observed p {S = S} {T} {k} {M} {N} c =
+    subst₂≡ (Model.ObservedComputations
+        (store-bind Σᴵ (Model.impreciseTy A))
+        (store-bind Σᴾ (Model.preciseTy A))
+        (New.interpret-body p (meaning E.extended)) S T k)
+      (cong (apply↓ M) (concealᴵ-generated p S))
+      (cong (apply↓ N) (concealᴾ-generated p T))
+      (EqNew.observed-to (abstract-equivalent p)
+        (K.conceal-observed p assignment
+          (EqNew.observed-to (EqNew.eq-sym (public-equivalent p)) c)))

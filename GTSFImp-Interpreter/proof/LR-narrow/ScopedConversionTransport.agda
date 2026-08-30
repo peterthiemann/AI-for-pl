@@ -7,6 +7,8 @@ module proof.LR-narrow.ScopedConversionTransport where
 --     reveal and conceal terms, and frame transport through store changes.
 --   * Exposes packaged structural shape laws for scoped arrow, identity,
 --     unseal, and seal conversions.
+--   * Canonical generation commutes with physical scope growth, for every
+--     type body, and packed conversion equality survives that growth.
 
 import Data.Fin as Fin
 open import Data.Nat using (suc)
@@ -21,10 +23,13 @@ open import CastTerms
 open import Reduction
 open import proof.TypeInTermSubst using
   (StoreRename-suc-bind; reveal-renameᵗ; conceal-renameᵗ; toRename-wk-eq)
+open import proof.ImprecisionConsistency using (fin-suc-injective)
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.FramePhases using (Frame)
 open import proof.LR-narrow.RevealFrames using
   (RevealFrm; ConcealFrm; revealFrame; concealFrame; reveal-frm; conceal-frm)
+open import proof.LR-narrow.RevealLifting using
+  (rename-structural-reveal; rename-structural-conceal)
 open import proof.LR-narrow.SlotLifting using
   (rename↑-identity; rename↓-identity)
 open import proof.LR-narrow.TermRenamingComposition using
@@ -107,6 +112,42 @@ private
   scope↓-seal-pack root X R = refl
   scope↓-seal-pack (allocate S A) X R =
     cong mapPack↓ (scope↓-seal-pack S X R)
+
+scope↑-cong : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    {A B C D} {c : Conv↑ Δ₀ A B} {d : Conv↑ Δ₀ C D}
+  → pack↑ c ≡ pack↑ d
+  → pack↑ (scope↑ S c) ≡ pack↑ (scope↑ S d)
+scope↑-cong root c≡d = c≡d
+scope↑-cong (allocate S A) c≡d = cong mapPack↑ (scope↑-cong S c≡d)
+
+scope↓-cong : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    {A B C D} {c : Conv↓ Δ₀ A B} {d : Conv↓ Δ₀ C D}
+  → pack↓ c ≡ pack↓ d
+  → pack↓ (scope↓ S c) ≡ pack↓ (scope↓ S d)
+scope↓-cong root c≡d = c≡d
+scope↓-cong (allocate S A) c≡d = cong mapPack↓ (scope↓-cong S c≡d)
+
+scope↑-generated : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (X : TyVar Δ₀) (R B : Ty Δ₀)
+  → pack↑ (scope↑ S 〖 X , R ↑ B 〗)
+      ≡ pack↑ 〖 scopeVar S X , scopeTy S R ↑ scopeTy S B 〗
+scope↑-generated root X R B = refl
+scope↑-generated (allocate S A) X R B =
+  trans
+    (cong mapPack↑ (scope↑-generated S X R B))
+    (rename-structural-reveal Fin.suc fin-suc-injective
+      (scopeVar S X) (scopeTy S R) (scopeTy S B))
+
+scope↓-generated : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
+    (X : TyVar Δ₀) (R B : Ty Δ₀)
+  → pack↓ (scope↓ S (makeConceal X R B))
+      ≡ pack↓ (makeConceal (scopeVar S X) (scopeTy S R) (scopeTy S B))
+scope↓-generated root X R B = refl
+scope↓-generated (allocate S A) X R B =
+  trans
+    (cong mapPack↓ (scope↓-generated S X R B))
+    (rename-structural-conceal Fin.suc fin-suc-injective
+      (scopeVar S X) (scopeTy S R) (scopeTy S B))
 
 scope↑-valid : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀} (S : PhysicalScope Σ₀ Δ)
     {A B} {c : Conv↑ Δ₀ A B}

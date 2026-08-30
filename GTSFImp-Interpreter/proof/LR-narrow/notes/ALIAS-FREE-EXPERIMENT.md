@@ -987,16 +987,17 @@ entry uses an unchanged conversion.
 
 If a computation pair is observed in the extended visible body environment,
 then applying those reveals gives observations at the rebasing of
-`⟦C⟧(α ↦ A, η)`. `fresh-reveal-observed` proves this at every index and
-independent physical future. `fresh-conceal-observed` proves the opposite
-direction. Both use the previous body-rebasing and environment-extension
-equivalences; neither assumes that a nominal name equals its representation.
+`⟦C⟧(α ↦ A, η)` at every index and independent physical future. Conceal
+proves the opposite direction. Both use the previous body-rebasing and
+environment-extension equivalences; neither assumes that a nominal name
+equals its representation. The public theorems now use canonical generators,
+as described below, rather than retaining a second compiled-only interface.
 
-The new compiler's unchanged-variable case uses an identity conversion on
-the assigned endpoint type. This is sound for its stated theorem, but it
-is not automatically equal to structurally running the evaluator's
-generator through an arbitrary substituted type. General canonical-generator
-alignment at the fresh visible environment is still a separate lemma.
+The compiler's unchanged-variable case uses an identity conversion on the
+assigned endpoint type. Its general theorem does not equate that identity
+with structural generation through an arbitrary composite substitution.
+The fresh visible environment has the stronger property needed below:
+old meanings still have nominal-variable endpoints.
 
 ### Higher-order and allocating-argument regressions
 
@@ -1016,6 +1017,61 @@ The application regression puts the existing allocating universal wrapper
 in argument position. It proves observations at the same index between
 `(λx. x) n` and `(λx. x) (((Λα. n) ↑ ∀ idℕ)[R])`, using the actual
 right-only allocation history through the application frame.
+
+## Canonical fresh-generator alignment
+
+`ScopedFreshBodyCompatibility` now connects those compiled conversions to
+the evaluator's actual generators. Let `ηᴵ,ηᴾ` embed the old visible names
+in the physical stores. Extend each embedding with a fresh name `α`, and
+let `Cᴵ,Cᴾ` be the endpoint spellings of the body under those embeddings.
+The new slots store `Aᴵ,Aᴾ`; write `Rᴵ,Rᴾ` for those representations
+weakened into the extended stores.
+
+If `C` belongs to the natural/variable/arrow fragment, then its compiled
+reveal is `〖 α , R ↑ C 〗` at each endpoint, and its compiled conceal is
+`makeConceal α R C`. The proof is structural: the new variable is a
+seal/unseal, an old visible variable is an identity, and arrows exchange
+the two directions in their domains. Old stored representations may be
+composite; the generator still sees their nominal names, not their contents.
+
+If `S` is any physical future scope, then
+`scope↑ S 〖 α , R ↑ C 〗 = 〖 scopeVar S α , scopeTy S R ↑ scopeTy S C 〗`,
+and analogously for conceal. `ScopedConversionTransport` proves these
+syntax laws for every type body, using the existing injective-renaming
+lemmas. The body-compatibility theorem itself remains fragment-restricted.
+
+The four `revealᴵ-generated`, `concealᴵ-generated`, `revealᴾ-generated`,
+and `concealᴾ-generated` equalities include the intrinsic endpoints and
+hold at arbitrary independent future scopes. No allocation is discarded,
+and the selected fresh pivot may have moved away from the newest position.
+
+If `M,N` are observed in the freshly extended nominal body environment,
+then their canonical reveals are observed at the rebased original body
+with argument `A`. `canonical-reveal-observed` proves this at the same
+index; `canonical-conceal-observed` proves the reverse conversion. Both
+preserve all three observation clauses. At the new roots, the reveal
+syntax is exactly the one produced by
+`(Λα. V)[A] —→ V ↑ 〖 α , R ↑ C 〗` after allocating `α ↦ A`.
+
+These results identify conversions, not universal values or whole wrapper
+applications. In particular, they do not turn a paired nominal meaning
+into a right-only nominal interpretation.
+
+### Mixed fresh and old names
+
+`ScopedFreshBodyCompatibilityExperiment` checks `(α ⇒ X) ⇒ (α ⇒ X)`
+over the existing environment with an extra private precise allocation.
+All four generator equalities are instantiated after one further imprecise
+allocation and two precise allocations. Their conclusions explicitly name
+the resulting distinct physical pivots and the shifted old natural name.
+Both canonical observation theorems are exercised at every index.
+
+The runtime test reveals the higher-order identity, applies it to
+`λx. x ↓ seal X ℕ` and then `n`, and unseals the result at `X`. Both
+endpoints are typed and return `n` in exactly nine steps. Besides the
+fresh argument seal/unseal cancellation, the trace executes the identity
+conceal and reveal on the unchanged old name before the final old-name
+unseal. No store entry or conversion rule is changed for the test.
 
 ## Conclusion and next critical path
 
@@ -1062,13 +1118,15 @@ fragment, including contravariant arrow domains and computation operands.
 The proof converts between nominal and representation interpretations
 operationally; it does not equate them by substitution coherence.
 
-The next critical step is connecting these compiled body conversions to
-the canonical conversions generated by the evaluator at a general fresh
-binder, then addressing the one-sided nominal interpretation needed by
-absent-slot universal-wrapper closure. The paired conversion theorem alone
-does not prove an asymmetric wrapper case. Small argument families also
-still need an appropriate admissible fresh-name argument; arbitrary code
-families do not promise one.
+Canonical fresh-generator alignment now checks, including arbitrary
+independent physical futures and unchanged old nominal names. The next
+critical step is the one-sided nominal interpretation needed by absent-slot
+universal-wrapper closure: a precise-only seal must be related to its
+unsealed imprecise representation, without inventing an imprecise slot.
+Prove its one-sided seal/unseal compatibility, then lift it through the
+body fragment. The paired theorem alone does not prove this asymmetric case.
+Small argument families also still need an appropriate admissible fresh-name
+argument; arbitrary code families do not promise one.
 
 The structural theorem covers the current body fragment, not arbitrary
 universal bodies. Dynamic types, nested universal syntax, missing-endpoint

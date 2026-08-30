@@ -107,3 +107,4 @@ import proof.LR-narrow.ScopedBodyConversion
 import proof.LR-narrow.ScopedBodyCompatibility
 import proof.LR-narrow.ScopedFreshBodyCompatibility
 import proof.LR-narrow.ScopedBodyCompatibilityExperiment
+import proof.LR-narrow.ScopedFreshBodyCompatibilityExperiment
