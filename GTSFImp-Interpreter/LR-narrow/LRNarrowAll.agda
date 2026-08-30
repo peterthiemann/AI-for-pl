@@ -97,3 +97,13 @@ import proof.LR-narrow.ScopedBodyFamily
 import proof.LR-narrow.ScopedBodyFamilyExperiment
 import proof.LR-narrow.ScopedStepExpansion
 import proof.LR-narrow.ScopedStepExpansionExperiment
+
+-- Structural paired conversions through interpreted bodies and fresh names.
+import proof.LR-narrow.ScopedConversionTransport
+import proof.LR-narrow.ScopedFrameComposition
+import proof.LR-narrow.ScopedApplication
+import proof.LR-narrow.ScopedConversionCompatibility
+import proof.LR-narrow.ScopedBodyConversion
+import proof.LR-narrow.ScopedBodyCompatibility
+import proof.LR-narrow.ScopedFreshBodyCompatibility
+import proof.LR-narrow.ScopedBodyCompatibilityExperiment

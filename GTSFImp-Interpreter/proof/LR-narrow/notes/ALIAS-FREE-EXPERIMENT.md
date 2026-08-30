@@ -917,6 +917,106 @@ right beta prefix ending in blame, and a type-beta allocation with the
 imprecise natural unchanged. These are all three-clause observations,
 not just forward simulation tests.
 
+## Structural body conversion compatibility
+
+`ScopedBodyConversion` compiles both directions through the existing
+natural/variable/arrow body fragment. A variable keeps its meaning or
+exchanges a paired nominal slot for its stored representation. The latter
+choice carries the two actual store lookups, not a compatibility premise.
+For unchanged meanings the conversions are `id↑` and `id↓`; for a nominal
+meaning they are `unseal X R` and `seal X R` at the corresponding endpoint.
+
+The arrow clauses are the actual conversion constructors:
+
+- `reveal(A ⇒ B) = conceal(A) ↦↑ reveal(B)`.
+- `conceal(A ⇒ B) = reveal(A) ↦↓ conceal(B)`.
+
+Thus negative occurrences use the opposite direction. All four endpoint
+conversions have proved store validity. `ScopedConversionTransport` lifts
+them through independent physical scopes and proves their frame transport
+along actual allocation histories.
+
+### Observations under frames and applications
+
+`ScopedFrameComposition.frame-observed` proves: if the operands are
+observed at `A` and the transported frames map related returned values
+to observations at `B`, at every residual index `j≤k` and pair of operand
+histories, then the framed computations are observed at `B` at index `k`.
+It splits and assembles the real evaluator phases. The final scope is
+`advance(S, operand-history ++ call-history)`, not a raw-store join or a
+lowered value. Forward return, backward return, and forward blame are
+all preserved.
+
+`ScopedApplication.application-observed` proves: if `F,G` are related
+at `arrow A B` at index `k`, `j<k`, and `M,N` are observed at `A` at
+index `j`, then `F M,G N` are observed at `B` at index `j`.
+If arguments allocate, the functions are transported along those exact
+histories. Every residual call index is at most `j`, so it remains
+strictly below the function's original `k`.
+
+### Both conversion directions
+
+If `M,N` are observed at the abstract interpretation of `C` at index `k`,
+then applying the compiled reveals gives observations at the public
+interpretation at the same `k`. Conversely, if `M,N` are observed at the
+public interpretation, applying the compiled conceals gives observations
+at the abstract interpretation at the same `k`.
+
+`ScopedBodyCompatibility.reveal-observed` and `conceal-observed` prove
+these statements mutually with their value-input versions. The induction
+is structural on the body; no termination override is needed.
+
+For a reveal at an arrow, the proof follows the whole-term reduction
+`(F ↑ (c ↦↑ d)) U —→ (F (U ↓ c)) ↑ d` on both sides. The domain induction
+gives the concealed argument computation; `application-observed` supplies
+the call; the range induction reveals its result. The conceal proof uses
+`(F ↓ (c ↦↓ d)) U —→ (F (U ↑ c)) ↓ d`, reversing the domain induction.
+The paired beta prefixes are restored without reducing the outer index.
+
+This includes non-value converted arguments: even an identity conversion
+on an unchanged leaf can take a step. It also includes function bodies
+that allocate or return closures retaining private names. Those histories
+are handled by frame composition, not erased by the structural induction.
+
+### Fresh visible binder
+
+`ScopedFreshBodyCompatibility` specializes the theorem to the environment
+created by a paired fresh allocation. Its head conversion exchanges the
+fresh nominal meaning with the rebased argument `A`; every old visible
+entry uses an unchanged conversion.
+
+If a computation pair is observed in the extended visible body environment,
+then applying those reveals gives observations at the rebasing of
+`⟦C⟧(α ↦ A, η)`. `fresh-reveal-observed` proves this at every index and
+independent physical future. `fresh-conceal-observed` proves the opposite
+direction. Both use the previous body-rebasing and environment-extension
+equivalences; neither assumes that a nominal name equals its representation.
+
+The new compiler's unchanged-variable case uses an identity conversion on
+the assigned endpoint type. This is sound for its stated theorem, but it
+is not automatically equal to structurally running the evaluator's
+generator through an arbitrary substituted type. General canonical-generator
+alignment at the fresh visible environment is still a separate lemma.
+
+### Higher-order and allocating-argument regressions
+
+`ScopedBodyCompatibilityExperiment` instantiates the body
+`(α ⇒ α) ⇒ (α ⇒ α)` with a paired slot storing `ℕ`. Both compiled
+conversions agree definitionally with the existing runtime generators
+for this fixture. The higher-order identity satisfies both the reveal
+and conceal observation theorems at every index.
+
+Applying the revealed higher-order identity to `λx. x` and then `n`
+returns `n` in seven steps. The checked trace includes a function conceal,
+an argument seal/unseal cancellation, and a result seal/unseal cancellation.
+Both endpoints have typing derivations, data-ending traces, and exact
+interpreter equations.
+
+The application regression puts the existing allocating universal wrapper
+in argument position. It proves observations at the same index between
+`(λx. x) n` and `(λx. x) (((Λα. n) ↑ ∀ idℕ)[R])`, using the actual
+right-only allocation history through the application frame.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -957,18 +1057,21 @@ arrow fragment, including renaming, substitution, rebasing, and fresh
 visible-environment coherence. Same-index expansion through one-sided
 allocating steps also checks. No new counterexample was found.
 
-The next critical step is **structural seal/unseal compatibility for the
-interpreted body**. A universal wrapper tests its inner value at a freshly
-allocated nominal name, whereas the outer result uses the original
-argument interpretation. These are different endpoint types and different
-relations: substitution coherence does **not** equate them. Generalize
-the existing function-seal proof through the interpreted body (including
-contravariant arrow domains), then combine it with rebasing and the
-allocating-step expansion to prove absent-slot universal-wrapper closure.
+Structural paired seal/unseal compatibility now checks through that
+fragment, including contravariant arrow domains and computation operands.
+The proof converts between nominal and representation interpretations
+operationally; it does not equate them by substitution coherence.
 
-The identity proof already combines fresh nominal interpretation,
-function-seal compatibility, and rebasing, but does not establish that
-combination for arbitrary universal bodies. Dynamic types, missing-endpoint
+The next critical step is connecting these compiled body conversions to
+the canonical conversions generated by the evaluator at a general fresh
+binder, then addressing the one-sided nominal interpretation needed by
+absent-slot universal-wrapper closure. The paired conversion theorem alone
+does not prove an asymmetric wrapper case. Small argument families also
+still need an appropriate admissible fresh-name argument; arbitrary code
+families do not promise one.
+
+The structural theorem covers the current body fragment, not arbitrary
+universal bodies. Dynamic types, nested universal syntax, missing-endpoint
 world interpretation, and the full syntax interpretation remain outside
 this fragment. Do not integrate the replacement into the live LR before
 the universal-wrapper case checks.
