@@ -69,3 +69,5 @@ import proof.LR-narrow.ScopedReturnsExperiment
 import proof.LR-narrow.EscapingSealExperiment
 import proof.LR-narrow.PrivateSealBehavior
 import proof.LR-narrow.PrivateSealInstantiationExperiment
+import proof.LR-narrow.FunctionSealRetraction
+import proof.LR-narrow.FunctionSealCompatibility
