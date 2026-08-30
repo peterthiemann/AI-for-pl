@@ -119,6 +119,45 @@ test a function result carrying a seal. The present constant result does
 not establish that escaping seals may be erased, nor does it discharge any
 of the four general `RevealObligations`.
 
+## Second experiment: visible return scopes
+
+`proof/LR-narrow/ScopedReturnsExperiment.agda` states a proof-local
+`ScopedReturns` replacement for the successful-return join. It retains an
+ordinary future world, but embeds its precise scope into the physical
+precise result scope. The imprecise scope remains exact. The witness requires:
+
+- An injective, order-preserving embedding `ρ`.
+- Preservation of every visible store lookup by `ρ`, using the existing
+  `StoreRename` relation. In particular, representations are preserved, not
+  merely the number of names.
+- Agreement of the runtime and semantic actions on **every caller term**.
+- A visible value `V` with physical result exactly `rename ρ V`.
+- The existing indexed value relation on the visible results.
+
+`literal-returns` supplies this witness at every index for the first
+experiment, hiding only `Z`. This is a new proof-local observation, not a
+change to `PairedReturns` or the live LR.
+
+`store-rename-bind`: if `ρ` preserves store lookup, then extending both
+stores by `A` and `rename ρ A` preserves lookup under `keep ρ`. This works
+for arbitrary types and embeddings. A hidden name need not remain at the
+head of the physical store.
+
+For a returned natural `n`, test the continuation
+`((Λα. λx:ℕ. x + n)[Y]) 1`. `continue-⊢`, `continue-↠`, and
+`continue-eval` prove typing, the complete six-step trace, and the exact
+interpreter return `n + 1` at every sufficient fuel. `continue-scope`
+proves that this family executes in both scopes with related final stores
+and renamed final values, for every lookup-preserving embedding. Applied
+after the literal test, the visible allocation history is `X,Y,T`; the
+physical history is `X,Y,Z,T`. The final embedding keeps `T`, skips `Z`,
+and keeps `Y,X`. Both continuations return `8`.
+
+This establishes stability under fresh allocation and this continuation
+family, **not** a general evaluation-renaming theorem. The escaping-seal
+test is still required before deciding whether this witness can be the
+whole return interface.
+
 ## Verification
 
 - `agda-mcp` checks the experiment through `LR-narrow/LRNarrowAll.agda`:
