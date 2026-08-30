@@ -108,3 +108,10 @@ import proof.LR-narrow.ScopedBodyCompatibility
 import proof.LR-narrow.ScopedFreshBodyCompatibility
 import proof.LR-narrow.ScopedBodyCompatibilityExperiment
 import proof.LR-narrow.ScopedFreshBodyCompatibilityExperiment
+
+-- Precise-only nominal slots: the imprecise program remains unsealed.
+import proof.LR-narrow.ScopedRightNominal
+import proof.LR-narrow.ScopedRightFrameComposition
+import proof.LR-narrow.ScopedRightSealCompatibility
+import proof.LR-narrow.ScopedRightSealExperiment
+import proof.LR-narrow.ScopedRightSealClosureExperiment

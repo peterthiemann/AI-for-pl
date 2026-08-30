@@ -1073,6 +1073,61 @@ fresh argument seal/unseal cancellation, the trace executes the identity
 conceal and reveal on the unchanged old name before the final old-name
 unseal. No store entry or conversion rule is changed for the test.
 
+## Precise-only nominal slots
+
+`ScopedRightNominal` supplies the asymmetric base case. If `A` is a scoped
+semantic type and the precise root contains `Y ↦ Aᴾ`, then
+`right-nominal A Y` has endpoints `Aᴵ` and `＇Y`. At physical scopes `S,T`
+and index `k`, its value relation is defined by
+
+`U ~ V ↓ seal (scopeVar T Y) (scopeTy T Aᴾ)` if and only if
+`U ~[A,S,T,k] V` and `V` is a value.
+
+There is no imprecise name or lookup premise. The constructor proves both
+endpoint typings, downward closure, and closure under independent physical
+futures. Its rebasing law preserves the same relation while transporting
+the precise pivot and representation to the new root.
+
+If `M,N` are observed at `A`, then `M` and
+`N ↓ seal (scopeVar T Y) (scopeTy T Aᴾ)` are observed at this right-only
+nominal type. If `M,N` are observed at the right-only nominal type, then
+`M` and `N ↑ unseal (scopeVar T Y) (scopeTy T Aᴾ)` are observed at `A`.
+`ScopedRightSealCompatibility` proves both statements at the same outer
+index, preserving forward return, backward return, and forward blame.
+The imprecise syntax is literally `M` in both conclusions.
+
+`ScopedRightFrameComposition` composes observations through a precise-only
+evaluation frame. It retains the actual operand histories on both sides
+and appends only the precise frame's history. In the backward-return proof,
+the imprecise continuation starts at an already returned value; value
+evaluation and result uniqueness show that this continuation contributes
+no new source term or allocation. Seal compatibility uses related values;
+unseal compatibility additionally uses same-index precise-step expansion
+for the cancellation. Neither theorem assumes evaluation equivariance.
+
+### Allocating, blaming, and higher-order regressions
+
+`ScopedRightSealExperiment` starts with an empty imprecise root and one
+precise natural slot. Its precise payload allocates twice before returning
+`n`. The enclosing seal moves from pivot `0` to pivot `2`; sealing and
+unsealing the payload returns `n` in six steps. The two observation proofs
+invoke the new compatibility APIs, while separate typed traces and exact
+interpreter equations check the concrete run. The blame regression also
+uses both APIs and checks the two-step precise blame propagation.
+
+`ScopedRightSealClosureExperiment` retains the earlier escaped private
+precise name and adds a fresh precise-only function slot. The imprecise
+closure is not shifted or wrapped. The sealed precise payload is the
+shifted non-identity closure, whose argument conversion still uses its
+private name. Seal/unseal observations hold at every index and arbitrary
+independent future scopes, using the full arrow relation rather than only
+one concrete call. The typed fully applied roundtrip returns its captured
+`n` in five steps, independently of its argument `m`; the unchanged
+imprecise closure returns `n` in two steps.
+
+These results discharge the one-sided nominal base case, not structural
+one-sided conversion for whole bodies or the absent-slot universal wrapper.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -1119,14 +1174,14 @@ The proof converts between nominal and representation interpretations
 operationally; it does not equate them by substitution coherence.
 
 Canonical fresh-generator alignment now checks, including arbitrary
-independent physical futures and unchanged old nominal names. The next
-critical step is the one-sided nominal interpretation needed by absent-slot
-universal-wrapper closure: a precise-only seal must be related to its
-unsealed imprecise representation, without inventing an imprecise slot.
-Prove its one-sided seal/unseal compatibility, then lift it through the
-body fragment. The paired theorem alone does not prove this asymmetric case.
-Small argument families also still need an appropriate admissible fresh-name
-argument; arbitrary code families do not promise one.
+independent physical futures and unchanged old nominal names. Precise-only
+nominal interpretation and its same-index seal/unseal compatibility now
+also check, without inventing an imprecise slot or altering its program.
+The next critical step is to lift this asymmetric compatibility through
+the body fragment, including contravariant arrow domains, then connect
+its fresh precise-only slot to canonical generation and the absent-slot
+universal clause. Small argument families still need an appropriate
+admissible fresh-name argument; arbitrary code families do not promise one.
 
 The structural theorem covers the current body fragment, not arbitrary
 universal bodies. Dynamic types, nested universal syntax, missing-endpoint
