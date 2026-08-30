@@ -66,3 +66,4 @@ import proof.LR-narrow.UniversalFamilyKit
 -- return interface, without changing the live relation.
 import proof.LR-narrow.ScopeExperiment
 import proof.LR-narrow.ScopedReturnsExperiment
+import proof.LR-narrow.EscapingSealExperiment

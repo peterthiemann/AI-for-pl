@@ -154,9 +154,77 @@ physical history is `X,Y,Z,T`. The final embedding keeps `T`, skips `Z`,
 and keeps `Y,X`. Both continuations return `8`.
 
 This establishes stability under fresh allocation and this continuation
-family, **not** a general evaluation-renaming theorem. The escaping-seal
-test is still required before deciding whether this witness can be the
-whole return interface.
+family, **not** a general evaluation-renaming theorem.
+
+## Second experiment: an escaping seal prevents lowering
+
+`proof/LR-narrow/EscapingSealExperiment.agda` repeats the test with
+`U = Λα. λx:α. x : ∀α. α ⇒ α`, again revealed at the absent old slot
+`X` and instantiated at `X`. The input and both returned functions are
+typed. The bare application takes one step; the wrapped application takes
+two. Their allocation histories are the same as in the literal test.
+
+The returned functions are exactly:
+
+    Vᴵ = (λx. x) ↑ (seal Y′ X′ ↦↑ unseal Y′ X′)
+
+    Vᴾ = (((λx. x) ↑ (seal Z Y ↦↑ unseal Z Y))
+                   ↑ (id↓ Y ↦↑ id↑ Y))
+                   ↑ (seal Y X ↦↑ unseal Y X)
+
+The precise result has type `X ⇒ X`: neither `Y` nor `Z` appears in its
+result type. But `Z` is still present in the returned conversion syntax.
+
+`wrapped-function-not-lowered`: if `Vᴾ` is the weakening of any value or
+term in the two-name scope, then `⊥`. The proof uses a syntax probe for
+the domain seal of the innermost reveal. Renaming commutes with the probe;
+weakening cannot produce the fresh name `Z`.
+
+`wrapped-function-not-in-paired-scope` strengthens this to **every**
+lookup-preserving embedding of the selected two-name paired world into
+the physical three-name store. Keeping `Z` instead of hiding it gives the
+wrong representation for a visible name. Thus merely choosing a different
+embedding of that world does not repair this example. This theorem does
+not quantify over every alternative future world or every possible
+behavioral scope relation.
+
+The escaping seal is not evidence of a behavioral failure. The checked
+data observations retain the physical stores:
+
+Diagram:
+
+    (Vᴵ (7 ↓ seal X′ ℕ)) ↑ unseal X′ ℕ
+       │
+       ▼
+       7
+
+    (Vᴾ (7 ↓ seal X ℕ)) ↑ unseal X ℕ
+       │
+       ▼
+       7
+
+`bare-use-⊢` and `wrapped-use-⊢` prove typing; `bare-use-eval` and
+`wrapped-use-eval` check exact interpreter returns at fuel `20`.
+
+## Conclusion and next critical path
+
+Unused-allocation hiding is a viable special case, but it is **not** a
+complete return interface for universal wrapper closure. Type-level
+non-occurrence alone does not justify dropping a name from returned
+syntax. The higher-order example needs its private seal retained.
+
+Do not replace the live `PairedReturns` with `ScopedReturns` yet. The next
+decisive experiment is a seal-aware **behavioral** scope relation for the
+returned function: retain its physical store and conversions, and prove
+that function application transports related arguments and results across
+the private scope. Start with the explicit identity wrappers above, then
+test composition through a further universal instantiation. This must be
+a proved elimination principle, not a new assumed compatibility field or
+an alias-identification rule.
+
+General evaluation transport, an observation interface covering escaping
+closures, and the four `RevealObligations` remain open. This experiment
+does not complete the fundamental property.
 
 ## Verification
 
