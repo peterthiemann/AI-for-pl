@@ -4,7 +4,8 @@ module proof.LR-narrow.ScopedConversionTransport where
 --   * Lifts reveal and conceal conversions from a physical root into any
 --     physical scope by renaming along the retained allocation history.
 --   * Proves scoped conversion validity, future lifting through scoped
---     reveal and conceal terms, and frame transport through store changes.
+--     reveal and conceal terms, including the identity universal wrapper, and
+--     frame transport through store changes.
 --   * Exposes packaged structural shape laws for scoped arrow, identity,
 --     unseal, and seal conversions.
 --   * Canonical generation commutes with physical scope growth, for every
@@ -177,6 +178,20 @@ lift-reveal {S = S} (grow {A = A} p) M c =
         (reveal-pointwise (toRenameᵗ wk↪ᵗ) Fin.suc
           toRename-wk-eq (scope↑ S c))))
     (lift-reveal p (⇑ᵗᵐ M) c)
+
+lift-universal-id-wrapper : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+    (p : ScopeFuture S T) {V : Term Δ} (C : Ty (suc Δ₀))
+  → liftTerm p (V ↑ `∀↑ id↑ (scopeBody S C))
+      ≡ liftTerm p V ↑ `∀↑ id↑ (scopeBody T C)
+lift-universal-id-wrapper stay C = refl
+lift-universal-id-wrapper {S = S} (grow p) {V = V} C =
+  trans
+    (cong (liftTerm p)
+      (cong (apply↑ (⇑ᵗᵐ V))
+        (reveal-pointwise (toRenameᵗ wk↪ᵗ) Fin.suc toRename-wk-eq
+          (`∀↑ id↑ (scopeBody S C)))))
+    (lift-universal-id-wrapper p {V = ⇑ᵗᵐ V} C)
 
 lift-conceal : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}

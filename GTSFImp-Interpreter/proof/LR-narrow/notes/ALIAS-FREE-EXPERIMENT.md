@@ -1323,6 +1323,64 @@ allocation followed by five store-preserving steps. The literal source
 endpoint returns `n` without stepping. These tests retain every private
 seal; they do not lower returned syntax to the original physical scope.
 
+## Identity universal reveal-wrapper closure
+
+`ScopedRightUniversalWrapper` now proves closure for arbitrary related
+values, rather than proving only that a particular identity inhabits a
+universal relation. Fix a seed semantic type `A`, the small argument codes
+constructed above, and a binder-only natural/variable/arrow body `C`.
+If `U` and `V` are related by the body-derived right-universal relation at
+`S, T, k`, then `U` and `V ↑ ∀α. id(C)` are related by that same relation
+at `S, T, k`. The conversion is scoped at the current precise endpoint.
+There is no requirement that `V` be a syntactic type abstraction.
+
+### Fresh instantiation and the actual wrapper step
+
+At an arbitrary pair of future scopes, let `a` be the tested code and
+`R` its precise endpoint. Allocate a fresh precise name `X ↦ R`, keeping
+the imprecise store unchanged. The original universal relation can be
+tested at the constructed fresh code, at the same index `j ≤ k`.
+Fresh-argument coherence and body interpretation congruence identify its
+result with the abstract body interpretation.
+
+Diagram: the wrapper's actual next step, in named notation.
+
+    (V ↑ ∀α. id(C))[R]
+            │
+            ▼
+    (V[X] ↑ id(C[X/α])) ↑ 〖 X , R ↑ C[X/α] 〗
+
+The universal instantiation clause supplies the observation of `V[X]`.
+Computation-level identity compatibility inserts the inner conversion;
+this operand may itself allocate, so a value-only identity lemma would
+not suffice. Canonical precise-only body compatibility supplies the outer
+conversion. Rebase transport interprets the result at its actual extended
+physical scope. Same-index right-step expansion then proves the original
+wrapper test. The imprecise computation remains unchanged throughout.
+
+All three observation clauses are preserved. Neither the fresh argument
+nor conversion compatibility is assumed as a new obligation, and no
+evaluation-equivariance theorem is used to erase the allocation.
+
+### Regression coverage
+
+`ScopedRightUniversalWrapperExperiment` applies the closure theorem to the
+right identity and then applies it again to the already wrapped value.
+It also wraps constant universals, so the input relation is not restricted
+to identity functions or to bodies with an occurring binder. Instantiation
+after unequal store growth uses the previous nested-nominal argument code:
+the source has one physical slot and the target has three.
+
+The fully applied identity regression returns `n` in one source step and
+eight target steps. The target allocates two distinct names, eliminates the
+intermediate identity conversion, calls both function adapters, and cancels
+both seals. Typing, the explicit reduction chain, exact interpreter returns,
+and the three computation observations all check.
+
+This closes the identity **reveal** wrapper for the stated body fragment
+and code family. It is not yet the general structural universal conversion,
+the conceal-wrapper case, or an interpretation of bodies with old variables.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -1383,21 +1441,24 @@ of all missing endpoints.
 The occurring-binder right identity now inhabits the derived family, and
 the nested nominal argument and its data-ending runtime check as well.
 
-The next critical step is universal-wrapper closure for arbitrary related
-values, initially for the identity universal conversion and binder-only
-body fragments. Test the original universal at the constructed fresh code,
-identify its result with the fresh abstract body, apply canonical body
-conversion, and expand the wrapper's allocating step without decreasing the
-right-only index. Identity inhabitance alone does not establish this closure.
-For bodies with old variables, tie the old assignment to a visible
-environment and prove its rebase coherence; an arbitrary semantic assignment
-does not supply the old-name data required by canonical generation.
+Identity universal reveal-wrapper closure now checks for arbitrary related
+values, at arbitrary current scopes and without decreasing the right-only
+index. Repeated wrapping and constant-body tests exercise the theorem beyond
+the original identity inhabitance proof.
+
+The next critical step is to extend this closure to a visible old environment
+and the actual structural body conversion required by universal reveal.
+Tie the old assignment to visible meanings and prove its rebase coherence;
+an arbitrary semantic assignment does not supply the old-name data required
+by canonical generation. The identity conceal-wrapper analogue also remains
+to be proved. These are still proof-local extensions, not permission to
+change the live term-imprecision relation or replace its obligations.
 
 The structural theorem covers the current body fragment, not arbitrary
 universal bodies. Dynamic types, nested universal syntax, missing-endpoint
 world interpretation, and the full syntax interpretation remain outside
 this fragment. Do not integrate the replacement into the live LR before
-the universal-wrapper case checks.
+the general universal-wrapper case checks.
 
 General evaluation equivariance, full universal-wrapper closure, and the four
 `RevealObligations` remain open. No live obligation has been discharged by
