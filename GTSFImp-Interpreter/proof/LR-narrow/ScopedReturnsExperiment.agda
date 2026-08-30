@@ -12,7 +12,7 @@ open import Data.Nat using (ℕ; zero; suc)
 open import Data.Product using (_×_; _,_; ∃-syntax)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; cong; trans)
+  using (_≡_; refl; cong; trans; sym)
 
 open import Types
 open import TyStore
@@ -90,6 +90,13 @@ store-rename-bind {ρ = ρ} h A (S-bind∋ {A = B} entry eq) =
     (trans (cong (renameᵗ (toRenameᵗ (C.keep ρ))) eq)
       (trans (renameᵗ-cong (⇑ᵗ B) (toRename-keep-eq ρ))
         (renameᵗ-shift (toRenameᵗ ρ) B)))
+
+store-rename-hide : ∀ {Δ Δ′} {ρ : Δ ↪ᵗ Δ′} {Σ Σ′}
+  → StoreRename (toRenameᵗ ρ) Σ Σ′
+  → (A : Ty Δ′)
+  → StoreRename (toRenameᵗ (C.skip ρ)) Σ (store-bind Σ′ A)
+store-rename-hide {ρ = ρ} h A {A = B} entry =
+  S-bind∋ (h entry) (sym (renameᵗ-comp (toRenameᵗ ρ) Fin.suc B))
 
 -- An executable continuation: allocate at a visible name, then add one
 -- to the previously returned natural. It exercises type application,

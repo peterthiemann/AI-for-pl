@@ -12,7 +12,7 @@ open import Data.Nat using (ℕ)
 open import Data.Product using (_×_; _,_; ∃-syntax)
 import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; cong; sym) renaming (subst to subst≡)
+  using (_≡_; refl; cong; sym; trans) renaming (subst to subst≡)
 
 open import Types
 open import TyStore
@@ -22,7 +22,7 @@ open import Conversion
 open import Reduction
 open import Consistency using (_↪ᵗ_; toRenameᵗ)
 open import proof.TypeInTermSubst using (StoreRename)
-open import proof.Reduction using (_++χ_; composeReduction)
+open import proof.Reduction using (_++χ_; composeReduction; applyStores-++)
 open import proof.LR-narrow.SlotLifting using (rename↑-identity)
 open import proof.LR-narrow.TypeRenamingComposition using (pack↑; apply↑)
 import proof.LR-narrow.EscapingSealExperiment as Escaping
@@ -208,3 +208,42 @@ wrapped-certificate : ∀ {R : Ty 0}
       (＇ (Fin.suc (Fin.suc Fin.zero))) Escaping.wrapped-function
 wrapped-certificate = seal-adapter (S-bind∋ (Z∋ refl) refl)
   (identity-adapter (seal-adapter (Z∋ refl) identity))
+
+-- A returned universal can be instantiated without exposing private slots.
+-- The second trace may allocate names, return a closure, or end in blame;
+-- the certified application contributes only a store-preserving prefix.
+
+instantiate-only-keeps : ∀ {Δ} {M N : Term Δ} {χs : StoreChanges Δ Δ}
+  → OnlyKeeps χs → (B : Ty (Data.Nat.suc Δ)) → (R : Ty Δ)
+  → M —↠[ χs ] N
+  → M ⦂∀ B [ R ] —↠[ χs ] N ⦂∀ B [ R ]
+instantiate-only-keeps {M = M} done B R ↠-refl = (M ⦂∀ B [ R ]) ∎[]
+instantiate-only-keeps {M = M} {N = P} {χs = keep ∷ χs}
+    (more p) B R (↠-step {N = N} step rest) =
+    M ⦂∀ B [ R ]
+  —→[ keep ]⟨ ξ-• step refl refl ⟩
+    N ⦂∀ B [ R ]
+  —↠[ χs ]⟨ instantiate-only-keeps p B R rest ⟩
+    P ⦂∀ B [ R ] ∎[]
+
+private-instantiation : ∀ {Δ Δ′} {Σ : TyStore Δ} {B F U R}
+    {M : Term Δ′} {ψs : StoreChanges Δ Δ′}
+  → (p : PrivateIdentity Σ (`∀ B) F)
+  → Value U → ⟨ Δ , Σ , [] ⟩ ⊢ U ⦂ `∀ B
+  → U ⦂∀ B [ R ] —↠[ ψs ] M
+  → (F · U) ⦂∀ B [ R ] —↠[ private-changes p ++χ ψs ] M
+private-instantiation {B = B} {F} {U} {R} {M} {ψs} p vU typed trace =
+    (F · U) ⦂∀ B [ R ]
+  —↠[ private-changes p ]⟨
+      instantiate-only-keeps (private-keeps p) B R
+        (private-application p vU) ⟩+
+    U ⦂∀ B [ R ]
+  —↠[ ψs ]⟨ trace ⟩
+    M ∎[]
+
+private-following-store : ∀ {Δ Δ′} {Σ : TyStore Δ} {A F}
+  → (p : PrivateIdentity Σ A F) → (ψs : StoreChanges Δ Δ′)
+  → (private-changes p ++χ ψs) ▶ˢ Σ ≡ ψs ▶ˢ Σ
+private-following-store {Σ = Σ} p ψs =
+  trans (sym (applyStores-++ (private-changes p) ψs Σ))
+    (cong (λ Σ′ → ψs ▶ˢ Σ′) (only-keeps-store (private-keeps p) Σ))

@@ -243,10 +243,42 @@ The precise certificate retains `Z`; the imprecise certificate has no
 corresponding private slot. Thus this is a behavioral treatment of the
 actual escaping functions, not an erasure of their syntax.
 
-The next check within this experiment is to pass a universal value through
-these adapters, instantiate it, and verify the resulting allocation and
-data observation. The present elimination theorem concerns reduction
-traces; it is not yet the live step-indexed computation relation.
+### Composition through another universal instantiation
+
+`private-instantiation`: if `F` is certified at `(∀α.B) ⇒ (∀α.B)`,
+`U : ∀α.B` is a value, and `U[R]` reduces to `M` with changes `ψ`, then
+`(F U)[R]` reduces to `M` with the certified store-preserving prefix
+followed by `ψ`. The suffix may allocate names or end in blame.
+`private-following-store` proves that the prefix does not change the
+suffix's final physical store. This is a proved composition principle for
+arbitrary suffix traces, not a new assumed compatibility field.
+
+`proof/LR-narrow/PrivateSealInstantiationExperiment.agda` checks a concrete
+instance. Set the old representation to `P = ∀α. α ⇒ α`. Add the matching
+old-`X` seal adapter to the bare and wrapped functions, obtaining
+`Fᴵ : P ⇒ P` and `Fᴾ : P ⇒ P`. Use arguments
+`Uᴵ = Λα. λx:α. x` and `Uᴾ = Uᴵ ↑ c`, where `c` is an absent-slot
+universal reveal at the already-private `Z`.
+
+The complete observations are `(Fᴵ Uᴵ)[ℕ] 7` and `(Fᴾ Uᴾ)[ℕ] 7`.
+Both return `7`. `observe-bare-↠` and `observe-wrapped-↠` compose the
+general application and instantiation lemmas with explicit allocation
+traces. Independent proof-carrying interpreter checks succeed at fuel
+`9` and `20`, respectively, with exact final contexts and stores.
+
+The imprecise store finishes with three names; the precise store finishes
+with five. In addition to the original private `Z`, the precise universal
+wrapper creates a second private allocation during the suffix. The final
+embedding skips the newest private name, keeps the new paired name,
+skips old `Z`, and keeps the original pair. `final-store-embedding`
+preserves every visible lookup; `final-values-related` proves the two
+natural results related at every index in the visible continued world.
+No physical allocation is deleted or identified with another name.
+
+The experiment therefore succeeds both for arbitrary value arguments to
+the certified adapters and for a subsequent universal elimination that
+introduces another private scope. The elimination theorem concerns
+reduction traces; it is not yet the live step-indexed computation relation.
 
 ## Conclusion and next critical path
 
@@ -255,18 +287,25 @@ complete return interface for universal wrapper closure. Type-level
 non-occurrence alone does not justify dropping a name from returned
 syntax. The higher-order example needs its private seal retained.
 
-Do not replace the live `PairedReturns` with `ScopedReturns` yet. The next
-decisive experiment is a seal-aware **behavioral** scope relation for the
-returned function: retain its physical store and conversions, and prove
-that function application transports related arguments and results across
-the private scope. Start with the explicit identity wrappers above, then
-test composition through a further universal instantiation. This must be
-a proved elimination principle, not a new assumed compatibility field or
-an alias-identification rule.
+The behavioral route now handles the escaping identity closures without
+changing `VarImp`: retain their physical stores and prove their
+eliminations. It also composes with a later, unequally allocating universal
+wrapper. Do not replace the live `PairedReturns` with `ScopedReturns`:
+the latter still requires literal lowering of every returned value.
 
-General evaluation transport, an observation interface covering escaping
-closures, and the four `RevealObligations` remain open. This experiment
-does not complete the fundamental property.
+The next critical step is to replace the identity leaf of the behavioral
+argument by **arbitrary related function bodies**. The current proof uses
+the fact that each application returns its argument exactly; general
+functions may return new closures carrying private seals. A general
+behavioral return relation must handle those results, preserve existing
+private scopes under futures, and support the index/fuel accounting of
+the live computation relation. None of these follows merely from the
+identity certificate.
+
+General evaluation transport, the observation interface for arbitrary
+escaping closures, and the four `RevealObligations` remain open. No
+`RevealObligations` field has been discharged by these experiments, and
+the fundamental property is not yet complete.
 
 ## Verification
 

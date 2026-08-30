@@ -68,3 +68,4 @@ import proof.LR-narrow.ScopeExperiment
 import proof.LR-narrow.ScopedReturnsExperiment
 import proof.LR-narrow.EscapingSealExperiment
 import proof.LR-narrow.PrivateSealBehavior
+import proof.LR-narrow.PrivateSealInstantiationExperiment
