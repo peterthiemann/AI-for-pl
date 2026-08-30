@@ -30,11 +30,17 @@ open import Reduction
 import Eval as E
 open import proof.ImprecisionConsistency using
   (ext-injective; fin-suc-injective; ty-all-injective)
-open import Consistency using (toRenameᵗ; keep)
-open import proof.TypeInTermSubst using (toRename-keep-eq)
+open import Consistency using (toRenameᵗ; keep; wk↪ᵗ)
+open import proof.TypeInTermSubst using
+  (renameᵗᵐ-preserves-Value; toRename-keep-eq)
 open import proof.LR-narrow.ImmediateReturn using
   (value-question-complete)
 open import proof.LR-narrow.BetaExpansion using (value-step-none)
+open import proof.LR-narrow.TypeBetaExpansion using
+  (type-beta-step-question)
+open import proof.LR-narrow.FramePhases using (Frame)
+open import proof.LR-narrow.RevealFrames using
+  (revealFrame; reveal-frm; concealFrame; conceal-frm)
 open import proof.LR-narrow.RevealSteps using
   (reveal-all-value; conceal-all-value)
 open import proof.LR-narrow.RevealLifting using
@@ -135,6 +141,64 @@ imprecise-peel-step-question
   conceal-type-app-step-question
     {Σ = Σ}
     (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C) vV
+
+-- After the peel's first bind, the exposed inner universal applies at the
+-- fresh target name.  Its beta step is lifted through the inherited peel
+-- conversion and the outer fresh reveal.
+
+imprecise-peel-inner-step-question : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
+    {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D)
+    {Σ : TyStore (suc Δᴵ)} {R : Ty Δᴵ} {V : Term (suc Δᴵ)}
+  → Value V
+  → Σ[ N ∈ Term (suc (suc Δᴵ)) ]
+      Σ[ step ∈ imprecise-peel-reductᴵᵇ peel R (Λ V)
+          —→[ bind (＇ Fin.zero) ] N ]
+        E.step? Σ (imprecise-peel-reductᴵᵇ peel R (Λ V))
+          ≡ just (E.step-result (bind (＇ Fin.zero)) N step)
+imprecise-peel-inner-step-question
+    (reveal-imprecise-peelᵇ s C no-occur i av)
+    {Σ = Σ} {R = R} vV
+    with type-beta-step-question
+      {Σ = Σ} {A = ＇ Fin.zero}
+      (renameᵗᵐ-preserves-Value (keep wk↪ᵗ) vV)
+imprecise-peel-inner-step-question
+    (reveal-imprecise-peelᵇ s C no-occur i av)
+    {Σ = Σ} {R = R} vV
+    | vV′ , step-eq =
+  _ , outer-step , outer-step-eq
+  where
+  old = reveal-frm
+    〖 Fin.suc (slotXᴵ s) , ⇑ᵗ (slotRᴵ s) ↑ C 〗
+  outer = reveal-frm
+    〖 Fin.zero , ⇑ᵗ R ↑
+      replaceTy (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C 〗
+  inner-step = β-Λ vV′
+  old-step = Frame.plug-step revealFrame old inner-step
+  outer-step = Frame.plug-step revealFrame outer old-step
+  old-step-eq = Frame.plug-step? revealFrame old {Σ = Σ} step-eq
+  outer-step-eq = Frame.plug-step? revealFrame outer {Σ = Σ} old-step-eq
+imprecise-peel-inner-step-question
+    (conceal-imprecise-peelᵇ s C no-occur i av)
+    {Σ = Σ} {R = R} vV
+    with type-beta-step-question
+      {Σ = Σ} {A = ＇ Fin.zero}
+      (renameᵗᵐ-preserves-Value (keep wk↪ᵗ) vV)
+imprecise-peel-inner-step-question
+    (conceal-imprecise-peelᵇ s C no-occur i av)
+    {Σ = Σ} {R = R} vV
+    | vV′ , step-eq =
+  _ , outer-step , outer-step-eq
+  where
+  old = conceal-frm
+    (makeConceal (Fin.suc (slotXᴵ s)) (⇑ᵗ (slotRᴵ s)) C)
+  outer = reveal-frm 〖 Fin.zero , ⇑ᵗ R ↑ C 〗
+  inner-step = β-Λ vV′
+  old-step = Frame.plug-step concealFrame old inner-step
+  outer-step = Frame.plug-step revealFrame outer old-step
+  old-step-eq = Frame.plug-step? concealFrame old {Σ = Σ} step-eq
+  outer-step-eq = Frame.plug-step? revealFrame outer {Σ = Σ} old-step-eq
 
 ------------------------------------------------------------------------
 -- The slot allocated by a paired type application
