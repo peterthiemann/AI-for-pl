@@ -136,3 +136,8 @@ import proof.LR-narrow.ScopedRightArgumentExperiment
 import proof.LR-narrow.ScopedRightUniversalWrapper
 import proof.LR-narrow.ScopedRightUniversalWrapperExperiment
 import proof.LR-narrow.ScopedVisibleUniversalWrapperExperiment
+
+-- LR-design regression evidence: actual CTI examples and negative controls.
+import proof.LR-narrow.WrapperImprecisionExamples
+import proof.LR-narrow.NominalObservationExamples
+import proof.LR-narrow.ReplacementImprecisionExamples
