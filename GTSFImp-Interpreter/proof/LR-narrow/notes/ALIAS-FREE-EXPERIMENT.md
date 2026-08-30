@@ -1259,6 +1259,70 @@ is observed at every index by applying `instantiate-observed` to the
 abstract identity-body observation. Separate typing, explicit reduction,
 and exact interpreter proofs check the fully applied data endpoint.
 
+## Body-derived right families and admissible fresh arguments
+
+`ScopedBodyFamily.RightBodyFamily` now derives the right-only family from
+the same natural/variable/arrow body interpretation as the paired family.
+For a body `C`, old assignment `η`, and fixed imprecise argument `Aᴵ`, the
+associated right-universal type has endpoints `C[ηᴵ][Aᴵ]` and `∀α. C[ηᴾ]`.
+At physical scopes `S, T`, a code `a` denotes a semantic type with imprecise
+endpoint `scopeTy S Aᴵ`;
+the result is the interpretation of `C` with `α` assigned that denotation
+and old meanings rebased to `S, T`. Endpoint coherence is proved from
+substitution and opening, not supplied as a separate result-family axiom.
+
+### Small codes closed under precise-only fresh names
+
+`ScopedRightArguments` fixes one seed semantic type `A` and defines a small
+code family. A code is a rebased seed, an independently grown code, or a
+fresh precise nominal over an existing code. The source endpoint is always
+`scopeTy S (impreciseTy A)`. The precise endpoint of a fresh code is the
+new name, whose store entry is the previous precise endpoint. No constructor
+contains an arbitrary `ScopedType` record.
+
+For every code `a` at `S, T`, the construction provides a code at
+`S, allocate T (preciseTy (denote a))`. Its denotation is equivalent to
+the precise-only nominal over the one-step rebase of `denote a`. Thus the
+fresh argument needed by a subsequent type application exists within this
+small family; it is not an assumption about arbitrary argument families.
+
+If `U` and `V` are related at `denote a`, then `U` and the shifted `V`
+sealed at the fresh precise name are related at the fresh code, at the
+same index. If the physical scopes grow independently, the lifted values
+are related at the corresponding grown code. These facts follow from the
+seed's semantic invariants and the proved precise-only nominal constructor.
+
+The scope of this code language is intentionally limited: one seed and its
+nominal extensions, with arbitrary independent store growth. It is not a
+small encoding of all semantic types or a general interpretation of every
+type-imprecision derivation.
+
+### Occurring-binder right identity and nested nominal arguments
+
+`ScopedRightUniversalIdentity` proves, at every index, that the ordinary
+identity at the fixed source type is related to `Λα. λx. x` by the derived
+right family for `α ⇒ α`. Its instantiation clause quantifies over arbitrary
+independent futures and uses the same-index `j ≤ k` boundary. The proof
+constructs the abstract identity observation at a fresh right nominal and
+uses the canonical allocating type-application theorem; it does not replace
+type application with a semantic axiom.
+
+`ScopedRightArgumentExperiment` instantiates this theorem with the natural
+seed and two successive fresh codes. In named form, the target store has
+`X ↦ ℕ` and `Y ↦ X`, while the source store is empty. The code relates `n`
+to `(n ↓ seal X) ↓ seal Y`. The regression checks that this relation survives
+independent subsequent allocations and that instantiating the right identity
+at `Y` satisfies all three computation-observation clauses at every index.
+It also checks the family-result equivalence between a fresh code and the
+abstract identity-body interpretation used by canonical body compatibility.
+
+The fully applied target program instantiates `Λα. λx. x` at `Y`, applies
+it to the doubly sealed natural, and unseals first `Y`, then `X`. Its typed,
+explicit reduction and evaluator witnesses reach `n` in six steps: one
+allocation followed by five store-preserving steps. The literal source
+endpoint returns `n` without stepping. These tests retain every private
+seal; they do not lower returned syntax to the original physical scope.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -1312,12 +1376,22 @@ without inventing an imprecise slot or altering its program.
 Fresh precise-only body meanings and canonical generators now agree across
 rebasing and independent futures. The same-index allocating type-beta
 corollary also checks, given the post-allocation body observation.
-The next critical step is to derive the body-based `RightFamily`, with a
-fixed imprecise endpoint and suitable small argument codes, and connect its
-instantiation clause to this new bridge. Prove the required admissible
-fresh-name argument rather than assuming an arbitrary code family provides
-one. This boundary concerns one new precise-only slot over an old paired
-visible environment, not a general interpretation of all missing endpoints.
+Body-derived `RightFamily` endpoints and a concrete small fresh-closed
+argument language now check. This boundary concerns one new precise-only
+slot over an old paired visible environment, not a general interpretation
+of all missing endpoints.
+The occurring-binder right identity now inhabits the derived family, and
+the nested nominal argument and its data-ending runtime check as well.
+
+The next critical step is universal-wrapper closure for arbitrary related
+values, initially for the identity universal conversion and binder-only
+body fragments. Test the original universal at the constructed fresh code,
+identify its result with the fresh abstract body, apply canonical body
+conversion, and expand the wrapper's allocating step without decreasing the
+right-only index. Identity inhabitance alone does not establish this closure.
+For bodies with old variables, tie the old assignment to a visible
+environment and prove its rebase coherence; an arbitrary semantic assignment
+does not supply the old-name data required by canonical generation.
 
 The structural theorem covers the current body fragment, not arbitrary
 universal bodies. Dynamic types, nested universal syntax, missing-endpoint

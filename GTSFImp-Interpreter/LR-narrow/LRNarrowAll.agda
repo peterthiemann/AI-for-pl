@@ -125,3 +125,8 @@ import proof.LR-narrow.ScopedRightBodyCompatibilityExperiment
 import proof.LR-narrow.ScopedRightFreshBodyCompatibility
 import proof.LR-narrow.ScopedRightFreshBodyCompatibilityExperiment
 import proof.LR-narrow.ScopedRightFreshInstantiationExperiment
+
+-- Body-derived right families and small fresh-closed argument codes.
+import proof.LR-narrow.ScopedRightArguments
+import proof.LR-narrow.ScopedRightUniversalIdentity
+import proof.LR-narrow.ScopedRightArgumentExperiment
