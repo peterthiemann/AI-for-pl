@@ -65,6 +65,7 @@ import proof.LR-narrow.UniversalFamilyKit
 -- Alias-free scope experiment: a checked counterexample to the raw-store
 -- return interface, without changing the live relation.
 import proof.LR-narrow.ScopeExperiment
+import proof.LR-narrow.RevealObligationsCounterexample
 import proof.LR-narrow.ScopedReturnsExperiment
 import proof.LR-narrow.EscapingSealExperiment
 import proof.LR-narrow.PrivateSealBehavior

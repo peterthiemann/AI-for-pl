@@ -1507,14 +1507,16 @@ world interpretation, and the full syntax interpretation remain outside
 this fragment. Do not integrate the replacement into the live LR before
 the general universal-wrapper case checks.
 
-General evaluation equivariance, full universal-wrapper closure, and the four
-`RevealObligations` remain open. No live obligation has been discharged by
-these experiments, and the fundamental property is not yet complete.
-`VarImp` and the live LR remain unchanged.
+General evaluation equivariance and full scoped universal-wrapper closure
+remain open. The bounded audit below refutes the unchanged live
+`RevealObligations` package; it must be restated over a replacement
+interface, not filled in as it stands. No live obligation has been
+discharged by these experiments, and the fundamental property is not yet
+complete. `VarImp` and the live LR remain unchanged.
 
-## Remaining work estimate (2026-08-30)
+## Historical work estimate (2026-08-30; superseded below)
 
-At the start of this checkpoint (`669d1c15`), a reasonable planning estimate
+At the start of this checkpoint (`669d1c15`), the planning estimate
 was **5–7 substantial work packages for universal-wrapper/conversion closure**
 and **12–18 for the full fundamental property**, including this checkpoint.
 After the visible-environment step, that leaves approximately **4–6** and
@@ -1533,9 +1535,9 @@ The wrapper/conversion path is:
   the compared endpoint rather than only introducing an inert wrapper.
 - [ ] Extend body interpretation to the needed dynamic and nested universal
   syntax, and interpret the required missing-endpoint worlds.
-- [ ] Once the general cases check, connect the scoped model to the live
-  relation and discharge the four fields of `RevealObligations` in
-  `proof/LR-narrow/RevealStatements.agda`.
+- [ ] Replace the live observation/value interface and restate its closure
+  obligations before integration. Discharging the four *unchanged* fields
+  of `RevealObligations` is impossible; see the bounded audit below.
 
 Full fundamental-property work also includes the independently parameterized
 `CastValueObligations`, paired and right/smart universal introductions,
@@ -1550,6 +1552,51 @@ full world interpretation admit the intended closure with the current
 invariants. Cast-value compatibility is separate debt and may expose an
 independent obstruction. Successful local wrapper experiments do not, by
 themselves, resolve those questions.
+
+## Bounded closure audit: the unchanged live endpoint is impossible
+
+The follow-up request imposed two stopping conditions: stop at a roadblock
+and construct a counterexample; also stop if closure requires more than six
+milestones. The preflight triggered the first condition, before any new
+closure milestone was implemented.
+
+`RevealObligationsCounterexample.reveal-obligations-impossible` proves:
+
+`RevealObligations → ⊥`.
+
+The witness is the existing inert-wrapper counterexample, now connected
+directly to the exact live obligation package. Let `U = Λα. 7` and let `c`
+be the reveal generated at the paired natural name `X` on `∀α. ℕ`.
+The slot is absent from the type, and `c = ∀↑ id(ℕ)`. At index six, `U`
+is related to itself, but `U` is not related to `U ↑ c`. Instantiating
+at the paired names gives `7` on both sides: the bare computation takes
+two steps and allocates once; the wrapped computation takes five steps
+and allocates twice. The exact final stores cannot inhabit the old raw-store
+future relation, as `ScopeExperiment.no-raw-join` proves.
+
+If an obligation package `ob` existed, then `RevealStructural ob` would
+provide all smaller-index/size statements. They discharge the `Below`
+premise of its precise reveal field at index six and size zero. That field
+would preserve the universal relation for the absent-slot wrapper above,
+contradicting `ScopeExperiment.inert-universal-reveal-not-closed`. This is
+a proof by contradiction from the hypothetical package, not an assumption
+that the smaller statements already hold without it.
+
+This does **not** refute the scoped model, and it is not a new operational
+counterexample to the dynamic gradual guarantee: both programs return `7`.
+The original experiment already identified the raw-store mismatch. The
+new result makes the impossibility of the promised unchanged live endpoint
+explicit at its actual Agda interface.
+
+The earlier **4–6** closure and **11–17** fundamental-property estimates
+are withdrawn. They treated live integration as closing an existing
+interface, whereas it requires replacing that interface and re-establishing
+its consumers. Paired universal wrapper closure is also distinct from the
+right-only wrapper theorem currently proved. The audit does not assert an
+artificially precise new milestone count or claim a new impossibility
+result for the intended replacement. A revised replacement contract and
+dependency audit are needed before a six-milestone completion bound can
+be justified. No additional closure or live-relation redesign was started.
 
 ## Verification
 
