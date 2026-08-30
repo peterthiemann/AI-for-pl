@@ -14,7 +14,7 @@ import Data.Fin as Fin
 open import Data.Maybe using (just; nothing)
 open import Data.Product using (_×_; _,_; Σ-syntax)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; sym; trans; cong; cong₂)
+  using (_≡_; _≢_; refl; sym; trans; cong; cong₂)
   renaming (subst to subst≡)
 open import Relation.Nullary using (yes; no)
 open import Data.Nat.Properties using () renaming (_≟_ to _≟ℕ_)
@@ -210,6 +210,17 @@ imprecise-peel-inner-nonvalue
     (reveal-imprecise-peelᵇ s C no-occur i av) R V = refl
 imprecise-peel-inner-nonvalue
     (conceal-imprecise-peelᵇ s C no-occur i av) R V = refl
+
+imprecise-peel-inner-not-blame : ∀ {Δᴾ Δᴵ Δᶜ}
+    {W : World Δᴾ Δᴵ Δᶜ} {B : Ty (suc Δᴾ)}
+    {C D : Ty (suc Δᴵ)}
+    (peel : ImprecisePeelᵇ W B C D)
+    (R : Ty Δᴵ) (V : Term (suc Δᴵ))
+  → imprecise-peel-reductᴵᵇ peel R (Λ V) ≢ blame
+imprecise-peel-inner-not-blame
+    (reveal-imprecise-peelᵇ s C no-occur i av) R V ()
+imprecise-peel-inner-not-blame
+    (conceal-imprecise-peelᵇ s C no-occur i av) R V ()
 
 ------------------------------------------------------------------------
 -- The slot allocated by a paired type application
