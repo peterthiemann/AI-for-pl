@@ -71,3 +71,4 @@ import proof.LR-narrow.PrivateSealBehavior
 import proof.LR-narrow.PrivateSealInstantiationExperiment
 import proof.LR-narrow.FunctionSealRetraction
 import proof.LR-narrow.FunctionSealCompatibility
+import proof.LR-narrow.FunctionSealClosureExperiment

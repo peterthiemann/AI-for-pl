@@ -42,7 +42,7 @@ changing observable casts.
 - Do not introduce new assumed compatibility fields, postulates, or
   termination escapes to make the experiment typecheck.
 
-## Status
+## Baseline status
 
 The branch has been created at the requested checkpoint. The baseline
 `LR-narrow/LRNarrowAll.agda` passes `agda-mcp` with no errors, goals, or
@@ -280,6 +280,104 @@ the certified adapters and for a subsequent universal elimination that
 introduces another private scope. The elimination theorem concerns
 reduction traces; it is not yet the live step-indexed computation relation.
 
+## Generalization: arbitrary function bodies and fresh closure results
+
+`proof/LR-narrow/FunctionSealRetraction.agda` removes the identity-body
+restriction for a balanced adapter. Define
+
+    roundtrip X A Y B F =
+      (F ↓ (unseal X A ↦↓ seal Y B)) ↑ (seal X A ↦↑ unseal Y B).
+
+`roundtrip-return`: if `F` and `V` are values and `F V` reduces to a value
+`U` with store changes `χ`, then `roundtrip X A Y B F V` reduces to
+**the same `U`**, with three store-preserving prefix steps, `χ`, and one
+store-preserving suffix step. `roundtrip-blame` proves the corresponding
+claim for blame, with two suffix steps. The store-action lemmas prove
+that the final physical store is exactly `χ` applied to the initial store.
+
+The proof transports the result seal and its matching unseal through
+every allocation in `χ`. It never removes seals *inside* `U`. Hence `U`
+may be an arbitrary newly returned closure, not just the argument `V`.
+This is a computational retraction, not a type-imprecision alias.
+
+### A single function reveal, without a roundtrip assumption
+
+`proof/LR-narrow/FunctionSealCompatibility.agda` goes beyond balanced
+adapters. Define
+
+    reveal-function X A Y B F = F ↑ (seal X A ↦↑ unseal Y B).
+
+`typed-reveal-function-return`: if `Σ(X) = A`, `Σ(Y) = B`,
+`F : X ⇒ Y` and `V : A` are closed values, and
+`F (V ↓ seal X A)` reduces with changes `χ` to a value `Z`, then there
+exists a value `U : χB` in the final physical store such that
+`Z = U ↓ seal (χY) (χB)` and `reveal-function X A Y B F V` reduces to `U`.
+The full trace consists of one prefix step, `χ`, and one suffix step.
+The same overhead suffices when the body blames.
+
+Crucially, the sealed shape of `Z` is **derived**, not assumed as a new
+compatibility obligation: preservation gives `Z : χY`, lookup transport
+gives `(χΣ)(χY) = χB`, and canonical forms plus lookup uniqueness identify
+the payload and representation. No syntactic restriction is placed on
+`F` beyond its valuehood and typing.
+
+For relational composition, `SealedValues Xᴵ Aᴵ Xᴾ Aᴾ S` has exactly
+this clause: if `Uᴵ` and `Uᴾ` are values and `S Uᴵ Uᴾ`, then it relates
+`Uᴵ ↓ seal Xᴵ Aᴵ` to `Uᴾ ↓ seal Xᴾ Aᴾ`. The names and representation
+types remain concrete endpoint data; the relation does not assert
+`Xᴵ ⊑ Aᴾ` or identify either name with its representation.
+
+`related-function-reveals-return`: if the two abstract-body runs return
+values related by this seal lifting at their transported output slots,
+then the revealed applications return `S`-related payloads. The endpoints
+may allocate independently and finish in different physical scopes.
+This theorem transports an already established body-result relation; it
+does not assert that arbitrary pairs of function bodies are related.
+
+### Non-identity regression with a private allocation inside the body
+
+`proof/LR-narrow/FunctionSealClosureExperiment.agda` starts in a store
+containing `X ↦ ℕ` and `Y ↦ (ℕ ⇒ ℕ)`. Its abstract functions are
+
+    Fᴵ = λn:X. (λx:ℕ. n ↑ unseal X ℕ) ↓ seal Y (ℕ ⇒ ℕ)
+    Fᴾ = λn:X. ((Λα. λx:α. n ↑ unseal X ℕ)[ℕ])
+                   ↓ seal Y (ℕ ⇒ ℕ).
+
+Apply their public reveals to a natural `n`. The bare body returns a new
+closure without allocating. The other body allocates `Z ↦ ℕ` and returns
+a new closure whose function conversion still mentions `Z`:
+
+    Uᴵ = λx:ℕ. (n ↓ seal X ℕ) ↑ unseal X ℕ
+    Uᴾ = (λx:Z. (n ↓ seal X ℕ) ↑ unseal X ℕ)
+           ↑ (seal Z ℕ ↦↑ id↑ ℕ).
+
+`public-bare-↠` and `public-private-↠` use the **typed general theorem**
+above to obtain these payloads; they do not duplicate the adapter proof.
+`related-public-results` uses the relational theorem with a proved
+behavioral relation: for every pair of value arguments `Wᴵ`, `Wᴾ`,
+`Uᴵ Wᴵ` reduces to `n` in two steps and `Uᴾ Wᴾ` reduces to `n` in four.
+These are constant functions, not identity adapters; neither returned
+closure is the original natural argument.
+
+The fully applied programs are checked for **all naturals `n` and `m`**.
+
+Diagram:
+
+    (reveal-function X ℕ Y (ℕ⇒ℕ) Fᴵ n) m
+       │ 5 steps, no allocation
+       ▼
+       n
+
+    (reveal-function X ℕ Y (ℕ⇒ℕ) Fᴾ n) m
+       │ 8 steps, one private allocation
+       ▼
+       n
+
+The reduction proofs compose the general adapter theorem with the proved
+closure behavior. Independent interpreter equalities check the exact
+fuel and final stores: two names on the bare side and three on the private
+side. For example, `n = 7` and `m = 9` returns `7`, not `9`.
+
 ## Conclusion and next critical path
 
 Unused-allocation hiding is a viable special case, but it is **not** a
@@ -287,25 +385,32 @@ complete return interface for universal wrapper closure. Type-level
 non-occurrence alone does not justify dropping a name from returned
 syntax. The higher-order example needs its private seal retained.
 
-The behavioral route now handles the escaping identity closures without
-changing `VarImp`: retain their physical stores and prove their
-eliminations. It also composes with a later, unequally allocating universal
-wrapper. Do not replace the live `PairedReturns` with `ScopedReturns`:
-the latter still requires literal lowering of every returned value.
+The behavioral route now has a local compatibility theorem for arbitrary
+typed function bodies, including allocating bodies returning new closures.
+The identity certificate is no longer the only positive evidence. Keep
+physical private scopes and relate the returned values behaviorally;
+do not replace the live `PairedReturns` with `ScopedReturns`, which still
+requires literal lowering of every returned value.
 
-The next critical step is to replace the identity leaf of the behavioral
-argument by **arbitrary related function bodies**. The current proof uses
-the fact that each application returns its argument exactly; general
-functions may return new closures carrying private seals. A general
-behavioral return relation must handle those results, preserve existing
-private scopes under futures, and support the index/fuel accounting of
-the live computation relation. None of these follows merely from the
-identity certificate.
+The next critical step is a **proof-local, scope-aware computation
+observation** with a backward return decomposition and fuel bounds for
+these function reveals. The new generic theorems are forward reduction
+transport; they do not yet decompose every observed return of an adapter
+into a body return, or establish the step-indexed LR clause. The exact
+interpreter checks above are regression evidence, not that general
+decomposition theorem.
 
-General evaluation transport, the observation interface for arbitrary
-escaping closures, and the four `RevealObligations` remain open. No
-`RevealObligations` field has been discharged by these experiments, and
-the fundamental property is not yet complete.
+Then give the value relation its function clause and nominal seal lifting,
+prove closure under later visible/private allocations, and derive the
+function-reveal case using the local compatibility theorem. The supplied
+body-result relation `S` must come from that relation's induction/future
+structure, not be added as an assumed compatibility field. Only integrate
+the new observation interface into the live LR after this bridge checks.
+
+General evaluation transport, the complete observation interface for
+escaping closures, and the four `RevealObligations` remain open. No field
+has been discharged by these experiments, and the fundamental property is
+not yet complete. `VarImp` and the live LR remain unchanged.
 
 ## Verification
 
