@@ -302,3 +302,25 @@ module Model {Δᴵ₀ Δᴾ₀} (Σᴵ₀ : TyStore Δᴵ₀) (Σᴾ₀ : TySto
           (eval-from-return {Σ = scopeStore S} {gas = gasᴵ} returnᴵ)
           (eval-from-blame {Σ = scopeStore S} {gas = n} blamedM)
     no-blame n<k (Δ′ , χs , trace , blamedM) | ()
+
+  observed-from-right-blame : ∀ {Δᴵ Δᴾ} {B : ScopedType}
+      {S : PhysicalScope Σᴵ₀ Δᴵ} {T : PhysicalScope Σᴾ₀ Δᴾ} {k M N gas}
+    → BlamesFrom (scopeStore T) gas N → ObservedComputations B S T k M N
+  observed-from-right-blame {B = B} {S} {T} {k} {M} {N} {gas}
+      blameN@(Δ′ , χs , trace , blamedN) = record
+    { forward-return = λ n<k ret → inj₂ (gas , blameN)
+    ; backward-return = no-return
+    ; forward-blame = λ n<k blameM → gas , blameN
+    }
+    where
+    no-return : ∀ {n} {out : E.EvalResult N}
+      → n < k → interpretFrom (scopeStore T) n N ≡ returned out
+      → ∃[ m ] ∃[ out′ ] (interpretFrom (scopeStore S) m M ≡ returned out′)
+          × related B (advance S (E.changes out′)) (advance T (E.changes out))
+              (k ∸ n) (E.term out′) (E.term out)
+    no-return {n} n<k ret
+        with eval-terminal-unique {Σ = scopeStore T}
+          {leftGas = n} {rightGas = gas}
+          (eval-from-return {Σ = scopeStore T} {gas = n} ret)
+          (eval-from-blame {Σ = scopeStore T} {gas = gas} blamedN)
+    no-return n<k ret | ()

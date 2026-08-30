@@ -23,6 +23,8 @@ open import Consistency using (wk↪ᵗ)
 open import proof.TypeInTermSubst using
   (typing-shiftᵗ-bind; renameᵗᵐ-preserves-Value; toRename-wk-eq;
    renameᵗ-wk-eq)
+open import proof.LR-narrow.Application using (_++ˢ_)
+open import proof.LR-narrow.FunctionSealRetraction using (applyVars)
 
 data PhysicalScope {Δ₀} (Σ₀ : TyStore Δ₀) : TyCtx → Set where
   root : PhysicalScope Σ₀ Δ₀
@@ -107,6 +109,12 @@ lift-root-type : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
 lift-root-type stay A = refl
 lift-root-type (grow p) A = lift-root-type p A
 
+lift-root-variable : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) → ∀ X → liftVar p (scopeVar S X) ≡ scopeVar T X
+lift-root-variable stay X = refl
+lift-root-variable (grow p) X = lift-root-variable p X
+
 lift-value : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′} {V}
   → (p : ScopeFuture S T) → Value V → Value (liftTerm p V)
@@ -154,6 +162,27 @@ advance-term : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
 advance-term S [] M = refl
 advance-term S (keep ∷ χs) M = advance-term S χs M
 advance-term S (bind A ∷ χs) M = advance-term (allocate S A) χs (⇑ᵗᵐ M)
+
+advance-type : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    (S : PhysicalScope Σ₀ Δ) (χs : StoreChanges Δ Δ′) A
+  → χs ▶ᵗ scopeTy S A ≡ scopeTy (advance S χs) A
+advance-type S [] A = refl
+advance-type S (keep ∷ χs) A = advance-type S χs A
+advance-type S (bind B ∷ χs) A = advance-type (allocate S B) χs A
+
+advance-variable : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    (S : PhysicalScope Σ₀ Δ) (χs : StoreChanges Δ Δ′) X
+  → applyVars χs (scopeVar S X) ≡ scopeVar (advance S χs) X
+advance-variable S [] X = refl
+advance-variable S (keep ∷ χs) X = advance-variable S χs X
+advance-variable S (bind B ∷ χs) X = advance-variable (allocate S B) χs X
+
+advance-keep : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    (S : PhysicalScope Σ₀ Δ) (χs : StoreChanges Δ Δ′)
+  → advance S (χs ++ˢ (keep ∷ [])) ≡ advance S χs
+advance-keep S [] = refl
+advance-keep S (keep ∷ χs) = advance-keep S χs
+advance-keep S (bind B ∷ χs) = advance-keep (allocate S B) χs
 
 lift-constant : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}

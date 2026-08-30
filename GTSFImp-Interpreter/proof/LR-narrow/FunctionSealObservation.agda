@@ -5,9 +5,11 @@ module proof.LR-narrow.FunctionSealObservation where
 --   * Retains the exact physical allocation history and returned payload,
 --     including private names in newly created closures.
 --   * Accounts for the adapter's two administrative steps in evaluator fuel.
+--   * Assembles unseal returns and excludes new blame at typed unseals.
 --   * Uses existing evaluator phases and canonical forms; no live LR changes.
 
 open import Data.List using ([])
+open import Data.Empty using (⊥; ⊥-elim)
 open import Data.Nat using (ℕ; suc; _+_; _∸_; _≤_; _<_; z≤n; s≤s)
 open import Data.Nat.Properties using
   (≤-refl; ≤-trans; +-mono-≤; +-suc; m≤m+n; ∸-monoʳ-≤)
@@ -23,10 +25,13 @@ open import Conversion
 open import Reduction
 import Eval as E
 open import Interpreter
+open import LR-narrow.Computation using (BlamesFrom)
 open import proof.TypeInTermSubst using (renameᵗ-id)
 open import proof.TypeSafety.Preservation using (multi-preservation)
 open import proof.LR-narrow.Application using
-  (value-unique; value-return-exact; _++ˢ_)
+  (value-unique; value-return-exact; _++ˢ_; prepend-return;
+   eval-from-return; eval-from-blame)
+open import proof.LR-narrow.TargetEvaluation using (eval-terminal-unique)
 open import proof.LR-narrow.FramePhases using (Frame)
 open import proof.LR-narrow.RevealFrames using
   (RevealFrm; reveal-frm; revealFrame)
@@ -46,6 +51,39 @@ private
   unseal-frame [] Y B = refl
   unseal-frame (keep ∷ χs) Y B rewrite renameᵗ-id B = unseal-frame χs Y B
   unseal-frame (bind A ∷ χs) Y B = unseal-frame χs (Fin.suc Y) (⇑ᵗ B)
+
+  matching-unseal-run : ∀ {Δ} {Σ : TyStore Δ} {U : Term Δ} {Y B}
+    → (vU : Value U)
+    → interpretFrom Σ 1 ((U ↓ seal Y B) ↑ unseal Y B)
+        ≡ returned (E.result Δ (keep ∷ []) U
+          (((U ↓ seal Y B) ↑ unseal Y B)
+            —→[ keep ]⟨ pure-step (conceal-reveal vU) ⟩ U ∎[]) vU)
+  matching-unseal-run {Σ = Σ} {Y = Y} {B} vU
+      with unseal-step-question {Σ = Σ} Y B vU
+  matching-unseal-run {Σ = Σ} vU | vU′ , step-eq
+      with value-unique vU′ vU
+  matching-unseal-run {Σ = Σ} vU | .vU , step-eq | refl =
+    prepend-return {Σ = Σ} {gas = 0} step-eq
+      (value-return-exact {Σ = Σ} 0 vU)
+
+  matching-unseal-frame-run : ∀ {Δ} {Σ : TyStore Δ} {U : Term Δ} {Y B}
+      (f : RevealFrm Δ)
+    → f ≡ reveal-frm (unseal Y B) → (vU : Value U)
+    → ∃ λ (trace : Frame.plug revealFrame f (U ↓ seal Y B)
+        —↠[ keep ∷ [] ] U) →
+        interpretFrom Σ 1 (Frame.plug revealFrame f (U ↓ seal Y B))
+          ≡ returned (E.result Δ (keep ∷ []) U trace vU)
+  matching-unseal-frame-run {Σ = Σ} ._ refl vU =
+    _ , matching-unseal-run {Σ = Σ} vU
+
+  matching-unseal-no-blame : ∀ {Δ} {Σ : TyStore Δ} {gas U Y B}
+    → Value U → BlamesFrom Σ gas ((U ↓ seal Y B) ↑ unseal Y B) → ⊥
+  matching-unseal-no-blame {Σ = Σ} {gas} vU (Δ′ , χs , trace , blamedU)
+      with eval-terminal-unique {Σ = Σ} {leftGas = 1} {rightGas = gas}
+        (eval-from-return {Σ = Σ} {gas = 1}
+          (matching-unseal-run {Σ = Σ} vU))
+        (eval-from-blame {Σ = Σ} {gas = gas} blamedU)
+  matching-unseal-no-blame vU (Δ′ , χs , trace , blamedU) | ()
 
   matching-unseal-return : ∀ {Δ} {Σ : TyStore Δ} {gas} {U : Term Δ}
       {Y B} (vU : Value U)
@@ -181,3 +219,55 @@ function-seal-body-budget : ∀ {bodyGas wholeGas k}
 function-seal-body-budget {bodyGas} {wholeGas} {k} budget observed =
   ≤-trans (s≤s (≤-trans (m≤m+n bodyGas 2) budget)) observed ,
   ∸-monoʳ-≤ k (≤-trans (m≤m+n bodyGas 2) budget)
+
+-- The frame's evaluator assembly retains the body's exact final context,
+-- payload, and history, followed by one administrative keep.
+
+unseal-return-expand : ∀ {Δ Δ′} {Σ : TyStore Δ} {gas M Y B}
+    {χs : StoreChanges Δ Δ′} {U : Term Δ′}
+    {trace : M —↠[ χs ] U ↓ seal (applyVars χs Y) (χs ▶ᵗ B)}
+  → (vU : Value U)
+  → interpretFrom Σ gas M ≡ returned
+      (E.result Δ′ χs (U ↓ seal (applyVars χs Y) (χs ▶ᵗ B))
+        trace (vU ↓ seal))
+  → ∃[ wholeGas ] ∃ λ (wholeTrace : M ↑ unseal Y B
+      —↠[ χs ++ˢ (keep ∷ []) ] U) →
+      interpretFrom Σ wholeGas (M ↑ unseal Y B)
+        ≡ returned (E.result Δ′ (χs ++ˢ (keep ∷ [])) U wholeTrace vU)
+unseal-return-expand {Σ = Σ} {gas} {Y = Y} {B} {χs} vU ret
+    with matching-unseal-frame-run {Σ = χs ▶ˢ Σ}
+      (Frame.transports revealFrame χs (reveal-frm (unseal Y B)))
+      (unseal-frame χs Y B) vU
+unseal-return-expand {Σ = Σ} {gas} {Y = Y} {B} {χs} vU ret
+    | callTrace , callReturn
+    with Frame.return-expand revealFrame {Σ = Σ}
+      {operandGas = gas} {callGas = 1} (reveal-frm (unseal Y B)) ret
+      callReturn
+unseal-return-expand vU ret | callTrace , callReturn
+    | wholeGas , wholeReturn =
+  wholeGas , _ , wholeReturn
+
+unseal-blame-invert : ∀ {Δ} {Σ : TyStore Δ} {gas M Y B}
+  → Σ ∋ Y ⦂ B → ⟨ Δ , Σ , [] ⟩ ⊢ M ⦂ ＇ Y
+  → BlamesFrom Σ gas (M ↑ unseal Y B)
+  → ∃[ bodyGas ] (bodyGas ≤ gas) × BlamesFrom Σ bodyGas M
+unseal-blame-invert {Σ = Σ} {gas} {Y = Y} {B} entry typed wholeBlame
+    with Frame.blame-phases-of revealFrame {Σ = Σ} {gas = gas}
+      (reveal-frm (unseal Y B)) wholeBlame
+unseal-blame-invert entry typed wholeBlame
+    | Frame.operand-phase-blames bodyGas bodyBlame budget =
+  bodyGas , budget , bodyBlame
+unseal-blame-invert {Σ = Σ} {Y = Y} {B} entry typed wholeBlame
+    | Frame.call-phase-blames bodyGas (E.result Δ′ χs Z traceZ vZ)
+        bodyReturn callGas callBlame budget
+    with canonical-payload (changed-entry χs entry) vZ
+      (subst≡ (λ T → ⟨ Δ′ , χs ▶ˢ Σ , [] ⟩ ⊢ Z ⦂ T)
+        (changed-variable-type χs Y) (multi-preservation typed traceZ))
+unseal-blame-invert {Σ = Σ} {Y = Y} {B} entry typed wholeBlame
+    | Frame.call-phase-blames bodyGas (E.result Δ′ χs Z traceZ vZ)
+        bodyReturn callGas callBlame budget
+    | U , vU , typedU , refl =
+  ⊥-elim (matching-unseal-no-blame {Σ = χs ▶ˢ Σ} {gas = callGas} vU
+    (subst≡ (λ f → BlamesFrom (χs ▶ˢ Σ) callGas
+        (Frame.plug revealFrame f (U ↓ seal (applyVars χs Y) (χs ▶ᵗ B))))
+      (unseal-frame χs Y B) callBlame))

@@ -6,6 +6,7 @@ module proof.LR-narrow.ScopedBehaviorExperiment where
 --   * Proves behavior after arbitrary independent future allocations, not
 --     only in the two initial result stores or at a chosen step index.
 --   * Relates the allocating maker computations at every observation index.
+--     Uses the general scope-aware function-seal compatibility theorem.
 --   * Accepts the original literal-wrapper counterexample at every index.
 
 open import Data.List using ([])
@@ -31,12 +32,12 @@ open import proof.LR-narrow.FramePhases using (Frame)
 open import proof.LR-narrow.RevealFrames using (revealFrame; reveal-frm)
 open import proof.LR-narrow.PhysicalScope
 open import proof.LR-narrow.ScopedBehavior
+open import proof.LR-narrow.ScopedFunctionSeal using (module Compatibility)
 open import proof.LR-narrow.FunctionSealCompatibility using
   (related-seals; related-function-reveals-return)
 open import LR-narrow.LogicalRelation using (same-natural)
 open import LR-narrow.World using (core; impreciseStore; preciseStore)
 import proof.LR-narrow.FunctionSealClosureExperiment as C
-import proof.LR-narrow.FunctionSealObservationExperiment as O
 import proof.LR-narrow.ScopeExperiment as First
 
 -- These templates expose just the two runtime names that move under futures.
@@ -105,6 +106,7 @@ private-domain-future (grow p) X Z n
   private-domain-future p (Fin.suc X) (Fin.suc Z) n
 
 module B = Model C.initial C.initial
+module K = Compatibility C.initial C.initial
 
 -- Every argument pair admitted by the natural domain consists of the same
 -- natural, but n is independent of that argument. The returned function is
@@ -173,12 +175,33 @@ bare-closure-return : ∀ n
         (C.public-bare-↠ n) (C.fresh-bare-value n))
 bare-closure-return n = refl
 
+bare-body-return : ∀ n
+  → interpretFrom C.initial 1
+      (C.make-bare · ($ (κℕ n) ↓ seal (Fin.suc Fin.zero) (‵ `ℕ)))
+      ≡ returned (E.result 2 (keep ∷ [])
+        (C.fresh-bare n ↓ seal Fin.zero (‵ `ℕ ⇒ ‵ `ℕ))
+        (C.make-bare-↠ n) (C.fresh-bare-value n ↓ seal))
+bare-body-return n = refl
+
+private-body-return : ∀ n
+  → interpretFrom C.initial 2
+      (C.make-private · ($ (κℕ n) ↓ seal (Fin.suc Fin.zero) (‵ `ℕ)))
+      ≡ returned (E.result 3 (keep ∷ bind (‵ `ℕ) ∷ [])
+        (C.fresh-private n ↓ seal (Fin.suc Fin.zero) (‵ `ℕ ⇒ ‵ `ℕ))
+        (C.make-private-↠ n) (C.fresh-private-value n ↓ seal))
+private-body-return n = refl
+
 makers-observed : ∀ n k
   → B.ObservedComputations (B.arrow B.natural B.natural) root root k
       (C.public-bare · $ (κℕ n)) (C.public-private · $ (κℕ n))
-makers-observed n k = B.observed-from-returns
-  {S = root} {T = root} {gasᴵ = 3} {gasᴾ = 4}
-  (bare-closure-return n) (O.private-closure-return n 0) (closures-related n k)
+makers-observed n k = K.observed-function-seals B.natural
+  (B.arrow B.natural B.natural) {S = root} {T = root}
+  (Fin.suc Fin.zero) (Fin.suc Fin.zero) Fin.zero Fin.zero
+  (S-bind∋ (Z∋ refl) refl) (S-bind∋ (Z∋ refl) refl) (Z∋ refl) (Z∋ refl)
+  C.make-bare-value C.make-private-value ($ (κℕ n)) ($ (κℕ n))
+  C.make-bare-⊢ C.make-private-⊢ (⊢$ (κℕ n)) (⊢$ (κℕ n))
+  (B.observed-from-returns {S = root} {T = root} {gasᴵ = 1} {gasᴾ = 2}
+    (bare-body-return n) (private-body-return n) (body-results-related n k))
 
 -- The original raw-store counterexample is now related without lowering
 -- either result scope. This is a computation test, not a universal-type

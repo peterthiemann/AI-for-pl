@@ -521,7 +521,9 @@ witnesses, without changing the live logical relation:
   comes from the constructed semantic model rather than an ad hoc
   relation on these two functions.
 - `makers-observed` proves all three observation clauses for the public
-  maker computations at every index in their initial scopes. This is an
+  maker computations at every index in their initial scopes. It now derives
+  that observation from the abstract bodies using general function-seal
+  compatibility, rather than directly comparing the public returns. It is an
   `ObservedComputations` witness, not yet a `ScopedComputations` witness
   for makers placed under arbitrary prior allocations.
 - `literal-wrapper-observed` accepts the original bare/wrapped literal
@@ -533,6 +535,91 @@ tests: two known interpreter returns with related results at index `k`
 imply the three observation clauses at `k`. Fuel-independent uniqueness
 identifies all later observed returns; downward closure supplies the
 residual index, and terminal uniqueness excludes left blame.
+
+## General scope-aware function-seal compatibility
+
+`proof/LR-narrow/ScopedFunctionSeal.agda` proves the general bridge within
+the fixed-root model. Let the root entries at `Xᴵ`, `Xᴾ` be `Aᴵ`, `Aᴾ`,
+and those at `Yᴵ`, `Yᴾ` be `Bᴵ`, `Bᴾ`, where `A` and `B` are semantic
+types. The endpoints may have different physical scopes `S` and `T`.
+
+`function-seals-related`: if `F` and `G` are related at index `k` at
+
+    arrow (nominal A Xᴵ Xᴾ) (nominal B Yᴵ Yᴾ),
+
+then the following values are related at `arrow A B`, at the same index
+and in the same physical scopes:
+
+    F ↑ (seal (S Xᴵ) (S Aᴵ) ↦↑ unseal (S Yᴵ) (S Bᴵ))
+    G ↑ (seal (T Xᴾ) (T Aᴾ) ↦↑ unseal (T Yᴾ) (T Bᴾ)).
+
+Every nominal type above includes its actual root-lookup proofs. There is
+no hypothesis saying the functions are identities, have balanced wrapper
+syntax, terminate, or return root-scoped syntax. Their bodies may allocate
+independently, return newly created closures, or blame. As with every
+compatibility lemma, their abstract behavior must already be related; the
+theorem does not claim that arbitrary typed functions are related.
+
+### Interpreter and observation bridge
+
+`FunctionSealObservation.agda` now also proves:
+
+- `unseal-return-expand`: if the interpreter returns
+  `U ↓ seal (χY) (χB)` from `M` with history `χ`, then the interpreter
+  returns the same `U` from `M ↑ unseal Y B`, with history
+  `χ ++ [keep]`. The return fuel is existential; the context, payload, and
+  history are exact. The proof assembles the existing evaluation frames.
+- `unseal-blame-invert`: if `Σ(Y) = B`, `M : Y` is closed, and
+  `M ↑ unseal Y B` blames at fuel `n`, then `M` blames at some fuel
+  `b ≤ n`. If instead its operand phase returned, preservation and
+  canonical forms would give a matching seal; terminal uniqueness excludes
+  blame from that matching unseal. Thus this is not an assumed blame rule.
+
+`observed-unseals` applies these facts and the earlier return inversion
+to prove all three observation clauses. It decodes an observation at
+`nominal B Xᴵ Xᴾ` into an observation at `B`. On each observed return,
+the body runs at fuel `b ≤ n`; downward closure changes its residual
+index from `k−b` to `k−n`. On the matching endpoint, frame assembly
+supplies the required interpreter run. A permitted precise blame is
+propagated through its unseal; a left blame is first inverted, passed
+through the body observation, and then propagated on the right.
+
+`advance-variable` and `advance-type` equate the runtime transport of root
+names and types with their readings in the result scope. `advance-keep`
+proves that the suffix `keep` leaves exactly the same physical scope.
+These equations normalize the boundary without lowering returned terms.
+
+`observed-pure-steps` adds the initial function-reveal step at both
+endpoints, preserving the same observation index. Together these give
+`observed-function-seals`, a general computation theorem from related
+abstract-body computations to related public applications.
+
+Finally, `function-seals-related` obtains the body observation from the
+abstract arrow clause, at every independent future and every `j < k`.
+The nominal input clause seals the related arguments; the computation
+theorem supplies the public calls. The body relation is therefore derived
+from the model, not added as an assumed compatibility field.
+
+### Regressions through the general theorem
+
+`ScopedBehaviorExperiment.makers-observed` now uses the general computation
+theorem on the non-identity maker bodies, including the private allocation
+and the returned function that retains its private seal. The body-result
+relation is the model's nominal lifting of its arrow relation.
+
+`ScopedFunctionSealExperiment.agda` separately instantiates the **value**
+theorem. The abstract function `λx:X. n ↓ seal X ℕ` is related to itself
+at every index and under all independent future allocations. Its public
+reveal is consequently related at `ℕ ⇒ ℕ`. Complete reduction chains and
+interpreter equalities show that applying it to any `m` returns `n` in
+three steps, so this is not an identity-body test.
+
+The same module proves relatedness when the precise abstract function is
+`λx:X. blame`, both with a constant left function and with a blaming left
+function. `observed-from-right-blame` justifies the abstract observations
+using an actual right blame run and terminal uniqueness. Exact public
+three-step blame runs are checked, and `forward-blame-through-compatibility`
+invokes the forward-blame clause obtained from the general value theorem.
 
 ## Conclusion and next critical path
 
@@ -554,21 +641,23 @@ its escaping non-identity closure inhabit the new observation and value
 relations. No new counterexample was found in this step. This supports
 continuing the same behavioral line, without claiming a full LR model.
 
-The next critical step is **general function-seal compatibility for the
-new observation**, using the proved backward decomposition and fuel bound.
-Complete the interpreter-level forward-return/blame assembly and the
-typed blame inversion required by the three observation clauses. Reuse
-the frame machinery and forward trace lemmas. Derive the body-result
-relation from the model's arrow/nominal clauses, rather than introducing
-an assumed compatibility field. The checked maker instance is evidence
-for this bridge, not its general proof.
+General function-seal compatibility now checks for the new observation
+and value relations, including all three observation directions. This
+closes the local bridge identified in the previous checkpoint. It does
+not discharge the live structural reveal cases or the universal wrapper.
 
-Then add visible-root/type-environment extension and universal types;
-the present physical futures cannot promote newly allocated slots into
-that environment. Dynamic types and the full world interpretation also
-remain outside this fragment. Only integrate the replacement into the
-live LR after the general compatibility bridge and the universal-wrapper
-case check.
+The next critical step is **visible-root/type-environment extension**.
+The present physical futures retain allocations but cannot make a newly
+allocated slot available to the semantic type environment. Define that
+extension explicitly across independently grown physical stores and prove
+that existing semantic types are stable under it. Test the extension with
+the unmatched private allocation followed by a paired visible allocation;
+the old private seal must remain usable throughout.
+
+Then construct universal types and prove the absent-slot universal-wrapper
+case. Dynamic types and the full world interpretation also remain outside
+this fragment. Do not integrate the replacement into the live LR before
+the universal-wrapper case checks.
 
 General evaluation transport, full universal-wrapper closure, and the four
 `RevealObligations` remain open. No live obligation has been discharged by

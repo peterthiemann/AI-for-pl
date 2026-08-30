@@ -79,4 +79,6 @@ import proof.LR-narrow.FunctionSealObservationExperiment
 -- proved index/future invariants, and non-identity private-seal closures.
 import proof.LR-narrow.PhysicalScope
 import proof.LR-narrow.ScopedBehavior
+import proof.LR-narrow.ScopedFunctionSeal
 import proof.LR-narrow.ScopedBehaviorExperiment
+import proof.LR-narrow.ScopedFunctionSealExperiment
