@@ -207,6 +207,32 @@ This proof is identity-specific. In particular, it does not establish
 membership of the dynamic injection producer, a general reveal-wrapper
 closure theorem, or arbitrary body conversion compatibility.
 
+`IntegratedLocalUniversalIdentityExperiments` eliminates the new universal
+membership through its `instantiate` field, first at the future-created
+nominal function code `X⇒X,Y⇒Y`, and then at the precise-only function
+code with endpoints `ℕ⇒ℕ,Y` and representation `Y↦ℕ⇒ℕ`. The first
+test introduces its argument scopes only after starting from the empty
+roots. The second keeps the pre-existing precise-only slot when the
+universal call allocates its fresh paired names.
+
+The following fully-applied companions have typing and exact evaluator
+results; here `idA = λx:A.x`:
+
+| Initial slots | Whole program | Result and steps |
+|---|---|---|
+| `X↦ℕ` | `(I[X⇒X] idX (7 ↓ seal X ℕ)) ↑ unseal X ℕ` | `7`, six steps, one additional allocation. |
+| None | `I[ℕ⇒ℕ] idℕ 7` | `7`, five steps, one additional allocation. |
+| Precise-only `Y↦ℕ⇒ℕ` | `(I[Y] (idℕ ↓ seal Y (ℕ⇒ℕ)) ↑ unseal Y (ℕ⇒ℕ)) 7` | `7`, six steps, one additional allocation. |
+
+The last two rows use the different endpoints of the same admissible code.
+These runs supplement the all-future membership theorem; they do not replace
+its quantification with sampled inputs. R18's unequal-natural rejection and
+the occupied-erasure negative control remain checked in the same aggregate.
+
+The identity proof checkpoint is `1cd0d47d`. The follow-up regression
+checkpoint includes this module in the full Agda MCP aggregate and
+independent `make check`, with no new holes, postulates, or proof escapes.
+
 ## Verification and remaining work
 
 All local modules are included in `LR-narrow/LRNarrowAll.agda`. The complete
@@ -222,9 +248,10 @@ experimental world changed only to generalize precise-only allocation;
 scope transport laws were added to support local anchors.
 
 The interface revision is complete within the stated finite code grammar.
+The occurring-binder identity is now proved within that grammar as well.
 The next substantive work is a guarded, fixed interpretation for general
 dynamic and universal payloads, together with compatibility and membership
 for the binder-dependent producer `Λα.λx:α.x⟨α!⟩`. Its former root-endpoint
 obstruction is removed, but its arbitrary-code membership is not proved by
-the constant-body witness. General body conversions, recursive cast
+the constant-body or identity witnesses. General body conversions, recursive cast
 continuation, and the bridge to CTI/fundamental-property assembly remain.
