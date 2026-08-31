@@ -97,6 +97,21 @@ tag steps, not the live LR's open cast obligations.
 the same result for **arbitrary observed operand computations**, including
 allocating operands. Its frame transports the real consistency environment.
 
+`IntegratedNominalProjection.matched-query-observed` proves the value-level
+nominal boundary premise. If `Matched W X Y`, both query names have direct
+`ℕ` representation, and the input packets are `dataDynamic`-related, then
+`Vᴵ⟨X?⟩ ↑ unseal X ℕ` and `Vᴾ⟨Y?⟩ ↑ unseal Y ℕ` are observed at
+`natural`. Successful target matching forces the matching source name by
+injectivity. Store lookup uniqueness gives the natural payload, and the
+actual projection and unseal steps return the shared number. Other cases
+produce precise blame; disjointness excludes a precise-only packet from
+matching an occupied query.
+
+Arbitrary sealing-chain packets are covered in the mismatch branches. The
+query's own representation is still restricted to direct `ℕ`. This theorem
+does not yet lift nominal queries over arbitrary operand computations or
+decode a matched alias chain.
+
 ### Escaping producer: `E13` and `E15` before projection
 
 `IntegratedEscapingProducer` examines `F = Λα.λx:α.x⟨α!⟩` before the final
@@ -121,6 +136,19 @@ recovers the complete E13/E15 observation through the common semantic model.
 This is an integrated producer/nominal/frame test. It is stronger than merely
 checking the final observations, but weaker than relating the universal at
 every instantiation type or proving the fundamental property.
+
+`IntegratedProducer.adapters-related` additionally relates the returned
+functions at `arrow natural dataDynamic`: the two-layer `X↦ℕ, Y↦X` adapter
+and the one-layer `Z↦ℕ` adapter, assuming `Matched W Y Z`. This is proved
+for every index, every future world, and every related natural argument.
+The lifted evaluator equations return after five and three keep steps,
+respectively, and `dataDynamic`'s future-closure theorem supplies the packet
+evidence. There is no assumed adapter-compatibility field.
+
+The producer module's `payload-family` proves the result-type equalities;
+it does **not** supply a `NaturalUniversalValues` inhabitant. Keeping that
+distinction explicit prevents the successful adapter test from being reported
+as full universal compatibility.
 
 ### Active negative controls
 
@@ -150,9 +178,11 @@ general dynamic or universal clauses.
 |---|---|---|
 | `IntegratedDataExperiments` | Same-name packets, distinct same-representation names, occupied-erasure exclusion, positive precise-only erasure, unequal payload rejection even at zero, missing-capability rejection, and arguments created in a future world. | A general interpretation of all dynamic payloads. |
 | `IntegratedProjection` | Natural query of all related data packets and arbitrary observed operands, at all indices. | Expanded projections, bottom casts, or general nominal-query/unseal compatibility. |
+| `IntegratedNominalProjection` | Matched direct-natural nominal query and unseal of all related data packets, with alias-packet mismatch and precise-only exclusion. | Aliased query representations or arbitrary operand computations. |
 | `IntegratedFrameComposition` | Three-direction composition with actual post-run worlds and histories. | The missing primitive boundary premises. |
 | `IntegratedSuite` | E1–E5, E13–E24, N1/N2 interpreted by the same `Observed natural`, at every index. | Primitive compatibility from their final data/blame outcomes. |
 | `IntegratedEscapingProducer` | E13/E15 calls related at `dataDynamic` with actual fresh post-run capabilities, then composed with natural projection. | A full universal value relation or arbitrary producer bodies. |
+| `IntegratedProducer` | Returned one-/two-layer adapter functions related at `arrow natural dataDynamic`, for all indices, futures, and related natural arguments. | Membership of the originating universals in `naturalUniversal`. |
 | Existing nominal/replacement controls | E6–E12 retain their typing, evaluator, non-value, and impossible-type-relation results. | New integrated observations for the type-level impossibility statements. |
 | Existing historical regression target | Ground-cast and occupied-slot projection counterexamples still check. | Closing the new model's expanded/bottom cast cases. |
 
@@ -183,3 +213,45 @@ the fact that both complete programs return the same number.
 The appropriate acceptance criterion is therefore a checked integrated
 fragment with specific semantic boundary proofs and preserved regressions,
 not a declaration that the full candidate architecture is already sound.
+
+## Assessment and next gate
+
+The combined direction has a nonempty working model, semantic packet and
+function witnesses, and a reusable composition theorem whose natural-query
+premise is actually discharged. It is no longer merely three compatible
+informal constraints. The evidence supports continuing with one architecture
+containing `A`, `B`, and `C′`; it does not support replacing the live LR yet.
+
+The next focused producer gate is to inhabit `naturalUniversal` for the
+concrete payload producer and its identity-universal wrapper, at arbitrary
+future scopes. Reuse the checked adapter function theorem, but prove the
+instantiation/allocation prefix and its post-run world uniformly. That closes
+the explicit gap between a successful concrete call and universal membership.
+
+After that, a general `★` payload interpretation, arbitrary instantiation
+types/bodies, and the old-world/CTI bridge remain substantive design work.
+Their statements must preserve these regressions and discharge real
+compatibility premises. Neither the repeated whole-run suite nor the
+natural-only universal interface supplies those results automatically.
+
+## Verification and checkpoints
+
+The completed experiment passes:
+
+- The Agda MCP aggregate load of `LR-narrow/LRNarrowAll.agda`, with no
+  remaining goals, invisible metavariables, or error diagnostics.
+- Independent `make -C GTSFImp-Interpreter check`, including the interpreter,
+  narrow/widen isomorphism, full LR aggregate, and both historical regression
+  targets.
+- A scan of the new proof modules for holes, postulates, and termination or
+  positivity escapes, plus `git diff --check`.
+
+The live imprecision, reduction, CTI, computation relation, and value relation
+files are unchanged from the starting checkpoint `c8c37038`. The only change
+to an existing cast proof is the operational-lemma extraction noted above.
+
+Successful milestones were committed and pushed separately: kernel and
+worlds (`dae52c3d`), data/frame/query compatibility (`9b5c442b`), escaping
+producer packets (`a550b089`), and finally all-futures adapter compatibility
+and direct-natural nominal queries. No counterexample to the implemented
+fragment was found; the broader obligations listed above remain unvalidated.

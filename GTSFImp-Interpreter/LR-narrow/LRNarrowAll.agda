@@ -157,3 +157,6 @@ import proof.LR-narrow.IntegratedFrameComposition
 import proof.LR-narrow.IntegratedProjection
 import proof.LR-narrow.IntegratedSuite
 import proof.LR-narrow.IntegratedEscapingProducer
+import proof.LR-narrow.IntegratedProducerSteps
+import proof.LR-narrow.IntegratedProducer
+import proof.LR-narrow.IntegratedNominalProjection
