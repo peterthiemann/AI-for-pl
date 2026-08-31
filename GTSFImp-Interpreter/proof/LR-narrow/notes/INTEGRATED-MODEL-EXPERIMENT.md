@@ -356,3 +356,62 @@ or carry the relevant proved interpretation coherence. Endpoint equality
 alone cannot supply it. Arbitrary relations for abstract type variables
 are not ruled out; identifying such a relation with the canonical meaning
 of an exposed concrete base type is the invalid step.
+
+## Generalization gate: future-fresh instantiation types
+
+`FreshInstantiationObstruction` proves a second, independent obstruction.
+Start with empty physical roots, then allocate `X↦ℕ` on the imprecise side.
+The concrete producer `F = Λα.λx:α.x⟨α!⟩` can be instantiated at this
+fresh name, with the ordinary typing judgment `F[X] : X⇒★`.
+
+However, the current `SemanticType` source endpoint is a type `B` in the
+**empty root**. There is no such `B` with `scopeTy S B = X⇒★`, where
+`S = allocate root ℕ`. Structural inversion reduces that equation to a
+closed root type scoping to `X`, which is impossible. This proves that
+merely changing the argument in `NaturalUniversalValues` from `ℕ` to an
+arbitrary later type cannot work while its result family keeps root-fixed
+`SemanticType` endpoints.
+
+The counterexample includes typing and exact evaluation of `F[X]`, not
+just a hypothetical type equation. A fully-applied companion supplies an
+`X`-sealed natural, executes the producer, and consumes the dynamic result
+in `λd:★.n`; it returns `n` in five steps. That consumer deliberately does
+not inspect the packet and is not evidence of general query compatibility.
+
+This does not refute full universal semantics or `A+B+C′`. Anchoring the
+result meaning at the current scopes, or changing the endpoint interface
+equivalently, can express `X⇒★`. Simply rebasing physical roots is not yet
+a solution: old `Matched` and `PreciseOnly` capabilities must survive, and
+the current integrated model has no general capability-preserving rebase.
+
+### Requirements for a reviewed semantic extension
+
+The semantic generalization is stopped at this interface boundary. No
+general dynamic relation or arbitrary-instantiation membership is claimed.
+The next implementation needs **both** scope-local result meanings and a
+fixed, coherent interpretation of payload/argument codes. Small codes are
+a possible way to name interpretations without existentially selecting
+an arbitrary `Set₁` semantic record; their denotation and recursive
+compatibility proofs remain to be built. These are requirements, not a
+newly validated full LR design.
+
+The old regression audit imposes the following additional constraints:
+
+| Regression gate | Requirement on that extension |
+|---|---|
+| R1–R5, R9, R13; E1–E5, E8, E13–E23 | Retain independent physical histories and private names in closures; quantify over later-created arguments. Moving the meaning's anchor must not lower syntax or freeze witnesses. |
+| R6, R7, R10 | Keep all three observation clauses and independent fuel. In particular, do not put every nominal payload one index lower: precise-only elimination has no imprecise step to fund that loss. |
+| R8; E6–E8, N1/N2 | Preserve old capabilities and argument variance when introducing a fresh argument meaning. Do not derive nominal matches from equal representations. |
+| R11; occupied-erasure control | Keep `Matched` and `PreciseOnly` disjoint, including for function, universal, and dynamic-in-dynamic payloads. |
+| R12, R14; E9–E12 | Carry the actual pending computation and target-body relation; neither endpoint syntax nor replacement can reconstruct them. |
+| R15, R17; E24 | Retain actual ground/consistency checks, expanded casts, bottom blame, and the order of boundaries. Canonical meanings do not justify boundary cancellation. |
+| R16 | Supply a checked well-founded construction. Arbitrary substitution can enlarge a universal body; canonical syntax codes alone do not solve recursive cast continuation. |
+| R18 | Concrete endpoint equality must not identify an arbitrary payload relation with the canonical interpretation. |
+| R19 | Future-local argument/result types must be expressible without a nonexistent closed-root preimage. |
+
+The active counterexample search has already rejected the two simplest
+extensions (R18/R19). The proposed requirements do not discard or weaken
+any existing regression, but this audit is **not** a proof that a future
+canonical, scope-local implementation will pass them. Higher-order,
+universal, dynamic-in-dynamic, expanded-cast, and higher-order precise-only
+payloads remain required adversarial tests of that implementation.
