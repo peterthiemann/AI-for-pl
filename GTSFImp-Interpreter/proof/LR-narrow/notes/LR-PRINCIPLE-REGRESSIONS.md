@@ -304,6 +304,7 @@ status, so a new design cannot accidentally resurrect them.
 | R17 | Function consistency mistaken for precision; bottom and expanded projections | [GroundCastTargetExamples](../../../../GTSFImp/proof/DGG/GroundCastTargetExamples.agda) refutes dropping the `A ⊑ ★` premise. Live cast proofs distinguish expanded inner ground checks and precise bottom-introduction blame. A new cast argument must retain those branches. |
 | R18 | Choose an arbitrary semantic payload meaning with endpoints `ℕ, ℕ` | [ExistentialPayloadCounterexample](../ExistentialPayloadCounterexample.agda) constructs a complete `SemanticType` relating `0` to `1`, but proves their tag/project computations unrelated at `Observed natural W 2` in the empty root world. Actual payload relatedness plus endpoint equality does not identify the canonical type interpretation. |
 | R19 | Instantiate the payload producer at a future-fresh nominal `X` | [FreshInstantiationObstruction](../FreshInstantiationObstruction.agda) proves `F[X] : X⇒★`, with evaluator companions, but no closed root type can scope to `X⇒★`. Arbitrary instantiation requires changing the current root-fixed result-meaning interface; the obstruction is not against full universal semantics. |
+| R20 | Choose a fixed payload code, then decode by endpoint equality into another code | [FixedCodeCounterexample](../FixedCodeCounterexample.agda) gives two codes at the same nominal endpoints. One argument code is inhabited; the other requires a precise-only capability forbidden by a persistent match, so its arrow vacuously relates `λx.0` and `λy.1` at every index. Matching nominal packet projections preserve the exact code but cannot produce the separate reader meaning; project–unseal–apply returns `0,1`. Fixed interpretation alone does not establish cross-code coherence. |
 
 ## Candidate shortcuts rejected before proposing a design
 
@@ -322,6 +323,7 @@ status, so a new design cannot accidentally resurrect them.
 | After several successful crossings, choose nominal matches by the current representation | N1/N2, strengthening E6–E8 | Reject. The old `X` query succeeds and the equally represented `Y` query fails after allocation and three mixed cycles. |
 | Choose any `SemanticType` witnessing the payload pair, constrained only by endpoint types | R18 | Reject. All current semantic invariants can hold for a noncanonical relation that equates different naturals. Projection compatibility needs a fixed interpretation or proved coherence with it. |
 | Replace the Nat-only universal argument by an arbitrary later type, keeping root-fixed result meanings | R19 | Reject. The result `X⇒★` after a future allocation has no closed-root preimage. The result meaning must be able to refer to current-scope types. |
+| Choose any fixed-code payload witness, then recode using only equal endpoints and matching outer tags | R20 | Reject. A capability conflict inside an arrow domain makes its call obligation vacuous in every future. Preserve the exact code or prove the needed producer/consumer coherence; an outer capability check is insufficient. |
 
 ## Reviewable LR direction
 
@@ -446,6 +448,7 @@ unimplemented combined LR satisfies the fundamental property.
 | R17 | Blame remains an observation. | Preserve the ground/consistency guard. | Expanded and bottom cast cases must be proved explicitly. |
 | R18 | Physical histories do not select type interpretations. | Require a fixed payload meaning or proved interpretation coherence, not an unrestricted existential semantic record. | Endpoint equality alone does not justify projection compatibility. |
 | R19 | Result meanings must refer to types at the current physical scopes. | Re-anchoring must preserve existing nominal capabilities. | The Nat-only root-fixed family is insufficient for `F[X]` at a future-fresh name. |
+| R20 | Actual return uniqueness rules out repairing unequal results by choosing different fuel. | Capabilities affect codes inside arrow domains, not just positive outer seals. | Fixed-code existential membership and endpoint agreement do not justify changing to a consumer code. Exact-code projection is a checked positive control. |
 | E1–E5 | Independent fuel and physical histories retained. | Private names are not lowered out of closures. | Identity universal wrappers remain computations, not definitional identities. |
 | E6–E9 | Delayed failure is observed; pending terms may reduce. | Nominal equality is not representation equality. | No pending-value or successful-query shortcut. |
 | E10–E12 | Scope separation does not imply a missing type relation. | Distinct old/fresh names are not identified. | Explicit target-body meaning remains required. |
@@ -528,6 +531,14 @@ types and bodies remain outside this interface. The experiment report records
 the exact statement and the additional future/packet-query regressions.
 
 ## Verification and keeping the regressions live
+
+The fixed-code generalization audit adds R20, documented in
+[Fixed-code coherence obstruction](FIXED-CODE-COHERENCE-OBSTRUCTION.md).
+The finite scope-local kernel and all-code identity theorem remain valid.
+The next general-dynamic implementation is paused at producer/consumer
+code coherence; no new admissibility predicate or coherence theorem is
+claimed. Both the new negative projection theorem and its all-index
+exact-code positive control are included in the aggregate.
 
 The new proof modules are imported by `LR-narrow/LRNarrowAll.agda`.
 `make -C GTSFImp-Interpreter check` also runs the

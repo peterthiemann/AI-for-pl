@@ -186,3 +186,7 @@ import proof.LR-narrow.IntegratedLocalIdentitySteps
 import proof.LR-narrow.IntegratedLocalIdentity
 import proof.LR-narrow.IntegratedLocalUniversalIdentity
 import proof.LR-narrow.IntegratedLocalUniversalIdentityExperiments
+
+-- Fixed syntax alone does not justify same-endpoint payload recoding.
+import proof.LR-narrow.FixedCodeCounterexampleTerms
+import proof.LR-narrow.FixedCodeCounterexample

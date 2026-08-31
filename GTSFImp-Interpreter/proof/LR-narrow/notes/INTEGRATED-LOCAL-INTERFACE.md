@@ -81,6 +81,11 @@ Codes with nominal endpoints still require their explicit capability at
 the world where membership is asserted; equal store representations do
 not create a match.
 
+This base-endpoint result is not general same-endpoint code coherence.
+R20, below, gives fixed codes with identical nominal endpoints and
+different meanings. The distinction can occur inside an arrow domain,
+where no positive argument membership need ever be supplied.
+
 `reanchor p q A` moves the endpoints to the current scopes while
 preserving `A`'s relation over the **same** worlds. Its relation uses path
 composition, and membership is equivalent in both directions at the new
@@ -235,6 +240,32 @@ independent `make check`, with no new holes, postulates, or proof escapes.
 
 ## Verification and remaining work
 
+### Fixed-code coherence preflight
+
+The next general-dynamic audit found R20, mechanized in
+`FixedCodeCounterexample` with typed operational companions in
+`FixedCodeCounterexampleTerms`. The
+[full counterexample](FIXED-CODE-COHERENCE-OBSTRUCTION.md) gives codes
+`a,b : Code S T X Y`: `a` has related arguments, but `b` requires a
+precise-only capability forbidden by the world's persistent `X,Y` match.
+Thus `b⇒ℕ` relates `λx.0,λy.1` vacuously at every index, while `a⇒ℕ`
+rejects them at index `3`.
+
+Matched nominal function packets carry those functions with actual
+`packetCode` membership. Their matching projections preserve observation
+at that exact code for every index, but cannot produce observation at a
+same-endpoint `readerCode` at index `4`. Fully applying the projected,
+unsealed functions returns `0,1` in three steps. Endpoint agreement,
+fixed interpretation, and an outer tag match are therefore insufficient
+to replace the producer's code by a consumer's code.
+
+This does not refute exact-code elimination or the previously proved
+identity membership. No calculus or semantic definition was changed.
+The general dynamic extension stops at this new coherence obligation;
+adding recursive dynamic/universal codes does not itself solve it.
+
+### Verification and next obligation
+
 All local modules are included in `LR-narrow/LRNarrowAll.agda`. The complete
 aggregate is checked with Agda MCP (no goals, invisible metavariables, or
 errors), and independent `make check` includes the interpreter, isomorphism,
@@ -249,9 +280,14 @@ scope transport laws were added to support local anchors.
 
 The interface revision is complete within the stated finite code grammar.
 The occurring-binder identity is now proved within that grammar as well.
-The next substantive work is a guarded, fixed interpretation for general
-dynamic and universal payloads, together with compatibility and membership
-for the binder-dependent producer `Λα.λx:α.x⟨α!⟩`. Its former root-endpoint
+The next bounded task is to state and test producer/consumer code coherence
+against R20 and the shared suite. Any world-admissibility restriction must
+inspect arrow domains as well as positive nominal evidence; no such
+restriction is adopted or proved sufficient here.
+
+After that gate, the remaining work includes a guarded interpretation for
+general dynamic and universal payloads, together with compatibility and
+membership for the binder-dependent producer `Λα.λx:α.x⟨α!⟩`. Its root-endpoint
 obstruction is removed, but its arbitrary-code membership is not proved by
 the constant-body or identity witnesses. General body conversions, recursive cast
 continuation, and the bridge to CTI/fundamental-property assembly remain.

@@ -503,3 +503,16 @@ meaning counterexample (`28f29a08`), the fresh-endpoint obstruction
 non-Nat recovery suite/documentation checkpoint. The semantic extension
 remains paused for review of the interface requirements, not declared
 complete on the strength of these operational tests.
+
+### Later continuation: fixed-code coherence
+
+The approved [scope-local interface](INTEGRATED-LOCAL-INTERFACE.md) removed
+the specific R18/R19 interface obstructions and subsequently proved the
+occurring-binder universal identity for its finite code grammar. The
+general-dynamic preflight after `4477c47e` found a further obstruction,
+[R20](FIXED-CODE-COHERENCE-OBSTRUCTION.md): choosing a fixed-code payload
+witness does not justify recoding to a different meaning with the same
+endpoints. Exact-code projection survives, but endpoint-only recoding
+does not. The new checkpoint constructs that counterexample and stops
+before extending the dynamic relation; producer/consumer coherence is the
+next explicit obligation.
