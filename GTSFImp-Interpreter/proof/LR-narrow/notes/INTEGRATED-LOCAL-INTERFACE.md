@@ -53,6 +53,63 @@ This change alone does not extend `dataDynamic`: that relation still
 requires its actual natural-payload evidence. Capability allocation and
 payload semantics remain separate obligations.
 
+## Fixed code interpretation
+
+`IntegratedLocalCodes.Code S T A B` has the following complete grammar.
+The interpretation `denote` is a recursive function, not a caller-supplied
+relation.
+
+| Code | Endpoints | Related values at index `k` |
+|---|---|---|
+| `base-code ι` | `ι,ι` | Equal constants of base type `ι`. |
+| `data-code` | `★,★` | The existing `DynamicValues`, including its actual natural-payload evidence. |
+| `arrow-code a b` | `AI⇒BI,AP⇒BP` | Typed function values that take every related argument at every future world and `j < k` to `Observed (denote b)` at `j`. |
+| `paired-code entryI entryP a` | `X,Y` | Exact seals of payloads related by `denote a` at `k`, and `Matched W X Y`. The entries identify both representations. |
+| `precise-code entryP a` | `AI,Y` | An unsealed imprecise payload and its precise seal, related by `denote a` at `k`, and `PreciseOnly W Y`. The entry identifies the precise representation. |
+
+Each interpretation proves valuehood, local endpoint typing, index
+downward closure, and future closure. In particular, neither nominal
+constructor subtracts an index from its payload. These constructors do
+not claim that arbitrary conversion computations preserve membership.
+
+If `a : Code S T ℕ ℕ` and `related (denote a) p q W k U V`, then
+`U,V` are the same natural constant. Consequently no code, even one
+chosen existentially, relates `0` to `1` at these endpoints. This is
+`natural-code-values` and `different-naturals-rejected`; it excludes R18's
+arbitrary-record witness. There is no constructor importing a `Meaning`.
+Codes with nominal endpoints still require their explicit capability at
+the world where membership is asserted; equal store representations do
+not create a match.
+
+`reanchor p q A` moves the endpoints to the current scopes while
+preserving `A`'s relation over the **same** worlds. Its relation uses path
+composition, and membership is equivalent in both directions at the new
+anchor. `reanchor-observed` preserves all three observations. This is an
+operation on meanings, not permission to inject one into the code grammar.
+
+## Universal interface at future-local codes
+
+`IntegratedLocalUniversal.Family S₀ T₀ CI CP` supplies a result **code**
+for every later pair of scopes and argument code `a : Code S T RI RP`:
+
+`result p q a : Code S T ((liftBody p CI)[RI]) ((liftBody q CP)[RP])`.
+
+If `U,V` belong to `universal F` at `p,q,W,k`, then for every future
+`r,s,W′`, every `j < k`, and every argument code at those future scopes,
+the actual type applications satisfy `Observed (denote (result F (p;r)
+(q;s) a)) stay stay W′ j`. Both terms use the displayed, lifted bodies
+and actual instantiation types. Thus argument and result types may contain
+names allocated after the original roots; they need no root preimage.
+The implementation proves downward closure and future closure by composing
+the same scope paths and world evolutions.
+
+This interface tests every argument in the displayed grammar, not every
+`Ty`. In particular, `data-code` does not add function/universal dynamic
+payloads, and there is no universal constructor in `Code` yet.
+`universal F` is a meaning built above that grammar. Returning a code
+removes arbitrary semantic-record choice, but constructing `F` and proving
+membership for a particular polymorphic body remain proof obligations.
+
 ## Acceptance boundaries
 
 The code layer must not accept an arbitrary `Meaning` or `SemanticType`

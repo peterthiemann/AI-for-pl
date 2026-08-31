@@ -394,6 +394,12 @@ the current integrated model has no general capability-preserving rebase.
 
 ### Requirements for a reviewed semantic extension
 
+The user subsequently approved the
+[scope-local semantic interface revision](INTEGRATED-LOCAL-INTERFACE.md).
+That note records its implementation and acceptance limits. The following
+assessment describes the boundary at the earlier checkpoint, and its
+regression requirements continue to apply.
+
 The semantic generalization is stopped at this interface boundary. No
 general dynamic relation or arbitrary-instantiation membership is claimed.
 The next implementation needs **both** scope-local result meanings and a

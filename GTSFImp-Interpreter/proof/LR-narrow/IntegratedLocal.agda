@@ -15,11 +15,10 @@ open import Data.Product using (_×_; _,_; ∃-syntax)
 open import Data.Sum using (_⊎_; inj₁; inj₂)
 open import Function.Base using (case_of_)
 open import Relation.Binary.PropositionalEquality
-  using (_≡_; refl; sym; cong) renaming (subst to subst≡; subst₂ to subst₂≡)
+  using (_≡_; refl; sym) renaming (subst to subst≡; subst₂ to subst₂≡)
 
 open import Types
 open import TyStore
-open import TermCtx using (Z)
 open import CastTerms
 open import Primitives using (κℕ; κ𝔹)
 open import Interpreter
@@ -31,7 +30,6 @@ open import proof.LR-narrow.Application
   using (eval-from-return; eval-from-blame; value-return-exact)
 open import proof.LR-narrow.TargetEvaluation
   using (return-result-unique; eval-terminal-unique)
-open import proof.LR-narrow.ScopedIdentity using (identity-return; lift-identity)
 open import proof.LR-narrow.PhysicalScope
 import proof.LR-narrow.IntegratedWorld as IW
 

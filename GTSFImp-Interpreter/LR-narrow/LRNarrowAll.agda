@@ -174,3 +174,7 @@ import proof.LR-narrow.GeneralInstantiationExperiments
 
 -- Scope-local semantic interface, retaining original nominal worlds.
 import proof.LR-narrow.IntegratedLocal
+import proof.LR-narrow.IntegratedLocalStructure
+import proof.LR-narrow.IntegratedLocalNominal
+import proof.LR-narrow.IntegratedLocalCodes
+import proof.LR-narrow.IntegratedLocalUniversal
