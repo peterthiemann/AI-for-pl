@@ -151,3 +151,8 @@ import proof.LR-narrow.RepeatedBoundaryControls
 import proof.LR-narrow.IntegratedWorld
 import proof.LR-narrow.IntegratedModel
 import proof.LR-narrow.IntegratedSteps
+import proof.LR-narrow.IntegratedData
+import proof.LR-narrow.IntegratedDataExperiments
+import proof.LR-narrow.IntegratedFrameComposition
+import proof.LR-narrow.IntegratedProjection
+import proof.LR-narrow.IntegratedSuite
