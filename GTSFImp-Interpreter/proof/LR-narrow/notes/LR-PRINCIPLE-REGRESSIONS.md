@@ -444,6 +444,8 @@ unimplemented combined LR satisfies the fundamental property.
 | R15 | Does not restore alias syntax. | Grounds, not arbitrary target shapes, control tags. | No target-shape uniqueness premise. |
 | R16 | No circular same-run continuation. | No hidden index loss. | Producer proof must be checked without termination escapes. |
 | R17 | Blame remains an observation. | Preserve the ground/consistency guard. | Expanded and bottom cast cases must be proved explicitly. |
+| R18 | Physical histories do not select type interpretations. | Require a fixed payload meaning or proved interpretation coherence, not an unrestricted existential semantic record. | Endpoint equality alone does not justify projection compatibility. |
+| R19 | Result meanings must refer to types at the current physical scopes. | Re-anchoring must preserve existing nominal capabilities. | The Nat-only root-fixed family is insufficient for `F[X]` at a future-fresh name. |
 | E1–E5 | Independent fuel and physical histories retained. | Private names are not lowered out of closures. | Identity universal wrappers remain computations, not definitional identities. |
 | E6–E9 | Delayed failure is observed; pending terms may reduce. | Nominal equality is not representation equality. | No pending-value or successful-query shortcut. |
 | E10–E12 | Scope separation does not imply a missing type relation. | Distinct old/fresh names are not identified. | Explicit target-body meaning remains required. |

@@ -229,6 +229,10 @@ general dynamic or universal clauses.
 | `IntegratedProducer` | Returned one-/two-layer adapter functions related at `arrow natural dataDynamic`, for all indices, futures, and related natural arguments. | Membership of the originating universals in `naturalUniversal`. |
 | `IntegratedUniversal` | Actual `naturalUniversal` membership for the bare producer pair and the identity-reveal wrapper/bare pair, at every world and index, using uniform allocation prefixes. | Universal compatibility for arbitrary type arguments or bodies. |
 | `IntegratedUniversalExperiments` | Membership for the original shared-suite terms, instantiation after unequal futures, preservation of old capabilities, and successful emitted-packet decoding for every natural input. | General alias-query compatibility or a new universal clause. |
+| `GeneralInstantiationSteps` | Exact, typed producer/wrapper allocation prefixes for every `R : Ty Δ`, including open nominal arguments. | Arbitrary-instantiation semantic membership or general payload compatibility. |
+| `GeneralInstantiationExperiments` | Six typed post-prefix executions recovering function, dynamic, and universal payloads and eliminating each to Nat data. | General query compatibility or new whole-program CTI derivations. |
+| `ExistentialPayloadCounterexample` | A complete noncanonical natural semantic record, and impossibility of tag/project compatibility from its existential witness. | Refutation of canonical interpretations or abstract-variable relations. |
+| `FreshInstantiationObstruction` | A well-typed, executable `F[X]` whose result type has no closed-root preimage. | Refutation of scope-local universal semantics. |
 | Existing nominal/replacement controls | E6–E12 retain their typing, evaluator, non-value, and impossible-type-relation results. | New integrated observations for the type-level impossibility statements. |
 | Existing historical regression target | Ground-cast and occupied-slot projection counterexamples still check. | Closing the new model's expanded/bottom cast cases. |
 
@@ -249,7 +253,11 @@ the fact that both complete programs return the same number.
    install matches for those old root entries.
 3. The natural-instantiation interface is weaker than full universal
    semantics. General producer recursion, type substitution, arbitrary
-   bodies, and the R16 size-growth issue still require a proof.
+   bodies, and the R16 size-growth issue still require a proof. R19 shows
+   that arbitrary future-local result types require changing its root-fixed
+   endpoints; R18 excludes choosing payload meanings solely by endpoint
+   equality. The arbitrary-type operational prefixes do not solve either
+   semantic interface obligation.
 4. The nine open paired cast gates and the one-sided cast obligations in the
    reference matrix are not discharged wholesale. Data-query compatibility
    closes a narrow boundary premise, not all base/variable-dynamic cases.
@@ -443,3 +451,49 @@ They do not establish that arbitrary input payloads are related, install
 new semantic world capabilities, prove general projection compatibility,
 or inhabit an arbitrary-instantiation universal relation. Those claims
 still require the scoped, coherent interpretation discussed above.
+
+### Concrete non-Nat payload recovery
+
+`GeneralInstantiationExperiments` starts from the **actual adapter values
+and stores returned by those prefixes**. Each test applies the adapter to
+a payload, projects the emitted nominal tag, and unseals the payload.
+The bare decoder traverses `Z↦R`; the wrapped decoder traverses
+`Y↦X↦R`. It then eliminates the recovered value to first-order data:
+
+| Instantiation type `R` | Payload | Elimination after recovery | Bare / wrapped steps |
+|---|---|---|---|
+| `ℕ⇒ℕ` | `λx:ℕ.x` | Apply to `n` | `6 / 9` |
+| `★` | `n⟨ℕ!⟩` | Project with `ℕ?` | `6 / 9` |
+| `∀α.α⇒α` | `Λα.λx:α.x` | Instantiate at `ℕ`, then apply to `n` | `9 / 12` |
+
+All six computations return the same arbitrary `n`, with typing and exact
+evaluator witnesses. The counts exclude the already-proved initial
+producer-instantiation prefixes. Function and dynamic tests contain only
+keep steps. Universal recovery has five/eight keeps, one fresh `ℕ`
+allocation, then three keeps; its final store is larger than the decoder's
+initial store. No comparison of equal fuel or silently joined stores is
+used.
+
+These payloads are outside the current `NaturalPayload` fragment: the
+dynamic case contains a dynamic packet inside a nominal seal, and the
+other two contain genuine higher-order values. The tests establish that
+the relevant operational paths work. They are neither inhabitants of a
+generalized `dataDynamic` nor proofs that arbitrary payload relations
+survive those paths.
+
+### Verification of the generalization checkpoint
+
+The four new proof modules are included in `LR-narrow/LRNarrowAll.agda`.
+Agda MCP checks the aggregate with no goals, invisible metavariables, or
+errors, and independent `make check` passes all five targets, including
+both historical cast/projection regressions. No new postulates, holes,
+termination escapes, or positivity escapes were introduced. The live
+calculus/LR and `IntegratedModel`/`IntegratedWorld` are unchanged from
+`fab31006`.
+
+Successful checkpoints were committed and pushed separately: the payload
+meaning counterexample (`28f29a08`), the fresh-endpoint obstruction
+(`195c0869`), arbitrary-type producer prefixes (`91a894ff`), and the final
+non-Nat recovery suite/documentation checkpoint. The semantic extension
+remains paused for review of the interface requirements, not declared
+complete on the strength of these operational tests.

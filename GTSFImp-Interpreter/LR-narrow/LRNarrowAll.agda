@@ -170,3 +170,4 @@ import proof.LR-narrow.FreshInstantiationObstruction
 
 -- Operational producer prefixes at arbitrary instantiation types.
 import proof.LR-narrow.GeneralInstantiationSteps
+import proof.LR-narrow.GeneralInstantiationExperiments
