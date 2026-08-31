@@ -163,3 +163,6 @@ import proof.LR-narrow.IntegratedNominalProjection
 import proof.LR-narrow.IntegratedUniversalSteps
 import proof.LR-narrow.IntegratedUniversal
 import proof.LR-narrow.IntegratedUniversalExperiments
+
+-- Guard against choosing arbitrary payload meanings by endpoint equality.
+import proof.LR-narrow.ExistentialPayloadCounterexample

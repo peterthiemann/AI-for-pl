@@ -302,6 +302,7 @@ status, so a new design cannot accidentally resurrect them.
 | R15 | General alias representative `T = ∀α.α⇒α` has multiple precision target shapes | Historical J.1–J.4. `X ⊑ ★⇒★` and `X ⊑ T` are possible in that alias calculus. The alleged runtime projection counterexample was **withdrawn**: ground readings plus consistency avoidance exclude it. Never replace actual ground/tag agreement by arbitrary target-shape uniqueness. |
 | R16 | Same-index recursive cast continuation; replacement can enlarge the next universal body | Fundamental plan, Findings B/E. The old circular cast proofs were removed; their obligations remain explicit. Neither a termination escape nor recurrence on the replaced type's size is a proof. |
 | R17 | Function consistency mistaken for precision; bottom and expanded projections | [GroundCastTargetExamples](../../../../GTSFImp/proof/DGG/GroundCastTargetExamples.agda) refutes dropping the `A ⊑ ★` premise. Live cast proofs distinguish expanded inner ground checks and precise bottom-introduction blame. A new cast argument must retain those branches. |
+| R18 | Choose an arbitrary semantic payload meaning with endpoints `ℕ, ℕ` | [ExistentialPayloadCounterexample](../ExistentialPayloadCounterexample.agda) constructs a complete `SemanticType` relating `0` to `1`, but proves their tag/project computations unrelated at `Observed natural W 2` in the empty root world. Actual payload relatedness plus endpoint equality does not identify the canonical type interpretation. |
 
 ## Candidate shortcuts rejected before proposing a design
 
@@ -318,6 +319,7 @@ status, so a new design cannot accidentally resurrect them.
 | Treat a pending peel as a value or a mere renaming | E9, E11/E12 / R14 | Reject. A reduction and a semantic body-conversion theorem are needed. |
 | Treat every well-typed boundary stack with equal endpoint types as identity | E24's `ℕ → ★ → 𝔹 → ★ → ℕ` body | Reject. Equal endpoints do not eliminate an intermediate failing check. This does not refute a properly restricted inverse-on-image theorem. |
 | After several successful crossings, choose nominal matches by the current representation | N1/N2, strengthening E6–E8 | Reject. The old `X` query succeeds and the equally represented `Y` query fails after allocation and three mixed cycles. |
+| Choose any `SemanticType` witnessing the payload pair, constrained only by endpoint types | R18 | Reject. All current semantic invariants can hold for a noncanonical relation that equates different naturals. Projection compatibility needs a fixed interpretation or proved coherence with it. |
 
 ## Reviewable LR direction
 

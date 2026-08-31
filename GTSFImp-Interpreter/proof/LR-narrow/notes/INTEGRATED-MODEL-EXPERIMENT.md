@@ -312,3 +312,47 @@ from `fb5bbfb7`, in addition to preserving the live definitions listed above.
 The final follow-up aggregate passes Agda MCP with no goals or invisible
 metavariables, and the complete `make check` passes with the new universal
 regressions and both historical regression targets included.
+
+## Generalization gate: arbitrary payload meanings
+
+The next requested extension is general dynamic payloads and arbitrary
+instantiations. An unrestricted existential payload meaning fails even
+before higher-order payloads are introduced.
+
+`ExistentialPayloadCounterexample.coarseNatural` is a complete inhabitant
+of the current `SemanticType` record with endpoints `ℕ, ℕ`. Its relation is
+`coarseNatural(W,k,n,m)` for **any** naturals `n,m`. Valuehood, endpoint
+typing, downward closure, and closure under all future worlds hold. Thus
+`existential-payload-witness` proves, at every index,
+
+`∃ A. impreciseTy A = ℕ ∧ preciseTy A = ℕ ∧ related A W k 0 1`.
+
+Nevertheless, the concrete, well-typed projection computations separate:
+
+Diagram:
+
+    (0 ⟨ℕ!⟩) ⟨ℕ?⟩                (1 ⟨ℕ!⟩) ⟨ℕ?⟩
+             │                              │
+             │ 1 step                       │ 1 step
+             ▼                              ▼
+             0                              1
+
+`tag-and-project-separates` proves that these terms cannot satisfy
+`Observed natural W 2`. The proof uses the backward-return observation
+at precise fuel `1`, uniqueness of the actual imprecise evaluator result
+at arbitrary fuel, and inequality of the returned naturals. It does not
+assume equal fuel or compare only one sampled imprecise run.
+
+Consequently, `existential-payload-projection-impossible` refutes natural
+projection compatibility from the displayed existential premise. Requiring
+an actual payload-relatedness proof, rather than merely payload typing,
+does **not** repair this shortcut: the counterexample already supplies one.
+
+This is not a counterexample to `natural`, `dataDynamic`, or the qualified
+`A+B+C′` direction. The unrestricted record collects semantic invariants;
+it does not assert that a relation is the intended interpretation of its
+endpoint syntax. A general dynamic clause must use a fixed interpretation
+or carry the relevant proved interpretation coherence. Endpoint equality
+alone cannot supply it. Arbitrary relations for abstract type variables
+are not ruled out; identifying such a relation with the canonical meaning
+of an exposed concrete base type is the invalid step.
