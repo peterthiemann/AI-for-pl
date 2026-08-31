@@ -52,14 +52,6 @@ module Composition (Fᴵ Fᴾ : Frame) {ΔI₀ ΔP₀}
     advance-append S (bind A ∷ χs) ψs =
       advance-append (allocate S A) χs ψs
 
-    lift-var-comp : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
-        {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
-        {U : PhysicalScope Σ₀ Δ₃}
-      → (p : ScopeFuture S T) → (q : ScopeFuture T U) → (X : TyVar Δ₁)
-      → liftVar (scope-trans p q) X ≡ liftVar q (liftVar p X)
-    lift-var-comp stay q X = refl
-    lift-var-comp (grow p) q X = lift-var-comp p q (Fin.suc X)
-
     lift-var-advance-append : ∀ {Δ₀ Δ Δ′ Δ″} {Σ₀ : TyStore Δ₀}
         (S : PhysicalScope Σ₀ Δ) (χs : StoreChanges Δ Δ′)
         (ψs : StoreChanges Δ′ Δ″) (X : TyVar Δ)
