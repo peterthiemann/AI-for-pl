@@ -146,9 +146,53 @@ respectively, and `dataDynamic`'s future-closure theorem supplies the packet
 evidence. There is no assumed adapter-compatibility field.
 
 The producer module's `payload-family` proves the result-type equalities;
-it does **not** supply a `NaturalUniversalValues` inhabitant. Keeping that
-distinction explicit prevents the successful adapter test from being reported
-as full universal compatibility.
+that record and the adapter theorem alone do **not** supply a
+`NaturalUniversalValues` inhabitant. The next section supplies the separate
+membership proof, without extending the interface to arbitrary type arguments.
+
+### Concrete universal membership
+
+Let `F = Λα.λx:α.x⟨α!⟩` and `r = ∀↑ id↑ (α⇒★)`.
+`IntegratedUniversal.producer-related` and `wrapper-related` prove,
+respectively, that `F` is related to `F` and `F ↑ r` is related to `F` at
+`naturalUniversal payload-family`, for every index and every initial world.
+The theorems allow arbitrary physical roots and scopes, and retain the actual
+consistency environments in the terms.
+
+The membership proof discharges the universal record's future-instantiation
+field: for every pair of scope futures and every future world, instantiate
+the lifted values at `ℕ` and obtain `Observed (arrow natural dataDynamic)`.
+`IntegratedUniversalSteps` proves the uniform evaluator prefixes, not just
+closed test runs:
+
+- `F[ℕ]` takes one step, allocates `Z↦ℕ`, and returns the one-layer adapter.
+- `(F ↑ r)[ℕ]` takes three steps, allocates `X↦ℕ` then `Y↦X`, and returns
+  the two-layer adapter, with the genuinely renamed runtime gate.
+
+For the wrapped/bare pair the post-run world is exactly
+`extend-paired (extend-privateI W ℕ) X ℕ`: `X` is private and `Y` matches
+`Z`. The future proof preserves every old match and every old precise-only
+capability. For the bare/bare pair, one paired natural allocation suffices.
+The previously checked all-futures adapter theorems then discharge the result
+relation. No universal compatibility premise, postulate, or recursive call to
+the membership theorem is used.
+
+The existing `NaturalUniversalValues`, `Observed`, and `World` definitions
+are unchanged: these are inhabitants of the prior interface, not a weakened
+replacement interface tailored to the examples.
+
+This closes the gap between concrete producer calls and **membership in the
+Nat-only universal interface**. It does not establish arbitrary instantiation
+types, arbitrary producer bodies, or R16's recursive size-growth case.
+
+`IntegratedUniversalExperiments` ties both membership theorems directly to
+the original `DynamicWrapperExamples.payload-function` and `payload-reveal`.
+It exercises the universal record's instantiation field after unequal scope
+growth, and checks that both an old match and an old precise-only capability
+survive the wrapped allocation prefix. Finally, the actual emitted packets
+are decoded successfully: the source query unseals `Y↦X↦ℕ`, while the target
+query unseals `Z↦ℕ`, returning the same arbitrary natural input. That last
+check is concrete operational evidence, not a general alias-query theorem.
 
 ### Active negative controls
 
@@ -183,6 +227,8 @@ general dynamic or universal clauses.
 | `IntegratedSuite` | E1–E5, E13–E24, N1/N2 interpreted by the same `Observed natural`, at every index. | Primitive compatibility from their final data/blame outcomes. |
 | `IntegratedEscapingProducer` | E13/E15 calls related at `dataDynamic` with actual fresh post-run capabilities, then composed with natural projection. | A full universal value relation or arbitrary producer bodies. |
 | `IntegratedProducer` | Returned one-/two-layer adapter functions related at `arrow natural dataDynamic`, for all indices, futures, and related natural arguments. | Membership of the originating universals in `naturalUniversal`. |
+| `IntegratedUniversal` | Actual `naturalUniversal` membership for the bare producer pair and the identity-reveal wrapper/bare pair, at every world and index, using uniform allocation prefixes. | Universal compatibility for arbitrary type arguments or bodies. |
+| `IntegratedUniversalExperiments` | Membership for the original shared-suite terms, instantiation after unequal futures, preservation of old capabilities, and successful emitted-packet decoding for every natural input. | General alias-query compatibility or a new universal clause. |
 | Existing nominal/replacement controls | E6–E12 retain their typing, evaluator, non-value, and impossible-type-relation results. | New integrated observations for the type-level impossibility statements. |
 | Existing historical regression target | Ground-cast and occupied-slot projection counterexamples still check. | Closing the new model's expanded/bottom cast cases. |
 
@@ -214,7 +260,7 @@ The appropriate acceptance criterion is therefore a checked integrated
 fragment with specific semantic boundary proofs and preserved regressions,
 not a declaration that the full candidate architecture is already sound.
 
-## Assessment and next gate
+## Assessment and remaining gates
 
 The combined direction has a nonempty working model, semantic packet and
 function witnesses, and a reusable composition theorem whose natural-query
@@ -222,13 +268,13 @@ premise is actually discharged. It is no longer merely three compatible
 informal constraints. The evidence supports continuing with one architecture
 containing `A`, `B`, and `C′`; it does not support replacing the live LR yet.
 
-The next focused producer gate is to inhabit `naturalUniversal` for the
-concrete payload producer and its identity-universal wrapper, at arbitrary
-future scopes. Reuse the checked adapter function theorem, but prove the
-instantiation/allocation prefix and its post-run world uniformly. That closes
-the explicit gap between a successful concrete call and universal membership.
+The focused producer gate is now closed: the concrete payload producer and
+its identity-universal wrapper inhabit `naturalUniversal` at arbitrary future
+scopes. The instantiation/allocation prefixes and their post-run worlds are
+proved uniformly, and the returned functions satisfy the all-futures arrow
+test. This is stronger than the previous successful concrete calls.
 
-After that, a general `★` payload interpretation, arbitrary instantiation
+A general `★` payload interpretation, arbitrary instantiation
 types/bodies, and the old-world/CTI bridge remain substantive design work.
 Their statements must preserve these regressions and discharge real
 compatibility premises. Neither the repeated whole-run suite nor the
@@ -253,5 +299,16 @@ to an existing cast proof is the operational-lemma extraction noted above.
 Successful milestones were committed and pushed separately: kernel and
 worlds (`dae52c3d`), data/frame/query compatibility (`9b5c442b`), escaping
 producer packets (`a550b089`), and finally all-futures adapter compatibility
-and direct-natural nominal queries. No counterexample to the implemented
-fragment was found; the broader obligations listed above remain unvalidated.
+and direct-natural nominal queries (`fb5bbfb7`). No counterexample to the
+implemented fragment was found; the broader obligations listed above remain
+unvalidated.
+
+The subsequent universal-membership milestones are paired-adapter support
+(`56656055`) and the uniform prefix/membership proofs (`27de4f8d`), followed
+by the focused regression and documentation checkpoint. Both proof milestones
+were checked with Agda MCP and the independent CLI before being pushed.
+The follow-up also leaves `IntegratedModel` and `IntegratedWorld` unchanged
+from `fb5bbfb7`, in addition to preserving the live definitions listed above.
+The final follow-up aggregate passes Agda MCP with no goals or invisible
+metavariables, and the complete `make check` passes with the new universal
+regressions and both historical regression targets included.

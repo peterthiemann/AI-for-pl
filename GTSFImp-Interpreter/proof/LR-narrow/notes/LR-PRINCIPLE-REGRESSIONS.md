@@ -510,6 +510,17 @@ then test the allocating producer extension. Their endpoint observations do
 not supply that value-level closure. Any proposal that treats passing these
 examples as discharging the cast gates must be rejected.
 
+The next focused producer gate has also been mechanized:
+`IntegratedUniversal` proves membership of the concrete dynamic-payload
+producer and its identity-universal reveal wrapper in the existing
+`naturalUniversal` interface, for every world, index, and future scope.
+Its uniform allocation prefixes preserve old nominal capabilities and relate
+the freshly returned adapters. This is a Nat-instantiation theorem for the
+concrete family, not a discharge of `open-universals`,
+`open-right-universal`, or `open-universal-dynamic`; arbitrary instantiation
+types and bodies remain outside this interface. The experiment report records
+the exact statement and the additional future/packet-query regressions.
+
 ## Verification and keeping the regressions live
 
 The new proof modules are imported by `LR-narrow/LRNarrowAll.agda`.
