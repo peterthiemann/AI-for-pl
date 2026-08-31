@@ -3,8 +3,8 @@ module proof.LR-narrow.IntegratedProducer where
 -- File Charter:
 --   * Relates the dynamic producer's returned adapter functions at
 --     Nat ⇒ dataDynamic for all future worlds and related natural arguments.
---   * Proves the natural-instantiation family's endpoint equalities, but
---     does not inhabit the full naturalUniversal value relation.
+--   * Proves the natural-instantiation family's endpoint equalities.
+--     IntegratedUniversal uses these results to prove concrete membership.
 --   * Actual closed universal calls are tested in IntegratedEscapingProducer.
 --     No live LR, CTI, or operational rule is changed.
 
@@ -28,9 +28,7 @@ open import proof.LR-narrow.IntegratedModel
 import proof.LR-narrow.IntegratedData as ID
 import proof.LR-narrow.IntegratedWorld as IW
 import proof.LR-narrow.IntegratedProducerSteps as PS
-
-payload-body : ∀ {Δ} → Ty (suc Δ)
-payload-body = ＇ Fin.zero ⇒ ★
+open PS using (payload-body)
 
 scope-body-star : ∀ {Δ₀ Δ} {Σ₀ : TyStore Δ₀}
     (S : PhysicalScope Σ₀ Δ)

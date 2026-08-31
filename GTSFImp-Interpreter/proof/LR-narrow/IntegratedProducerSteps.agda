@@ -8,7 +8,8 @@ module proof.LR-narrow.IntegratedProducerSteps where
 --   * This file is independent of IntegratedModel and IntegratedData.
 
 open import Data.List using (_∷_; [])
-open import Data.Nat using (ℕ)
+open import Data.Nat using (ℕ; suc)
+import Data.Fin as Fin
 open import Relation.Binary.PropositionalEquality
   using (_≡_; refl)
 
@@ -27,6 +28,9 @@ open import LR-narrow.LogicalRelation using (groundInjection)
 open import proof.Consistency as PC using (rename∼★ᵐ)
 open import proof.LR-narrow.Closure using (rename-ground-injection)
 open import proof.LR-narrow.PhysicalScope
+
+payload-body : ∀ {Δ} → Ty (suc Δ)
+payload-body = ＇ Fin.zero ⇒ ★
 
 lift-application : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}

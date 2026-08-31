@@ -160,3 +160,5 @@ import proof.LR-narrow.IntegratedEscapingProducer
 import proof.LR-narrow.IntegratedProducerSteps
 import proof.LR-narrow.IntegratedProducer
 import proof.LR-narrow.IntegratedNominalProjection
+import proof.LR-narrow.IntegratedUniversalSteps
+import proof.LR-narrow.IntegratedUniversal
