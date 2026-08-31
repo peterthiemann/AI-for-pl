@@ -97,14 +97,62 @@ tag steps, not the live LR's open cast obligations.
 the same result for **arbitrary observed operand computations**, including
 allocating operands. Its frame transports the real consistency environment.
 
+### Escaping producer: `E13` and `E15` before projection
+
+`IntegratedEscapingProducer` examines `F = Λα.λx:α.x⟨α!⟩` before the final
+`ℕ?` query. The actual returned values are:
+
+- `F[ℕ] n` returns `(n ↓ seal Z ℕ)⟨Z!⟩`, after allocating `Z↦ℕ`.
+- `(F ↑ ∀↑ id↑ (α⇒★))[ℕ] n` returns
+  `((n ↓ seal X ℕ) ↓ seal Y X)⟨Y!⟩`, after allocating `X↦ℕ`, then `Y↦X`.
+
+The post-run world makes `X` private and matches `Y` with `Z`. The checked
+`wrapped-call-observed` theorem relates these calls at `dataDynamic` for
+every natural input and index. It does not identify `X` with `Y`, or resolve
+both nominal tags to `ℕ`. In particular the alias chain is part of the
+returned value evidence, not an erased annotation.
+
+For the erased-binder pair, `(λx:★.x) (n⟨ℕ!⟩)` returns the natural-tagged
+packet and `F[ℕ] n` returns the `Z`-tagged packet. The post-run world marks
+`Z` precise-only. `erased-call-observed` relates these **returned packets**,
+before any blame occurs. Composing each theorem with `natural-query-observed`
+recovers the complete E13/E15 observation through the common semantic model.
+
+This is an integrated producer/nominal/frame test. It is stronger than merely
+checking the final observations, but weaker than relating the universal at
+every instantiation type or proving the fundamental property.
+
+### Active negative controls
+
+`missing-capability-rejected` proves that even two identical nominal packets
+are unrelated in an empty capability world. Together with the concrete
+fresh-producing calls, this rules out freezing the initial capability set
+while merely growing physical scopes. The implemented observation therefore
+returns an explicit future world, not just future stores.
+
+`same-representation-not-related` rejects swapping two names with equal
+representation. `occupied-erasure-rejected` rejects using the precise-only
+alternative at an occupied match; `fresh-erasure-allowed` checks that the
+legitimate alternative remains inhabited. `different-data-rejected` rejects
+unequal natural payloads at every index, including zero. These are statements
+about this model's value relation, not conclusions drawn from matching final
+program outputs.
+
+None of these controls refutes the implemented fragment. They refute the
+stronger frozen-world, representation-equality, unconditional-erasure, and
+payload-index-loss shortcuts. The old regressions remain independently live;
+their successful checking is not counted as a new proof of the missing
+general dynamic or universal clauses.
+
 ## Shared suite and what its results establish
 
 | Evidence | What is checked | What it does not establish |
 |---|---|---|
-| `IntegratedDataExperiments` | Same-name packets, distinct same-representation names, occupied-erasure exclusion, and arguments created in a future world. | A general interpretation of all dynamic payloads. |
+| `IntegratedDataExperiments` | Same-name packets, distinct same-representation names, occupied-erasure exclusion, positive precise-only erasure, unequal payload rejection even at zero, missing-capability rejection, and arguments created in a future world. | A general interpretation of all dynamic payloads. |
 | `IntegratedProjection` | Natural query of all related data packets and arbitrary observed operands, at all indices. | Expanded projections, bottom casts, or general nominal-query/unseal compatibility. |
 | `IntegratedFrameComposition` | Three-direction composition with actual post-run worlds and histories. | The missing primitive boundary premises. |
 | `IntegratedSuite` | E1–E5, E13–E24, N1/N2 interpreted by the same `Observed natural`, at every index. | Primitive compatibility from their final data/blame outcomes. |
+| `IntegratedEscapingProducer` | E13/E15 calls related at `dataDynamic` with actual fresh post-run capabilities, then composed with natural projection. | A full universal value relation or arbitrary producer bodies. |
 | Existing nominal/replacement controls | E6–E12 retain their typing, evaluator, non-value, and impossible-type-relation results. | New integrated observations for the type-level impossibility statements. |
 | Existing historical regression target | Ground-cast and occupied-slot projection counterexamples still check. | Closing the new model's expanded/bottom cast cases. |
 

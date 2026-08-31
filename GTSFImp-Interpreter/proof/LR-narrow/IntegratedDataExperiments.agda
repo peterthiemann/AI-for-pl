@@ -137,6 +137,15 @@ occupied-erasure-rejected : ∀ n k
 occupied-erasure-rejected n k = no-occupied-erasure new-paired
   (natural-packet S2 n) (named-packet Fin.zero n)
 
+-- Even identical runtime packets cannot use an empty capability world.
+-- A producer that exports a fresh tag must establish a post-run capability.
+missing-capability-rejected : ∀ n k
+  → related dataDynamic (empty {S = S2} {T = S2}) k
+      (N.package Fin.zero n) (N.package Fin.zero n) → ⊥
+missing-capability-rejected n k r with dynamic-nominal-match
+    (named-packet Fin.zero n) (named-packet Fin.zero n) r
+missing-capability-rejected n k r | ()
+
 -- Payload equality remains observable at zero; the dynamic relation does
 -- not acquire an extra unguarded predecessor shift at a tag boundary.
 different-data-rejected : ∀ n m k → n ≢ m

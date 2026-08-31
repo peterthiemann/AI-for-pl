@@ -2,7 +2,10 @@
 
 Date: 2026-08-31. Branch: `codex/gtsf-alias-free-experiment`.
 
-This is an evidence and review document, not an implemented LR redesign.
+This is an evidence and review document, not a replacement of the live LR.
+The subsequent [integrated model experiment](INTEGRATED-MODEL-EXPERIMENT.md)
+implements a shared `A+B+C′` data fragment and distinguishes its semantic
+boundary proofs from the whole-program regression results below.
 The calculus, CTI, and live LR are unchanged. The old endpoint
 `RevealObligations` is already refuted; the objective is to find a replacement
 interface without losing the earlier counterexamples.
@@ -495,8 +498,12 @@ merely by these examples or the existing scoped wrapper results.
 | `open-right-universal` | Same-index one-sided universal instantiation, beyond identity/body-fragment families. |
 | `open-universal-dynamic` | Universal dynamic payloads combining tag checks, wrapper allocation, and body substitution. E13–E15 exercise part of this boundary operationally, not the general cast obligation. |
 
-Consequently a wholesale LR replacement is **not** recommended yet. The next
-prototype should establish B's dynamic nominal value relation and its
+Consequently a wholesale LR replacement is **not** recommended yet. The
+integrated prototype now establishes a data-only instance of B's dynamic
+nominal relation and natural projection compatibility, including generic
+frame composition; see its report for the exact additional producer tests
+and limits. The original prototype objective was to establish B's dynamic
+nominal value relation and its
 projection/unseal boundary premises for C′, keeping occupied and precise-only
 cases separate. E13–E15, E24, and N1/N2 are concrete acceptance tests; E18/E23
 then test the allocating producer extension. Their endpoint observations do
