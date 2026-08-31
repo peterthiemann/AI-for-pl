@@ -162,12 +162,13 @@ different-data-rejected n m k different (precise-only-tagged only p q)
 different-data-rejected n m k different (precise-only-tagged only p q) | ()
 
 fresh-erasure-allowed : ∀ n k
-  → related dataDynamic (extend-only-nat (empty {S = root} {T = root})) k
+  → related dataDynamic
+      (extend-only (empty {S = root} {T = root}) (‵ `ℕ)) k
       ($ (κℕ n) ⟨ natural-injection ⟩)
       (($ (κℕ n) ↓ seal Fin.zero (‵ `ℕ))
         ⟨ groundInjection (＇ Fin.zero) (C.X∼★ᶜ {μ = C.idᶜ} refl) ⟩)
 fresh-erasure-allowed n k =
-  precise-only-tagged new-precise-only-nat (natural-packet root n)
+  precise-only-tagged new-precise-only (natural-packet root n)
     (ground-packet C.idᶜ ($ (κℕ n) ↓ seal Fin.zero (‵ `ℕ))
       (payload-seal (Z∋ refl) payload-natural) (C.X∼★ᶜ refl) refl)
 

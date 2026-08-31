@@ -23,15 +23,6 @@ open import proof.LR-narrow.PhysicalScope
 
 module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
 
-  private
-    lift-var-comp : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
-        {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
-        {U : PhysicalScope Σ₀ Δ₃}
-      → (p : ScopeFuture S T) → (q : ScopeFuture T U) → (X : TyVar Δ₁)
-      → liftVar (scope-trans p q) X ≡ liftVar q (liftVar p X)
-    lift-var-comp stay q X = refl
-    lift-var-comp (grow p) q X = lift-var-comp p q (Fin.suc X)
-
   mutual
     data World : ∀ {ΔI ΔP}
       → PhysicalScope ΣI0 ΔI → PhysicalScope ΣP0 ΔP → Set where
@@ -48,9 +39,9 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
           {T : PhysicalScope ΣP0 ΔP}
         → (W : World S T) → (A : Ty ΔI) → (B : Ty ΔP)
         → World (allocate S A) (allocate T B)
-      extend-only-nat : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
+      extend-only : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
           {T : PhysicalScope ΣP0 ΔP}
-        → World S T → World S (allocate T (‵ `ℕ))
+        → (W : World S T) → (B : Ty ΔP) → World S (allocate T B)
 
     data Matched : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
         {T : PhysicalScope ΣP0 ΔP}
@@ -68,9 +59,9 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
           {T : PhysicalScope ΣP0 ΔP} {W : World S T} {A B X Y}
         → Matched W X Y
         → Matched (extend-paired W A B) (Fin.suc X) (Fin.suc Y)
-      old-only-nat-match : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
-          {T : PhysicalScope ΣP0 ΔP} {W : World S T} {X Y}
-        → Matched W X Y → Matched (extend-only-nat W) X (Fin.suc Y)
+      old-only-match : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
+          {T : PhysicalScope ΣP0 ΔP} {W : World S T} {B X Y}
+        → Matched W X Y → Matched (extend-only W B) X (Fin.suc Y)
 
     data PreciseOnly : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
         {T : PhysicalScope ΣP0 ΔP}
@@ -84,12 +75,12 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
       old-only-paired : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
           {T : PhysicalScope ΣP0 ΔP} {W : World S T} {A B Y}
         → PreciseOnly W Y → PreciseOnly (extend-paired W A B) (Fin.suc Y)
-      new-precise-only-nat : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
-          {T : PhysicalScope ΣP0 ΔP} {W : World S T}
-        → PreciseOnly (extend-only-nat W) Fin.zero
-      old-precise-only-nat : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
-          {T : PhysicalScope ΣP0 ΔP} {W : World S T} {Y}
-        → PreciseOnly W Y → PreciseOnly (extend-only-nat W) (Fin.suc Y)
+      new-precise-only : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
+          {T : PhysicalScope ΣP0 ΔP} {W : World S T} {B}
+        → PreciseOnly (extend-only W B) Fin.zero
+      old-precise-only : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
+          {T : PhysicalScope ΣP0 ΔP} {W : World S T} {B Y}
+        → PreciseOnly W Y → PreciseOnly (extend-only W B) (Fin.suc Y)
 
   matched-left-inj : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
       {T : PhysicalScope ΣP0 ΔP} {W : World S T} {X Y Y′}
@@ -101,7 +92,7 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
   matched-left-inj new-paired new-paired = refl
   matched-left-inj (old-paired p) (old-paired q) =
     cong Fin.suc (matched-left-inj p q)
-  matched-left-inj (old-only-nat-match p) (old-only-nat-match q) =
+  matched-left-inj (old-only-match p) (old-only-match q) =
     cong Fin.suc (matched-left-inj p q)
 
   matched-right-inj : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
@@ -114,7 +105,7 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
   matched-right-inj new-paired new-paired = refl
   matched-right-inj (old-paired p) (old-paired q) =
     cong Fin.suc (matched-right-inj p q)
-  matched-right-inj (old-only-nat-match p) (old-only-nat-match q) =
+  matched-right-inj (old-only-match p) (old-only-match q) =
     matched-right-inj p q
 
   only-not-matched-at : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
@@ -126,7 +117,7 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
     only-not-matched-at o p
   only-not-matched-at (old-only-paired o) (old-paired p) =
     only-not-matched-at o p
-  only-not-matched-at (old-precise-only-nat o) (old-only-nat-match p) =
+  only-not-matched-at (old-precise-only o) (old-only-match p) =
     only-not-matched-at o p
 
   record Future {ΔI ΔP ΔI′ ΔP′}
@@ -198,12 +189,12 @@ module Worlds {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0) (ΣP0 : TyStore ΔP0) where
     ; only-future = old-only-paired
     }
 
-  extend-only-nat-future : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
-      {T : PhysicalScope ΣP0 ΔP} (W : World S T)
-    → Future stay (grow stay) W (extend-only-nat W)
-  extend-only-nat-future W = record
-    { matched-future = old-only-nat-match
-    ; only-future = old-precise-only-nat
+  extend-only-future : ∀ {ΔI ΔP} {S : PhysicalScope ΣI0 ΔI}
+      {T : PhysicalScope ΣP0 ΔP} (W : World S T) (B : Ty ΔP)
+    → Future stay (grow stay) W (extend-only W B)
+  extend-only-future W B = record
+    { matched-future = old-only-match
+    ; only-future = old-precise-only
     }
 
   advance-source : ∀ {ΔI ΔI′ ΔP} {S : PhysicalScope ΣI0 ΔI}

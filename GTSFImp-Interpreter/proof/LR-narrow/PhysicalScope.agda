@@ -113,6 +113,20 @@ scope-trans : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
 scope-trans stay q = q
 scope-trans (grow p) q = grow (scope-trans p q)
 
+scope-trans-right-id : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) → scope-trans p stay ≡ p
+scope-trans-right-id stay = refl
+scope-trans-right-id (grow p) = cong grow (scope-trans-right-id p)
+
+scope-trans-assoc : ∀ {Δ₀ Δ₁ Δ₂ Δ₃ Δ₄} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
+    {U : PhysicalScope Σ₀ Δ₃} {V : PhysicalScope Σ₀ Δ₄}
+  → (p : ScopeFuture S T) (q : ScopeFuture T U) (r : ScopeFuture U V)
+  → scope-trans (scope-trans p q) r ≡ scope-trans p (scope-trans q r)
+scope-trans-assoc stay q r = refl
+scope-trans-assoc (grow p) q r = cong grow (scope-trans-assoc p q r)
+
 liftTerm : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
   → ScopeFuture S T → Term Δ → Term Δ′
@@ -131,12 +145,84 @@ liftVar : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
 liftVar stay X = X
 liftVar (grow p) X = liftVar p (Fin.suc X)
 
+liftBody : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → ScopeFuture S T → Ty (suc Δ) → Ty (suc Δ′)
+liftBody stay B = B
+liftBody (grow p) B = liftBody p (renameᵗ (extᵗ Fin.suc) B)
+
 lift-term-comp : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
     {U : PhysicalScope Σ₀ Δ₃} (p : ScopeFuture S T) (q : ScopeFuture T U) M
   → liftTerm (scope-trans p q) M ≡ liftTerm q (liftTerm p M)
 lift-term-comp stay q M = refl
 lift-term-comp (grow p) q M = lift-term-comp p q (⇑ᵗᵐ M)
+
+lift-ty-comp : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
+    {U : PhysicalScope Σ₀ Δ₃} (p : ScopeFuture S T)
+    (q : ScopeFuture T U) A
+  → liftTy (scope-trans p q) A ≡ liftTy q (liftTy p A)
+lift-ty-comp stay q A = refl
+lift-ty-comp (grow p) q A = lift-ty-comp p q (⇑ᵗ A)
+
+lift-var-comp : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
+    {U : PhysicalScope Σ₀ Δ₃} (p : ScopeFuture S T)
+    (q : ScopeFuture T U) X
+  → liftVar (scope-trans p q) X ≡ liftVar q (liftVar p X)
+lift-var-comp stay q X = refl
+lift-var-comp (grow p) q X = lift-var-comp p q (Fin.suc X)
+
+lift-body-comp : ∀ {Δ₀ Δ₁ Δ₂ Δ₃} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ₁} {T : PhysicalScope Σ₀ Δ₂}
+    {U : PhysicalScope Σ₀ Δ₃} (p : ScopeFuture S T)
+    (q : ScopeFuture T U) B
+  → liftBody (scope-trans p q) B ≡ liftBody q (liftBody p B)
+lift-body-comp stay q B = refl
+lift-body-comp (grow p) q B =
+  lift-body-comp p q (renameᵗ (extᵗ Fin.suc) B)
+
+lift-ty-variable : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) (X : TyVar Δ)
+  → liftTy p (＇ X) ≡ ＇ (liftVar p X)
+lift-ty-variable stay X = refl
+lift-ty-variable (grow p) X = lift-ty-variable p (Fin.suc X)
+
+lift-ty-base : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) (ι : Base) → liftTy p (‵ ι) ≡ ‵ ι
+lift-ty-base stay ι = refl
+lift-ty-base (grow p) ι = lift-ty-base p ι
+
+lift-ty-star : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) → liftTy p ★ ≡ ★
+lift-ty-star stay = refl
+lift-ty-star (grow p) = lift-ty-star p
+
+lift-ty-arrow : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) (A B : Ty Δ)
+  → liftTy p (A ⇒ B) ≡ (liftTy p A ⇒ liftTy p B)
+lift-ty-arrow stay A B = refl
+lift-ty-arrow (grow p) A B = lift-ty-arrow p (⇑ᵗ A) (⇑ᵗ B)
+
+lift-ty-universal : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+  → (p : ScopeFuture S T) (B : Ty (suc Δ))
+  → liftTy p (`∀ B) ≡ `∀ (liftBody p B)
+lift-ty-universal stay B = refl
+lift-ty-universal (grow p) B =
+  lift-ty-universal p (renameᵗ (extᵗ Fin.suc) B)
+
+lift-entry : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′} {X A}
+  → (p : ScopeFuture S T)
+  → scopeStore S ∋ X ⦂ A → scopeStore T ∋ liftVar p X ⦂ liftTy p A
+lift-entry stay entry = entry
+lift-entry (grow p) entry = lift-entry p (S-bind∋ entry refl)
 
 lift-root-type : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
@@ -225,6 +311,16 @@ lift-constant : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
   → liftTerm p ($ c) ≡ $ c
 lift-constant stay c = refl
 lift-constant (grow p) c = lift-constant p c
+
+lift-local-seal : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
+    {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}
+    (p : ScopeFuture S T) X R U
+  → liftTerm p (U ↓ seal X R)
+      ≡ liftTerm p U ↓ seal (liftVar p X) (liftTy p R)
+lift-local-seal stay X R U = refl
+lift-local-seal (grow p) X R U
+    rewrite toRename-wk-eq X | renameᵗ-wk-eq R =
+  lift-local-seal p (Fin.suc X) (⇑ᵗ R) (⇑ᵗᵐ U)
 
 lift-root-seal : ∀ {Δ₀ Δ Δ′} {Σ₀ : TyStore Δ₀}
     {S : PhysicalScope Σ₀ Δ} {T : PhysicalScope Σ₀ Δ′}

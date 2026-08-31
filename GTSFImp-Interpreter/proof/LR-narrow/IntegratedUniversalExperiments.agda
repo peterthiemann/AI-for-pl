@@ -65,13 +65,13 @@ nonempty-target : PhysicalScope store-empty 2
 nonempty-target = allocate matched-target (‵ `ℕ)
 
 nonempty-world : World nonempty-source nonempty-target
-nonempty-world = extend-only-nat (extend-paired empty (‵ `ℕ) (‵ `ℕ))
+nonempty-world = extend-only (extend-paired empty (‵ `ℕ) (‵ `ℕ)) (‵ `ℕ)
 
 old-match : Matched nonempty-world Fin.zero (Fin.suc Fin.zero)
-old-match = old-only-nat-match new-paired
+old-match = old-only-match new-paired
 
 old-only : PreciseOnly nonempty-world Fin.zero
-old-only = new-precise-only-nat
+old-only = new-precise-only
 
 wrapped-postworld :
   World (allocate (allocate nonempty-source (‵ `ℕ)) (＇ Fin.zero))

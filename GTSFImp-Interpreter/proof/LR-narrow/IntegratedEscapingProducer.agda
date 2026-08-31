@@ -121,10 +121,10 @@ erased-call-observed : ∀ n k
       ((D.payload-function ⦂∀ D.payload-body [ ‵ `ℕ ]) · $ (κℕ n))
 erased-call-observed n k =
   observed-from-returns {gasI = 1} {gasP = 4}
-    {W′ = extend-only-nat empty}
+    {W′ = extend-only empty (‵ `ℕ)}
     (proj₂ (erased-return n)) (proj₂ (bare-return n))
     (record { matched-future = λ (); only-future = λ () })
-    (precise-only-tagged new-precise-only-nat
+    (precise-only-tagged new-precise-only
       (I.ground-packet _ _ I.payload-natural C.ι∼★ refl)
       (P.ground-packet _ _ (P.payload-seal (Z∋ refl) P.payload-natural)
         bare-gate refl))

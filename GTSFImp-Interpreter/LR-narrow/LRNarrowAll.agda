@@ -171,3 +171,6 @@ import proof.LR-narrow.FreshInstantiationObstruction
 -- Operational producer prefixes at arbitrary instantiation types.
 import proof.LR-narrow.GeneralInstantiationSteps
 import proof.LR-narrow.GeneralInstantiationExperiments
+
+-- Scope-local semantic interface, retaining original nominal worlds.
+import proof.LR-narrow.IntegratedLocal
