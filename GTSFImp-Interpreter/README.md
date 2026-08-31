@@ -4,6 +4,14 @@ This sibling of `GTSF-Interpreter` reuses the intrinsic cast language and
 proof-carrying evaluator in `GTSFImp/`. It does not duplicate the reduction
 engine.
 
+The current alias-free branch is developing a separate experimental LR.
+Its latest [scope-local semantic interface](proof/LR-narrow/notes/INTEGRATED-LOCAL-INTERFACE.md)
+retains persistent nominal worlds and uses fixed admissible codes for local
+argument/result meanings. The [integrated experiment record](proof/LR-narrow/notes/INTEGRATED-MODEL-EXPERIMENT.md)
+contains the earlier results and regression counterexamples. These experiments
+do not yet replace the live LR or complete its fundamental property. The
+inventory below describes that live development.
+
 The port currently contains:
 
 - `Interpreter.agda`: fuel-bounded return/blame outcomes and LR entry points;

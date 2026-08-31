@@ -110,6 +110,49 @@ payloads, and there is no universal constructor in `Code` yet.
 removes arbitrary semantic-record choice, but constructing `F` and proving
 membership for a particular polymorphic body remain proof obligations.
 
+## Regression discipline
+
+`IntegratedLocalExperiments` checks the following local claims:
+
+| Test | Checked result |
+|---|---|
+| R18 existential choice | No `Code S T ℕ ℕ` witnesses relatedness of `0,1`. |
+| R19 fresh endpoints | After fresh paired allocations, codes exist for `X⇒★,Y⇒★` and `X⇒X,Y⇒Y`; the latter is inhabited by identities at every index. This is not membership of the dynamic injection producer. |
+| Higher-order precise-only payload | `λx:ℕ.x` relates to its precise seal at a slot represented by `ℕ⇒ℕ`, at every index with same-index payload evidence. Unsealing and applying to `7` has typed, data-ending evaluator companions. |
+| Occupied erasure | The precise-only function code cannot be inhabited when the target name is occupied by a match. |
+| Unequal future histories | Both paired and precise-only memberships survive one imprecise and two precise private allocations. Reanchoring the paired meaning retains the same final world and values. |
+
+`IntegratedLocalUniversalProducer` proves more than selected evaluator runs.
+Let `Kₙ = Λα.n : ∀α.ℕ` and `r = ∀↑id↑ℕ`. Both `Kₙ,Kₙ` and
+`Kₙ ↑ r,Kₙ` inhabit `universal constant-family` for **every** anchor,
+current world, index, future world, and future-local argument code.
+The family returns the canonical natural code for every argument.
+
+The proof uses actual instantiations at arbitrary `RI,RP`. The bare pair
+returns `n,n` in `2/2` steps after allocating the two representations.
+The wrapped imprecise term takes `5` steps, allocating `X↦RI` followed by
+`Y↦X`; the precise bare term takes `2` and allocates `Z↦RP`. The returned
+world extends the caller's world by the imprecise private `X` and paired
+`Y,Z`, preserving all old capabilities. These are proofs of all three
+observations at every index, not an equal-fuel comparison. The constant
+body deliberately avoids claiming general body-conversion compatibility.
+
+The existing integrated suite and historical counterexamples remain in
+`LRNarrowAll`. Their continued typechecking preserves the regression basis;
+it is not a migration proof for all their primitive compatibility lemmas.
+The local revision additionally needs positive membership and negative
+controls, not only endpoint typing or evaluator samples.
+
+The scope/observation kernel retains independent histories, all three
+observations, strict `n < k`, and unchanged residual-index accounting
+(R1--R7, R9--R10, R13). Nominal membership requires persistent capabilities
+and keeps precise-only payloads at the same index (R8, R11). The fixed-code
+base separation and future-local endpoints address the specific interface
+obstructions R18/R19. Pending computations, replacement-sensitive target
+bodies, actual cast checks, and well-founded recursive continuation remain
+requirements for later compatibility proofs (R12, R14--R17); this revision
+does not discharge them by changing their statements.
+
 ## Acceptance boundaries
 
 The code layer must not accept an arbitrary `Meaning` or `SemanticType`
@@ -120,3 +163,25 @@ neither a record field nor a finite collection of successful runs counts
 as such a proof. General recursive dynamic/universal interpretation and
 R16's cast-continuation argument remain separate work unless explicitly
 discharged below.
+
+## Verification and remaining work
+
+All local modules are included in `LR-narrow/LRNarrowAll.agda`. The complete
+aggregate is checked with Agda MCP (no goals, invisible metavariables, or
+errors), and independent `make check` includes the interpreter, isomorphism,
+LR aggregate, and both historical cast/projection regressions. The new files
+introduce no postulates, holes, termination overrides, or positivity escapes.
+
+The live LR, CTI, evaluator, and reduction definitions are unchanged from
+`9618efef`. The earlier `IntegratedModel` remains an experimental reference
+for existing proofs; it is not a wrapper for the new interface. The shared
+experimental world changed only to generalize precise-only allocation;
+scope transport laws were added to support local anchors.
+
+The interface revision is complete within the stated finite code grammar.
+The next substantive work is a guarded, fixed interpretation for general
+dynamic and universal payloads, together with compatibility and membership
+for the binder-dependent producer `Λα.λx:α.x⟨α!⟩`. Its former root-endpoint
+obstruction is removed, but its arbitrary-code membership is not proved by
+the constant-body witness. General body conversions, recursive cast
+continuation, and the bridge to CTI/fundamental-property assembly remain.

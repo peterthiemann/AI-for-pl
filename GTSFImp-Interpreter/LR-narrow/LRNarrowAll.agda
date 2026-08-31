@@ -178,3 +178,5 @@ import proof.LR-narrow.IntegratedLocalStructure
 import proof.LR-narrow.IntegratedLocalNominal
 import proof.LR-narrow.IntegratedLocalCodes
 import proof.LR-narrow.IntegratedLocalUniversal
+import proof.LR-narrow.IntegratedLocalExperiments
+import proof.LR-narrow.IntegratedLocalUniversalProducer
