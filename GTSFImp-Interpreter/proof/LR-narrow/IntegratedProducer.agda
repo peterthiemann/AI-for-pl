@@ -187,3 +187,70 @@ module ProducerAt {ΔI0 ΔP0} (ΣI0 : TyStore ΔI0)
           ($ (κℕ n)))
         (cong (liftTerm q (PS.one-adapter-function Z gateP) ·_)
           (lift-constant q (κℕ n)))
+
+  paired-adapters-related : ∀ {ΔI ΔP}
+      {S : PhysicalScope ΣI0 ΔI} {T : PhysicalScope ΣP0 ΔP}
+      {W : World S T} {X : TyVar ΔI} {Y : TyVar ΔP}
+      {μI : Env∼ ΔI} {μP : Env∼ ΔP}
+      {gateI : μI ⊢ ＇ X ∼★} {gateP : μP ⊢ ＇ Y ∼★}
+    → scopeStore S ∋ X ⦂ ‵ `ℕ
+    → scopeStore T ∋ Y ⦂ ‵ `ℕ
+    → Matched W X Y
+    → ∀ k
+    → related (arrow natural Data.dataDynamic) W k
+        (PS.one-adapter-function X gateI)
+        (PS.one-adapter-function Y gateP)
+  paired-adapters-related {S = S} {T} {W} {X} {Y} {gateI = gateI}
+      {gateP = gateP} x-entry y-entry matched k =
+    arrow-values PS.one-adapter-function-value
+      PS.one-adapter-function-value typedI (functionP-typed y-entry) call
+    where
+    source-type : scopeTy S (‵ `ℕ ⇒ ★) ≡ (‵ `ℕ ⇒ ★)
+    source-type rewrite scope-arrow S (‵ `ℕ) ★
+                      | scope-natural S
+                      | Data.I.scope-star S = refl
+
+    typedI : ⟨ _ , scopeStore S , [] ⟩
+      ⊢ PS.one-adapter-function X gateI ⦂ scopeTy S (‵ `ℕ ⇒ ★)
+    typedI = subst≡ (λ A → ⟨ _ , scopeStore S , [] ⟩
+        ⊢ PS.one-adapter-function X gateI ⦂ A)
+      (sym source-type) (PS.one-adapter-function-⊢ x-entry)
+
+    call : ∀ {ΔI′ ΔP′}
+        {S′ : PhysicalScope ΣI0 ΔI′} {T′ : PhysicalScope ΣP0 ΔP′}
+        {W′ : World S′ T′} {j U V}
+      → (p : ScopeFuture S S′) → (q : ScopeFuture T T′)
+      → Future p q W W′ → j < k → related natural W′ j U V
+      → Observed Data.dataDynamic W′ j
+          (liftTerm p (PS.one-adapter-function X gateI) · U)
+          (liftTerm q (PS.one-adapter-function Y gateP) · V)
+    call {W′ = W′} {j = j} p q ext j<k (same-natural n) =
+      subst₂≡ (Observed Data.dataDynamic W′ j) source-eq target-eq
+        (observed-from-returns {A = Data.dataDynamic}
+          {M = liftTerm p (PS.one-adapter X gateI n)}
+          {N = liftTerm q (PS.one-adapter Y gateP n)}
+          {gasI = 3} {gasP = 3}
+          (PS.one-adapter-lift-return n p)
+          (PS.one-adapter-lift-return n q) future-refl
+          (future-closed Data.dataDynamic p q ext
+            (Data.matched-name-tagged matched
+              (Data.I.ground-packet _ _
+                (Data.I.payload-seal x-entry Data.I.payload-natural)
+                gateI refl)
+              (target-packet n y-entry))))
+      where
+      source-eq : liftTerm p (PS.one-adapter X gateI n)
+        ≡ liftTerm p (PS.one-adapter-function X gateI) · $ (κℕ n)
+      source-eq = trans
+        (PS.lift-application p (PS.one-adapter-function X gateI)
+          ($ (κℕ n)))
+        (cong (liftTerm p (PS.one-adapter-function X gateI) ·_)
+          (lift-constant p (κℕ n)))
+
+      target-eq : liftTerm q (PS.one-adapter Y gateP n)
+        ≡ liftTerm q (PS.one-adapter-function Y gateP) · $ (κℕ n)
+      target-eq = trans
+        (PS.lift-application q (PS.one-adapter-function Y gateP)
+          ($ (κℕ n)))
+        (cong (liftTerm q (PS.one-adapter-function Y gateP) ·_)
+          (lift-constant q (κℕ n)))
