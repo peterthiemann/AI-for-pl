@@ -145,3 +145,4 @@ import proof.LR-narrow.DynamicWrapperExamples
 import proof.LR-narrow.RepeatedCastExamples
 import proof.LR-narrow.RepeatedSealExamples
 import proof.LR-narrow.MixedBoundaryExamples
+import proof.LR-narrow.RepeatedBoundaryControls

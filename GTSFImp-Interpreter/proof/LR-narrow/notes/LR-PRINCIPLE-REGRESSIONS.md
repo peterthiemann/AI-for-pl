@@ -1,6 +1,6 @@
 # LR principles from imprecision examples
 
-Date: 2026-08-30. Branch: `codex/gtsf-alias-free-experiment`.
+Date: 2026-08-31. Branch: `codex/gtsf-alias-free-experiment`.
 
 This is an evidence and review document, not an implemented LR redesign.
 The calculus, CTI, and live LR are unchanged. The old endpoint
@@ -28,8 +28,17 @@ branch: this branch has no such constructor.
 ## New checked examples
 
 Write `U = Λα.λx:α.x`, `Kₙ = Λα.n`, and
-`H = Λα.λf:(α⇒α).f`. Let `r` and `c` be the identity universal reveal and
-conceal at the displayed type. These wrappers still allocate when instantiated.
+`H = Λα.λf:(α⇒α).f`. Here are the actual conversion terms, with named
+binders rather than de Bruijn indices:
+
+- `r_K = ∀↑ (id↑ ℕ) : Conv↑ (∀α.ℕ) (∀α.ℕ)`.
+- `r_U = ∀↑ (id↑ (α⇒α)) : Conv↑ (∀α.α⇒α) (∀α.α⇒α)`.
+- `c_U = ∀↓ (id↓ (α⇒α)) : Conv↓ (∀α.α⇒α) (∀α.α⇒α)`.
+- `r_H = ∀↑ (id↑ ((α⇒α)⇒(α⇒α)))`, with both endpoints
+  `∀α.(α⇒α)⇒(α⇒α)`.
+
+These are structural universal wrappers, **not** the plain whole-type
+conversions `id↑ (∀α.A)` and `id↓ (∀α.A)`. They allocate when instantiated.
 
 [WrapperImprecisionExamples](../WrapperImprecisionExamples.agda) proves the
 following **whole-program CTI derivations**, not merely operand relations.
@@ -37,11 +46,11 @@ The examples are families over every natural `n`.
 
 | ID | Precise program | Imprecise program | Checked observation |
 |---|---|---|---|
-| E1 | `Kₙ[ℕ]` | `(Kₙ ↑ r)[ℕ]` | Both return `n`; 2 versus 5 steps, 1 versus 2 allocations. |
-| E2 | `U[ℕ] n` | `(U ↑ r)[ℕ] n` | Both return `n`; 4 versus 8 steps. At fuel 4 the imprecise program is timed out. |
-| E3 | `U[ℕ] n` | `((U ↑ r) ↓ c)[ℕ] n` | Both return `n`; the mixed wrapper run is checked with fuel 16. |
-| E4 | `U[ℕ] n` | `(((U ↑ r) ↓ c) ↑ r)[ℕ] n` | Both return `n`; repeated mixed wrappers are checked with fuel 20. |
-| E5 | `H[ℕ] (λx:ℕ.x) n` | `(H ↑ r)[ℕ] (λx:ℕ.x) n` | Both return `n`; higher-order argument and result conversions are exercised. |
+| E1 | `Kₙ[ℕ]` | `(Kₙ ↑ r_K)[ℕ]` | Both return `n`; 2 versus 5 steps, 1 versus 2 allocations. |
+| E2 | `U[ℕ] n` | `(U ↑ r_U)[ℕ] n` | Both return `n`; 4 versus 8 steps. At fuel 4 the imprecise program is timed out. |
+| E3 | `U[ℕ] n` | `((U ↑ r_U) ↓ c_U)[ℕ] n` | Both return `n`; the mixed wrapper run is checked with fuel 16. |
+| E4 | `U[ℕ] n` | `(((U ↑ r_U) ↓ c_U) ↑ r_U)[ℕ] n` | Both return `n`; repeated mixed wrappers are checked with fuel 20. |
+| E5 | `H[ℕ] (λx:ℕ.x) n` | `(H ↑ r_H)[ℕ] (λx:ℕ.x) n` | Both return `n`; higher-order argument and result conversions are exercised. |
 
 Fuel bounds in E3–E5 are sufficient bounds, not asserted minimal costs.
 These five CTI derivations add wrappers to the **imprecise** side. The previous
@@ -81,10 +90,13 @@ The active counterexample search then moved beyond the scoped natural/arrow
 body fragment. [DynamicWrapperExamples](../DynamicWrapperExamples.agda) gives
 three more whole-program CTI pairs, again for every `n`:
 
+Here `r_F = ∀↑ (id↑ (α⇒★)) : Conv↑ (∀α.α⇒★) (∀α.α⇒★)`;
+the conversion for `Q` is `r_U` above.
+
 | ID | Precise program | Imprecise program | Checked result |
 |---|---|---|---|
-| E13 | `(F[ℕ] n) ⟨ ℕ? ⟩`, where `F = Λα.λx:α.x ⟨ α! ⟩` | `((F ↑ r)[ℕ] n) ⟨ ℕ? ⟩` | Both blame: the payload is tagged with the private nominal name, not with `ℕ`. Bounds 8 and 16. |
-| E14 | `Q[ℕ] n`, where `Q = Λα.λx:α.(x ⟨ α! ⟩) ⟨ α? ⟩` | `(Q ↑ r)[ℕ] n` | Both return `n`: the internally matching fresh tag survives the wrapper. Bounds 8 and 16. |
+| E13 | `(F[ℕ] n) ⟨ ℕ? ⟩`, where `F = Λα.λx:α.x ⟨ α! ⟩` | `((F ↑ r_F)[ℕ] n) ⟨ ℕ? ⟩` | Both blame: the payload is tagged with the private nominal name, not with `ℕ`. Bounds 8 and 16. |
+| E14 | `Q[ℕ] n`, where `Q = Λα.λx:α.(x ⟨ α! ⟩) ⟨ α? ⟩` | `(Q ↑ r_U)[ℕ] n` | Both return `n`: the internally matching fresh tag survives the wrapper. Bounds 8 and 16. |
 | E15 | `(F[ℕ] n) ⟨ ℕ? ⟩` | `((λx:★.x) (n ⟨ ℕ! ⟩)) ⟨ ℕ? ⟩` | Precise blames; imprecise returns `n`. Both typing and CTI are checked. Bounds 8 and 4. |
 
 E13 attempts to expose a wrapper's private allocation through a dynamic
@@ -103,6 +115,165 @@ injected at `ℕ`. Hence the two programs really are imprecise-related, although
 their tags and final outcomes differ. This is the **allowed** direction of
 blame, not a counterexample to DGG. It actively refutes an unconditional
 tag-bijection or equal-outcomes design, independently of historical LR clauses.
+
+## Repeated boundaries: nine additional imprecision pairs
+
+The earlier examples did not adequately test repeated **nonidentity**
+boundaries. E16–E24 supply three cast, three sealing, and three mixed examples.
+Each row has two syntactically different programs, typing for both, an actual
+whole-program CTI derivation, and proof-carrying evaluator results. All final
+types are `ℕ`. These are program regressions, not a proof of LR compatibility
+for every value inhabiting an intermediate type.
+
+### Concrete casts and conversions
+
+Use `f = λx:ℕ.x + 1`, `a = λg:(ℕ⇒ℕ).g 1`, `U = Λα.λx:α.x`,
+`T = ℕ⇒ℕ`, and `D = ★⇒★`. Superscripts on operations mean finite
+iteration: `C³(M) = C(C(C(M)))`, not a postulated cast-composition equation.
+
+The casts below include their direction; arrow casts reverse the input:
+
+- `ℕ! = id ℕ ! : ℕ ∼ ★`, `ℕ? = ? (id ℕ) : ★ ∼ ℕ`.
+  `𝔹!` and `𝔹?` are the corresponding Boolean casts.
+- `u = ℕ? ↦ ℕ! : T ∼ D`, `d = ℕ! ↦ ℕ? : D ∼ T`.
+- `u₂ = d ↦ ℕ! : (T⇒ℕ) ∼ (D⇒★)`,
+  `d₂ = u ↦ ℕ? : (D⇒★) ∼ (T⇒ℕ)`.
+- `u∀ = inst (α? ↦ α!) : (∀α.α⇒α) ∼ D`,
+  `d∀ = gen (α! ↦ α?) : D ∼ (∀α.α⇒α)`.
+  The injection in `u∀` uses the instantiation environment, and its domain
+  projection the flipped environment; `d∀` uses the generalization environment
+  and its flip. These are the actual casts in
+  [ExampleTerms](../../../../GTSFImp/proof/DGG/ExampleTerms.agda), not a
+  universal ground tag or an identity reveal. Their non-dynamic endpoint side
+  condition is witnessed by `D ≠ ★`.
+
+Define `B(M) = M ⟨ℕ!⟩ ⟨ℕ?⟩`, `C(M) = M ⟨u⟩ ⟨d⟩`,
+`C₂(M) = M ⟨u₂⟩ ⟨d₂⟩`, and `C∀(M) = M ⟨u∀⟩ ⟨d∀⟩`.
+
+For an actual store entry `X↦A`, the function conversions are
+
+- `c_X,A = unseal X A ↦↓ seal X A : Conv↓ (A⇒A) (X⇒X)`;
+- `r_X,A = seal X A ↦↑ unseal X A : Conv↑ (X⇒X) (A⇒A)`;
+- `S_X,A(M) = (M ↓ c_X,A) ↑ r_X,A : A⇒A` when `M : A⇒A`.
+
+Write `S = S_X,ℕ` when `X↦ℕ`. Under `∀α`, the same **old** `X`
+is retained, distinct from `α`:
+
+- `c_X,ℕ∀ = ∀↓ (unseal X ℕ ↦↓ seal X ℕ)` has type
+  `Conv↓ (∀α.T) (∀α.X⇒X)`;
+- `r_X,ℕ∀ = ∀↑ (seal X ℕ ↦↑ unseal X ℕ)` has the reverse type;
+- `S∀(M) = (M ↓ c_X,ℕ∀) ↑ r_X,ℕ∀`;
+- `C_b∀(M) = M ⟨∀ᶜ u⟩ ⟨∀ᶜ d⟩`, crossing
+  `∀α.T → ∀α.D → ∀α.T`.
+
+Here `C∀` crosses between a universal and a function using `inst/gen`;
+`C_b∀` is a structural universal cast. They are different operations.
+Likewise `S∀` genuinely changes `X` in the body; it is not E1–E4's
+`∀↑ id↑`/`∀↓ id↓` wrapper.
+
+### Cast matrix
+
+[RepeatedCastExamples](../RepeatedCastExamples.agda) checks:
+
+| ID | Precise program | Imprecise program | Boundary types and observation |
+|---|---|---|---|
+| E16 / C1 | `f n` | `C³(f) n` | Three `T → D → T` cycles. Both return `n + 1`; sufficient fuel 4 / 40. |
+| E17 / C2 | `a f` | `C₂²(a) C³(f)` | Two `(T⇒ℕ) → (D⇒★) → (T⇒ℕ)` cycles; three more on the higher-order argument. Both return `2`; fuel 8 / 100. |
+| E18 / C3 | `U[ℕ] n` | `C∀²(U)[ℕ] n` | Two `(∀α.α⇒α) → D → (∀α.α⇒α)` cycles, then instantiate and apply. Both return `n`; fuel 6 / 120. Real `inst/gen` produces fresh physical names. |
+
+The CTI witnesses are `first-order²`, `higher-order²`, and `poly-cycle²`.
+The equal results do not license erasing allocation histories or demanding
+equal fuel.
+
+### Sealing matrix
+
+In E19 the store is `X↦ℕ, Y↦X, Z↦Y`. Define the complete chain traversal
+
+`L(M) = (((((M ↓ seal X ℕ) ↓ seal Y X) ↓ seal Z Y)
+↑ unseal Z Y) ↑ unseal Y X) ↑ unseal X ℕ)`.
+
+Its successive types are `ℕ → X → Y → Z → Y → X → ℕ`.
+In E20–E21 the store is `X↦ℕ`. For E21, put
+`h = λg:(X⇒X).g : (X⇒X)⇒(X⇒X)` and define
+
+- `r₂ = c_X,ℕ ↦↑ r_X,ℕ`, of type
+  `Conv↑ ((X⇒X)⇒(X⇒X)) (T⇒T)`;
+- `c₂ = r_X,ℕ ↦↓ c_X,ℕ`, of type
+  `Conv↓ (T⇒T) ((X⇒X)⇒(X⇒X))`;
+- `J(M) = (M ↑ r₂) ↓ c₂`.
+
+Thus `J` goes from a nominal higher-order type to its representation and back;
+`S` goes from a representation function type to its nominal type and back.
+
+[RepeatedSealExamples](../RepeatedSealExamples.agda) checks:
+
+| ID | Precise program | Imprecise program | Boundary types and observation |
+|---|---|---|---|
+| E19 / S1 | `L³(n + 1)` | `B(L³(n + 1))` | Three traversals of the three-name representation chain; the payload computes. Both return `n + 1`; fuel 20 / 30. |
+| E20 / S2 | `S²(f) n` | `B(S²(f) B(n))` | Two `T → (X⇒X) → T` cycles. The imprecise side also checks the argument and result. Both return `n + 1`; fuel 18 / 24. |
+| E21 / S3 | `J²(h) (f ↓ c_X,ℕ) (n ↓ seal X ℕ) ↑ unseal X ℕ` | `B(J²(h) (f ↓ c_X,ℕ) (B(n) ↓ seal X ℕ) ↑ unseal X ℕ)` | Two higher-order seal cycles, followed by two applications. Both return `n + 1`; fuel 40 / 50. |
+
+The CTI witnesses are `s1-pair²`, `s2-pair²`, and `s3-pair²`.
+The matched seal boundaries are present on both sides; their mere deletion
+is **not** claimed admissible. The small additional imprecise-side casts make
+these genuinely asymmetric CTI tests, not just reflexivity examples.
+
+### Mixed matrix
+
+For E24 let
+`bad = λx:ℕ.x ⟨ℕ!⟩ ⟨𝔹?⟩ ⟨𝔹!⟩ ⟨ℕ?⟩ : T`
+and `i = λx:★.x : D`. The precise store is `X↦ℕ`, the imprecise
+store `X′↦★`. Both occupy the same center, whose mark is `X⊑★`.
+Write `S′ = S_X′,★`. The intermediate nominal function types remain
+paired: this is not the forbidden occupied-slot, direct-seal erasure of R11.
+
+[MixedBoundaryExamples](../MixedBoundaryExamples.agda) checks:
+
+| ID | Precise program | Imprecise program | Boundary types and observation |
+|---|---|---|---|
+| E22 / M1 | `S(S(f)) n` | `C(S(C(S(C(f))))) n` | Two nominal function cycles interleaved with three genuine function-cast cycles. Both return `n + 1`; fuel 32 / 64. |
+| E23 / M2 | `S∀(S∀(Λα.f))[ℕ] n` | `C_b∀(S∀(C_b∀(S∀(C_b∀(Λα.f)))))[ℕ] n` | Two genuine old-name universal seal cycles interleaved with three structural universal cast cycles. Instantiation allocates between pending layers. Both return `n + 1`; fuel 64 / 128. |
+| E24 / M3 | `S(C(S(C(C(bad))))) n` | `(S′(S′(i)) (n ⟨ℕ!⟩)) ⟨ℕ?⟩` | Two matched function-seal cycles at different representations, three extra precise-side cast cycles, then a latent failing check. Precise **blames**, imprecise returns `n`; fuel 128 / 128. |
+
+The CTI witnesses are `interleaved²`, `allocating²`, and `mixed-latent²`.
+E24 is legal directional imprecision, not a DGG counterexample. It ensures
+that testing repeated boundaries is not restricted to equal successful returns.
+The failing check occurs inside the function body; the example does not start
+with a literal `blame` surrounded by wrappers.
+
+All fuel numbers in E16–E24 are sufficient bounds, not minimal step counts.
+
+### Active nominal counterexample attempt after repeated crossings
+
+[RepeatedBoundaryControls](../RepeatedBoundaryControls.agda) adds a matched
+success/failure control, deliberately **not** asserted to be a CTI pair.
+In `X↦ℕ, Y↦ℕ`, let
+
+`R_Z(M) = (((M ↓ seal Z ℕ) ⟨Z!⟩) ⟨Z?⟩) ↑ unseal Z ℕ`,
+
+`g = λx:ℕ.R_X(R_Y(R_X(x + 1)))`,
+
+`F = Λα.λx:ℕ.((g x) ↓ seal X ℕ) ⟨X!⟩ : ∀α.ℕ⇒★`.
+
+Use `r = ∀↑ (id↑ (ℕ⇒★))` and `c = ∀↓ (id↓ (ℕ⇒★))`,
+both with endpoints `∀α.ℕ⇒★`. Define
+
+`O_Q(n) = ((((F ↑ r) ↓ c)[ℕ] n) ⟨Q?⟩) ↑ unseal Q ℕ`.
+
+There are three inner `R` cycles, each containing a seal, a nominal injection
+cast, a nominal projection cast, and an unseal. Outside them is **one**
+allocating universal reveal/conceal pair. These are scalar nominal casts,
+not E22–E24's structural function-cast cycles.
+
+| Control | Observation | What it attacks |
+|---|---|---|
+| N1, `O_X(n)` | Returns `n + 1`, fuel 64. | Preserving a latent old tag through three `R` cycles and fresh universal allocations must still allow the matching query. |
+| N2, `O_Y(n)` | Blames, fuel 64. | Equal representations, repeated successful crossings, and a name-free result type do not permit choosing a new nominal match. |
+
+`query-independent-success-impossible` formally refutes the proposed shortcut
+that all final queries would succeed. These controls retain names in the
+actual computation and add allocation, delayed application, and repeated
+crossings to E6–E8; they do not establish arbitrary-future-world closure.
 
 ## Earlier regression inventory
 
@@ -142,6 +313,8 @@ status, so a new design cannot accidentally resurrect them.
 | Store every nominal payload one index lower | R10, including R7's higher-order variant | Reject for precise-only seals. No imprecise step pays that decrement. |
 | Reconstruct conceal's original body derivation from the replaced type | E10 / R12 | Reject by `un-replacement-impossible`. |
 | Treat a pending peel as a value or a mere renaming | E9, E11/E12 / R14 | Reject. A reduction and a semantic body-conversion theorem are needed. |
+| Treat every well-typed boundary stack with equal endpoint types as identity | E24's `ℕ → ★ → 𝔹 → ★ → ℕ` body | Reject. Equal endpoints do not eliminate an intermediate failing check. This does not refute a properly restricted inverse-on-image theorem. |
+| After several successful crossings, choose nominal matches by the current representation | N1/N2, strengthening E6–E8 | Reject. The old `X` query succeeds and the equally represented `Y` query fails after allocation and three mixed cycles. |
 
 ## Reviewable LR direction
 
@@ -168,6 +341,8 @@ that arbitrary well-typed values are related, or that private names can be
 forgotten from dynamic observations.
 E15 specifically requires the precise-blame alternative; replacing the three
 directional clauses with equality of outcomes would regress immediately.
+E18 and E23 add repeated genuine cast/conversion allocation paths. E24 again
+requires precise-only blame, this time inside alternating structural boundaries.
 
 ### B. Separate matched nominal capabilities from precise-only payloads
 
@@ -192,6 +367,10 @@ is introduced and preserved is an explicit new obligation, not garbage
 collection. E6–E8, E13–E15 and R7/R11/R15 block the weaker and stronger
 shortcuts. In particular, E15 makes a single global tag-matching rule too
 strong, while E7 makes representation-based matching too weak.
+N1/N2 actively retest this distinction after three seal/tag/project/unseal
+cycles inside allocating universal wrappers: neither losing the old match nor
+matching by representation is acceptable. E24 keeps both nominal occupants
+even though their representations and the center's precision mark differ.
 
 ### C. Universal producers supply conversion-aware computations
 
@@ -208,13 +387,45 @@ producer construction and its well-founded recursion are part of the design's
 proof obligation. E3–E5, E9–E12 and R4/R8/R12–R16 support this boundary, but do
 not prove a producer theorem for arbitrary nested universals and casts.
 
+### C′. Ordered boundary composition, not cancellation
+
+The repeated tests suggest a more concrete implementation of C: use the
+existing frame-composition theorem as the composition spine, and require a
+local semantic compatibility proof for each cast/reveal/conceal boundary.
+Keep the order, intermediate types, actual scopes, and nominal capabilities;
+do not normalize a sequence merely because its first and last types agree.
+
+The already checked paired-frame theorem is precise about this obligation:
+if `Mᴵ` and `Mᴾ` are observed at semantic type `A` and index `k`, and
+for **every** pair of operand histories `χᴵ, χᴾ`, every `j ≤ k`, and every
+pair of `A`-related returned values in the resulting physical scopes, plugging
+those values into the transported frames `Fᴵ, Fᴾ` gives computations observed
+at `B, j`, then `Fᴵ[Mᴵ]` and `Fᴾ[Mᴾ]` are observed at `B, k`.
+This is
+[`ScopedFrameComposition.Composition.frame-observed`](../ScopedFrameComposition.agda),
+not a new postulate or an inference from the nine sample evaluations.
+
+The proposed extension is to establish its boundary premises for the missing
+dynamic and universal-cast cases. Their local proofs must retain B's occupied
+versus precise-only distinction. One-sided boundaries need the corresponding
+one-sided composition/step-expansion argument; a paired-frame theorem alone
+does not pay for a silent-side step. Universal producers still owe C's
+post-bind computation evidence, including explicit conceal target-body meaning.
+
+For a finite sequence of **already proved compatible boundaries**, compose
+these theorems in the syntax's actual order. Induction on that finite sequence
+does **not** prove the recursive universal producer, whose reduction can
+introduce new boundaries and enlarge a substituted type. R16 remains open.
+This proposal separates the reusable composition theorem from its genuinely
+unproved cast/producer premises instead of hiding them in a closure field.
+
 ## Full-regression check of these constraints
 
 “Compatible” below means that the proposed constraint retains the stated
 requirement or rejects the bad shortcut. It is not an Agda proof that a yet
 unimplemented combined LR satisfies the fundamental property.
 
-| Regressions | A: physical observations | B: nominal split | C: producer computations |
+| Regressions | A: physical observations | B: nominal split | C/C′: producer and boundary computations |
 |---|---|---|---|
 | R1, R13 | No raw join; compatible. | Does not require every allocation to be matched. | Must produce actual post-bind observations; no old-world endpoint. |
 | R2–R5, R9 | Retains physical closures and later arguments. | No type-support-only erasure. | Requires non-identity, higher-order body evidence. |
@@ -226,7 +437,45 @@ unimplemented combined LR satisfies the fundamental property.
 | R15 | Does not restore alias syntax. | Grounds, not arbitrary target shapes, control tags. | No target-shape uniqueness premise. |
 | R16 | No circular same-run continuation. | No hidden index loss. | Producer proof must be checked without termination escapes. |
 | R17 | Blame remains an observation. | Preserve the ground/consistency guard. | Expanded and bottom cast cases must be proved explicitly. |
+| E1–E5 | Independent fuel and physical histories retained. | Private names are not lowered out of closures. | Identity universal wrappers remain computations, not definitional identities. |
+| E6–E9 | Delayed failure is observed; pending terms may reduce. | Nominal equality is not representation equality. | No pending-value or successful-query shortcut. |
+| E10–E12 | Scope separation does not imply a missing type relation. | Distinct old/fresh names are not identified. | Explicit target-body meaning remains required. |
 | E13–E15 | Preserves both matching outcomes and allowed precise-only blame. | Tests fresh nominal tags and the erased-binder alternative separately. | Exercises a dynamic body, but not a general cast-producer theorem. |
+| E16–E18 / C1–C3 | Unequal costs and real inst/gen allocations allowed. | No conclusion about arbitrary nominal observations from data-only tests. | Repeated first/higher-order and real inst/gen paths pass operationally; general primitive compatibility remains open. |
+| E19–E21 / S1–S3 | Complete applied computations, not just function values. | Direct representation chains and nominal higher-order arguments retained. | Direction reverses at function inputs, twice at higher order; no deletion of matched seals assumed. |
+| E22–E23 / M1–M2 | The universal case keeps actual post-bind scopes. | Old `X` is not replaced by a fresh binder. | The cast/seal order is retained through application and universal allocation. |
+| E24 / M3 | Allows precise blame with imprecise success. | Occupied decayed center retains paired nominal boundaries. | Intermediate Boolean projection is not erased merely because endpoints agree. |
+| N1/N2 | Old captured tags remain observable after fresh allocation. | The original match succeeds; a same-representation substitute fails. | Three successful mixed cycles do not authorize changing the later query. |
+
+### Result of the renewed counterexample search
+
+None of A, B, or the explicitly qualified C is refuted by this regression
+suite. They survive **as constraints**, not as a completed definition and
+fundamental-property proof. C′ supplies an existing proved composition core
+and a sharper proposed interface for the missing primitive cases.
+
+The active attacks were:
+
+1. Force repeated casts contravariantly by passing and calling functions,
+   rather than merely observing wrapped values: E17/E21 return the computed
+   successor result.
+2. Cross genuine inst/gen and old-name universal conversions repeatedly:
+   E18/E23 return despite fresh physical allocations and pending wrappers.
+3. Hide a failing base check behind repeated cast/seal function boundaries:
+   E24 exposes the failure only on the precise side, as permitted by CTI.
+4. Export an old nominal tag after three mixed cycles and fresh allocations,
+   then try both the original and a same-representation name: N1 succeeds,
+   N2 blames. B predicts that distinction, without a garbage-collection rule.
+5. Reapply all earlier attacks, including occupied-slot erasure, un-replacement,
+   pending-value assumptions, bottom/expanded projections, index loss, and
+   the withdrawn alias counterexample: R1–R17 and E1–E15 remain in the matrix.
+
+I found no counterexample to the **qualified A+B+C′ direction**. This is not
+evidence that an unspecified full LR has passed. In particular, a dynamic
+value relation supporting arbitrary future consumers, all nine paired cast
+gates, and a noncircular universal-producer construction are still missing.
+The new tests reject stronger cancellation and nominal-forgetting principles;
+they do not justify adding either to the LR.
 
 ## Cast gates that have not passed
 
@@ -238,30 +487,30 @@ merely by these examples or the existing scoped wrapper results.
 |---|---|
 | `open-function-injection` | Function ground injection followed by application to related arguments and result projection. |
 | `open-function-precise-injection` | Precise injection, expanded target projection, and all blame directions. |
-| `open-function-precise-generalization` | A real `gen` producer crossing binders; this case cannot be dismissed as impossible. |
-| `open-universals` | Paired universal casts with staggered/pending computations and nested bodies. |
-| `open-function-dynamic` | Dynamic function payloads whose latent results allocate or blame. |
+| `open-function-precise-generalization` | A real `gen` producer crossing binders; this case cannot be dismissed as impossible. E18 now checks two concrete inst/gen roundtrips, not this general semantic case. |
+| `open-universals` | Paired universal casts with staggered/pending computations and nested bodies. E23 adds concrete repeated old-name conversions interleaved with universal casts. |
+| `open-function-dynamic` | Dynamic function payloads whose latent results allocate or blame. E24 adds a checked latent-blame mixed-boundary pair. |
 | `open-base-dynamic` | Ground tag tests, expanded projections, and bottom introduction. |
-| `open-variable-dynamic` | Both occupied paired tags and nonoccupied precise-only payloads; E6–E8 are negative controls. |
+| `open-variable-dynamic` | Both occupied paired tags and nonoccupied precise-only payloads; E6–E8 and N1/N2 are negative controls, not primitive LR compatibility. |
 | `open-right-universal` | Same-index one-sided universal instantiation, beyond identity/body-fragment families. |
 | `open-universal-dynamic` | Universal dynamic payloads combining tag checks, wrapper allocation, and body substitution. E13–E15 exercise part of this boundary operationally, not the general cast obligation. |
 
 Consequently a wholesale LR replacement is **not** recommended yet. The next
-discriminating prototype should cross the missing boundary: universal wrappers
-whose bodies export and consume dynamic nominal payloads, with the occupied and
-precise-only cases proved separately in the value relation, using E13–E15 as
-concrete acceptance tests. Their endpoint computation observations do not
-supply that value-level closure. Any proposal that treats passing the
-natural/arrow fragment as passing these cast gates must be rejected.
+prototype should establish B's dynamic nominal value relation and its
+projection/unseal boundary premises for C′, keeping occupied and precise-only
+cases separate. E13–E15, E24, and N1/N2 are concrete acceptance tests; E18/E23
+then test the allocating producer extension. Their endpoint observations do
+not supply that value-level closure. Any proposal that treats passing these
+examples as discharging the cast gates must be rejected.
 
 ## Verification and keeping the regressions live
 
 The new proof modules are imported by `LR-narrow/LRNarrowAll.agda`.
-`make -C GTSFImp-Interpreter check` also runs the new
+`make -C GTSFImp-Interpreter check` also runs the
 `check-lr-regressions` target for the historical ground-cast and occupied-slot
 projection examples.
 
-This audit found that `ProjectionMismatchStarRepScratch` still used removed
+The August 30 audit found that `ProjectionMismatchStarRepScratch` used removed
 source-conceal APIs. Its proof was ported to the current two constructors;
 the negative theorem and runtime witnesses are unchanged. No CTI rule was
 edited. This was a stale regression test, not a newly discovered CTI failure.
@@ -271,5 +520,6 @@ the Agda CLI. The latter also checks the historical scratch module with its
 extra notes include path; standalone MCP loading of that old scratch module
 cannot resolve `Types` under its inferred include configuration. No new holes,
 postulates, or termination escapes
-are introduced. `Imprecision`, `Reduction`, `CastTermImprecision`, and the live
-`LogicalRelation`/`Computation` definitions remain unchanged from `fb74f3c6`.
+are introduced. For the August 31 repeated-boundary additions, `Imprecision`,
+`Reduction`, `CastTermImprecision`, and the live `LogicalRelation`/`Computation`
+definitions are verified unchanged from the previous checkpoint `d3d2b7bb`.
