@@ -146,3 +146,8 @@ import proof.LR-narrow.RepeatedCastExamples
 import proof.LR-narrow.RepeatedSealExamples
 import proof.LR-narrow.MixedBoundaryExamples
 import proof.LR-narrow.RepeatedBoundaryControls
+
+-- Integrated experimental observations retain persistent nominal worlds.
+import proof.LR-narrow.IntegratedWorld
+import proof.LR-narrow.IntegratedModel
+import proof.LR-narrow.IntegratedSteps
