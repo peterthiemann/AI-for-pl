@@ -167,3 +167,6 @@ import proof.LR-narrow.IntegratedUniversalExperiments
 -- Guard against choosing arbitrary payload meanings by endpoint equality.
 import proof.LR-narrow.ExistentialPayloadCounterexample
 import proof.LR-narrow.FreshInstantiationObstruction
+
+-- Operational producer prefixes at arbitrary instantiation types.
+import proof.LR-narrow.GeneralInstantiationSteps

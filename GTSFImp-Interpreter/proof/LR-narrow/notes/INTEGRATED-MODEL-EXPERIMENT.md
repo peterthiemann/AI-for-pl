@@ -415,3 +415,31 @@ any existing regression, but this audit is **not** a proof that a future
 canonical, scope-local implementation will pass them. Higher-order,
 universal, dynamic-in-dynamic, expanded-cast, and higher-order precise-only
 payloads remain required adversarial tests of that implementation.
+
+## Positive operational result at arbitrary instantiation types
+
+Independently of the blocked semantic interface,
+`GeneralInstantiationSteps` proves the producer allocation prefixes for
+**every** store `Σ`, type `R : Ty Δ`, and admissible injection gate. This
+includes dynamic, function, universal, and already-allocated nominal
+argument types; it is not a finite list of Nat-specialized runs.
+
+With named variables, `F = Λα.λx:α.x⟨α!⟩` and
+`r = ∀↑ id↑ (α⇒★)`, the returned values are:
+
+| Input | Exact history | Returned value, in its actual final scope |
+|---|---|---|
+| `F[R]` | Allocate `Z↦R`; 1 step | `(λx:Z.x⟨Z!⟩) ↑ (seal Z R ↦↑ id↑ ★)` |
+| `(F ↑ r)[R]` | Allocate `X↦R`, then `Y↦X`, then keep; 3 steps | `((λx:Y.x⟨Y!⟩) ↑ (seal Y X ↦↑ id↑ ★)) ↑ (seal X R ↦↑ id↑ ★)` |
+
+The Agda equations retain the actual renamed gate and explicitly expose
+the final terms, histories, traces, and value witnesses. The wrapper's
+canonical-form equality normalizes the representation weakening; its
+typing theorem requires no evaluation premise. The result types are
+`⇑ᵗ R ⇒ ★` and `⇑ᵗ (⇑ᵗ R) ⇒ ★` respectively.
+
+These uniform operational lemmas are usable by a revised semantic model.
+They do not establish that arbitrary input payloads are related, install
+new semantic world capabilities, prove general projection compatibility,
+or inhabit an arbitrary-instantiation universal relation. Those claims
+still require the scoped, coherent interpretation discussed above.
