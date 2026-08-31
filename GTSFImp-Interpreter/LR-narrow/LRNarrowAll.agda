@@ -143,3 +143,4 @@ import proof.LR-narrow.NominalObservationExamples
 import proof.LR-narrow.ReplacementImprecisionExamples
 import proof.LR-narrow.DynamicWrapperExamples
 import proof.LR-narrow.RepeatedCastExamples
+import proof.LR-narrow.RepeatedSealExamples
