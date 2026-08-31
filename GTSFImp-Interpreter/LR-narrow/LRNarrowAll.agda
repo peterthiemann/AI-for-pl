@@ -180,3 +180,8 @@ import proof.LR-narrow.IntegratedLocalCodes
 import proof.LR-narrow.IntegratedLocalUniversal
 import proof.LR-narrow.IntegratedLocalExperiments
 import proof.LR-narrow.IntegratedLocalUniversalProducer
+
+-- Occurring-binder universal identity, with actual seal/unseal adapter runs.
+import proof.LR-narrow.IntegratedLocalIdentitySteps
+import proof.LR-narrow.IntegratedLocalIdentity
+import proof.LR-narrow.IntegratedLocalUniversalIdentity

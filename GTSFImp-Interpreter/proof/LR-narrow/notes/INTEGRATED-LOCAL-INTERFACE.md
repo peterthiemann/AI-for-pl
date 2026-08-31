@@ -164,6 +164,49 @@ as such a proof. General recursive dynamic/universal interpretation and
 R16's cast-continuation argument remain separate work unless explicitly
 discharged below.
 
+## Occurring-binder identity continuation
+
+`IntegratedLocalUniversalIdentity` proves membership of
+`I = Λα.λx:α.x : ∀α.α⇒α`. Unlike the
+constant-body witness, its argument code occurs in both the contravariant
+and covariant positions of the result: `result p q a = arrow-code a a`,
+after the binder-lifting equations. It still quantifies over the current
+finite code grammar, not every type in the calculus.
+
+For a representation `R` allocated at a fresh name `X`, the actual
+instantiation result is `(λx:X.x) ↑ (seal X R ↦↑ unseal X R)`. If `U`
+is any later value, including a higher-order value with private names, its
+application has this exact reduction in that later physical scope:
+
+Diagram:
+
+    ((λx:X.x) ↑ (seal X R ↦↑ unseal X R)) U
+                         │
+                         ▼
+           ((λx:X.x) (U ↓ seal X R)) ↑ unseal X R
+                         │
+                         ▼
+                    (U ↓ seal X R) ↑ unseal X R
+                         │
+                         ▼
+                         U
+
+All three steps preserve the store. The slot must have the stated store
+entry for typing; it need not be an externally visible semantic match.
+This does not identify nominal types with their representations: the
+specific program seals and unseals at exactly the same name.
+
+The semantic arrow test therefore returns the supplied related arguments
+unchanged, in their actual current world and at the same payload index.
+The observation theorem accounts for the actual steps and all three
+return/blame directions. Type application itself allocates a fresh paired
+extension of the caller's world, preserving every older capability.
+Nothing restricts later arguments to weakened copies of earlier values.
+
+This proof is identity-specific. In particular, it does not establish
+membership of the dynamic injection producer, a general reveal-wrapper
+closure theorem, or arbitrary body conversion compatibility.
+
 ## Verification and remaining work
 
 All local modules are included in `LR-narrow/LRNarrowAll.agda`. The complete
